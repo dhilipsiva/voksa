@@ -1,7 +1,8 @@
 #!/bin/sh
 # PreToolUse(Bash): guard rail, not a security boundary.
 # Blocks (exit 2, stderr shown to Claude):
-#   - `git push` that targets main, or a bare `git push` (could target main)
+#   - force pushes (commits auto-push fast-forward; history rewrites on a
+#     pushed main stay a deliberate human act)
 #   - recursive rm that is not confined to target/
 # Reads the hook JSON on stdin. The command value is inspected as the slice of
 # JSON after "command":" — a JSON-escape-aware parser is overkill here and a
@@ -12,12 +13,8 @@ cmd=${input#*'"command":"'}
 [ "$cmd" = "$input" ] && exit 0 # no Bash command field found
 
 if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push'; then
-    if printf '%s' "$cmd" | grep -q 'main'; then
-        echo "Blocked: pushing to main is not allowed — main only moves via CI-green, human-reviewed phase merges." >&2
-        exit 2
-    fi
-    if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push[[:space:]]*(\\?"|$)'; then
-        echo "Blocked: bare 'git push' may target main; name an explicit non-main branch." >&2
+    if printf '%s' "$cmd" | grep -Eq -- '--force|[[:space:]]-f([[:space:]]|\\?"|$)'; then
+        echo "Blocked: force pushes are not allowed — rewrite history only as a deliberate human act." >&2
         exit 2
     fi
 fi

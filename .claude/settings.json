@@ -11,6 +11,17 @@
             "timeout": 120
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [".claude/hooks/auto-push.sh"],
+            "timeout": 120
+          }
+        ]
       }
     ],
     "PreToolUse": [

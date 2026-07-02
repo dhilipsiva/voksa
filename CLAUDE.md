@@ -74,5 +74,6 @@ Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete
 - eSpeak NG (GPLv3) is an OUT-OF-PROCESS oracle only. Never copy its code, phoneme tables, or data files. All linguistic rules come from the CLL.
 - Phases are sequential (see PLAN.md); do not start phase N+1 before N is tagged. main is always green.
 - After completing a milestone: update PLAN.md (status, date, SHA, deviations), run the full verify battery, commit (Conventional Commits), tag phaseN-complete.
+- Commits auto-push to origin (PostToolUse hook). Never force-push.
 - Listening checkpoints (Phases 7, 10, 11): render the battery, then STOP for human review. The human tags the milestone, not you.
 - When compacting: preserve current phase, modified files, test status, open TODOs.

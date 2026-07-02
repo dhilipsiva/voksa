@@ -10,8 +10,11 @@ plan). Read CLAUDE.md first; it holds the project map and the exact commands.
   `chore(repo): ...`, `docs: ...`. Each phase ends in one milestone commit
   tagged `phaseN-complete`.
 - **main is always green.** Phases are strictly sequential; do not start
-  Phase N+1 before Phase N is tagged. Merges to main require CI green plus
-  human review.
+  Phase N+1 before Phase N is tagged. Greenness is enforced by the Stop
+  test-gate hook, the /verify battery, and CI.
+- **Commits auto-push.** Every commit is pushed to origin automatically
+  (hook-enforced). Force pushes are blocked — history rewrites on a pushed
+  main are a deliberate human act.
 - **TDD, red first.** Write failing tests, run them, see red, commit the
   failing tests, then implement until green. Never modify a test to make it
   pass.

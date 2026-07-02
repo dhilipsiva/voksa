@@ -37,3 +37,4 @@ Rule: main is always green. Phases are sequential; do not start N+1 before N is 
 (append: date, phase, sessions used, notes)
 
 - 2026-07-02 — Phase 0 — 1 session — Workspace (4 crates), flake (fenix stable 1.96.1 + wasm32 std, espeak-ng), CI, portable Windows/WSL hooks, verifier subagent, skills, working oracle (coi-munje.wav RIFF-valid, 58690 B). TDD smoke: red (wrong assertion) → Stop hook blocked exit 2 → fix → 7/7 green → Stop hook passed. Found+fixed: wasm-pack 0.15 silently swallows wasm-opt failures (binaryen 129 rejects rustc's default bulk-memory ops) via per-crate wasm-opt feature flags; wasm 17171 → 15923 B. Fresh-context verifier: all criteria PASS.
+- 2026-07-02 — policy — Auto-push enabled at owner request: PostToolUse hook pushes `origin HEAD --follow-tags` after every git commit/tag. Guard hook now blocks only force pushes and stray rm -rf (push-to-main block removed).
