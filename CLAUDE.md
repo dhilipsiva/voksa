@@ -10,7 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Pre-Phase-0: the repo is still a bare `cargo init` scaffold (single crate, `src/main.rs` hello-world, no dependencies, edition 2024). All design work is done and lives in `docs/`. The workspace layout and most commands below describe the **target** state that Phase 0 (see PLAN.md; kickoff prompt in docs/phase0-prompt.md) is supposed to scaffold — until then only plain `cargo build` / `cargo test` / `cargo clippy` / `cargo fmt` apply.
+Phase 0 complete: workspace (4 crates), nix flake, CI, Claude Code harness (hooks + verifier subagent + /phase-start //verify //phase-commit skills), and the working eSpeak oracle xtask. No DSP code yet — see PLAN.md for live phase status.
+
+Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
+`wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
+using the PowerShell tool (Git Bash mangles `/home/...` args via MSYS path conversion).
 
 ## Authoritative documents (read before designing anything)
 
@@ -24,26 +28,20 @@ Pre-Phase-0: the repo is still a bare `cargo init` scaffold (single crate, `src/
 
 Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete Lojban Language) spec > any report; docs/phonology.md is the CLL distillation to cite when implementing.
 
-## Commands
+## Commands (use these exact invocations, inside `nix develop`)
 
-Current (pre-Phase-0):
-- Build: `cargo build`
-- Test: `cargo test`
-- Lint: `cargo clippy --all-targets -- -D warnings`
-- Format: `cargo fmt --all`
-
-Target invocations once Phase 0 scaffolds the workspace (use these exact forms):
 - Test: `cargo nextest run --workspace`
 - Lint: `cargo clippy --workspace --all-targets -- -D warnings`
+- Format: `cargo fmt --all` (check: `--check`)
 - Snapshots: `cargo insta review`
-- WASM build: `cd crates/voksa-web && wasm-pack build --release --target web`
-- WASM size gate: `cargo xtask wasm-size`
-- Browser test: `wasm-pack test --headless --chrome crates/voksa-web`
-- eSpeak oracle: `cargo xtask oracle -- <lojban text>`
-- Listening battery: `cargo xtask listening-battery`
+- WASM build: `wasm-pack build --release --target web crates/voksa-web`
+- WASM size gate: `cargo xtask wasm-size` (stub until Phase 9)
+- Browser test: `wasm-pack test --headless --chrome crates/voksa-web` (from Phase 9)
+- eSpeak oracle: `cargo xtask oracle -- <lojban text>` → fixtures/oracle/<slug>.wav
+- Listening battery: `cargo xtask listening-battery` (stub until Phase 7)
 - Dev shell: `nix develop`
 
-## Target workspace map (Phase 0 deliverable)
+## Workspace map
 
 - crates/voksa-core — no_std + alloc. Front-end + schedule compiler + DSP.
 - crates/voksa-cli — native binary: cpal playback + offline WAV render.

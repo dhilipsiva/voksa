@@ -1,1 +1,7 @@
 /target
+/crates/voksa-web/pkg/
+/fixtures/oracle/*.wav
+/artifacts/
+/.claude/worktrees/
+/.claude/hooks/.stop-gate-count
+/.claude/settings.local.json

@@ -1,0 +1,27 @@
+[package]
+name = "voksa-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "voksa TTS wasm-bindgen bindings for the browser"
+
+[lib]
+# cdylib: the .wasm artifact. rlib: lets `tests/` integration tests and native
+# dependents link the crate (unit tests in src/ run natively either way).
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+voksa-core.workspace = true
+wasm-bindgen.workspace = true
+
+# rustc emits bulk-memory / nontrapping-fptoint / sign-ext by default for wasm32
+# these days; wasm-opt validates with them off unless told otherwise (and
+# wasm-pack 0.15 swallows the wasm-opt failure, silently skipping optimization).
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+    "-Oz",
+    "--enable-bulk-memory",
+    "--enable-nontrapping-float-to-int",
+    "--enable-sign-ext",
+]

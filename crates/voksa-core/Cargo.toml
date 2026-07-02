@@ -1,0 +1,9 @@
+[package]
+name = "voksa-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "voksa TTS core: no_std + alloc Lojban synthesis engine"
+
+[dependencies]

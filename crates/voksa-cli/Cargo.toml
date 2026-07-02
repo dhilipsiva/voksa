@@ -1,0 +1,14 @@
+[package]
+name = "voksa-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "voksa TTS command-line interface"
+
+[[bin]]
+name = "voksa"
+path = "src/main.rs"
+
+[dependencies]
+voksa-core.workspace = true
