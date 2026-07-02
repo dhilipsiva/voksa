@@ -10,20 +10,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Pre-Phase-0: the repo is still a bare `cargo init` scaffold (single crate, `src/main.rs` hello-world, no dependencies, edition 2024). All design work is done and lives in `docs/`. The workspace layout and most commands below describe the **target** state that Phase 0 (see docs/PLAN.md) is supposed to scaffold — until then only plain `cargo build` / `cargo test` / `cargo clippy` / `cargo fmt` apply.
+Pre-Phase-0: the repo is still a bare `cargo init` scaffold (single crate, `src/main.rs` hello-world, no dependencies, edition 2024). All design work is done and lives in `docs/`. The workspace layout and most commands below describe the **target** state that Phase 0 (see PLAN.md; kickoff prompt in docs/phase0-prompt.md) is supposed to scaffold — until then only plain `cargo build` / `cargo test` / `cargo clippy` / `cargo fmt` apply.
 
 ## Authoritative documents (read before designing anything)
 
-- docs/claude-final.md — first-round (v1) architecture report
-- docs/claude-draft.md — **verified v2 report; supersedes v1 and all other reports on conflict** (yes, "draft" is the later, authoritative one — the filenames are misleading)
-- docs/chatgpt-report.md, docs/gemini-report.md — other first-round research inputs; v2 corrects known errors in them (e.g. Gemini's "21 consonants" — the correct count is 17)
-- docs/implementation.md — the 12-phase implementation playbook this repo follows
-- docs/PLAN.md — live phase table + status. UPDATE AFTER EVERY MILESTONE.
-- docs/README-handoff.md — how this bundle was assembled
+- docs/research/01-architecture-v1.md — first-round architecture research
+- docs/research/02-architecture-v2.md — VERIFIED v2; supersedes v1 on conflicts
+- docs/research/03-implementation-playbook.md — the 12-phase plan this repo follows
+- docs/phonology.md — CLL-derived rules (single source of truth)
+- docs/formants.md — formant seeds + consonant loci; tests assert against this table
+- PLAN.md — live phase table + status. UPDATE AFTER EVERY MILESTONE.
+- docs/chatgpt-report.md, docs/gemini-report.md — supplementary first-round research inputs; v2 corrects known errors in them (e.g. Gemini's "21 consonants" — the correct count is 17)
 
-Precedence on any conflict: v2 report (claude-draft.md) > v1 report > other reports. The CLL (Complete Lojban Language) spec beats any report.
-
-Note: the playbook references docs/phonology.md and docs/formants.md as the single source of truth for CLL rules and formant seeds — those files do not exist yet and must be created (Phase 0/2). Until then the rules live in the research reports and the summary below.
+Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete Lojban Language) spec > any report; docs/phonology.md is the CLL distillation to cite when implementing.
 
 ## Commands
 
@@ -64,7 +63,7 @@ Target invocations once Phase 0 scaffolds the workspace (use these exact forms):
 - Mandatory pauses: before vowel-initial words; after consonant-final words (all cmevla); around zoi/la'o foreign text; after Cy cmavo; stressed-final-cmavo before brivla. Flags: `--dotside` (leading pause before every cmevla), `--buffer` (short [ɪ] epenthesis, excluded from stress counting; default OFF).
 - Normalization: digits → PA cmavo (no pa re ci vo mu xa ze bi so; pi decimal; ki'o thousands; dau fei gai jau rei vai hex). Lerfu: by cy dy…, .abu…, .y'y.
 - Prosody: declination 120→95 Hz; stress = ~1.5× duration + F0 excursion (+10–30 Hz) + amplitude boost; optional xu terminal rise.
-- Attitudinal overlay (UI cmavo): F0 + voice-quality per the v2 report §11 table (.ui joy, .uu sadness, .oi creak/diplophonia, .ii vibrato/flutter, .o'o monotone; intensity via cai/sai/ru'e/nai). Params: F0 AV AH OQ TL FL DI.
+- Attitudinal overlay (UI cmavo): F0 + voice-quality per docs/research/02-architecture-v2.md §11 table (.ui joy, .uu sadness, .oi creak/diplophonia, .ii vibrato/flutter, .o'o monotone; intensity via cai/sai/ru'e/nai). Params: F0 AV AH OQ TL FL DI.
 
 ## Rules for working here
 
@@ -75,7 +74,7 @@ Target invocations once Phase 0 scaffolds the workspace (use these exact forms):
 - WASM: `-C target-feature=+simd128`; wasm-opt -Oz; size budget enforced by xtask.
 - No heap allocation in the audio callback / process() hot path.
 - eSpeak NG (GPLv3) is an OUT-OF-PROCESS oracle only. Never copy its code, phoneme tables, or data files. All linguistic rules come from the CLL.
-- Phases are sequential (see docs/PLAN.md); do not start phase N+1 before N is tagged. main is always green.
-- After completing a milestone: update docs/PLAN.md (status, date, SHA, deviations), run the full verify battery, commit (Conventional Commits), tag phaseN-complete.
+- Phases are sequential (see PLAN.md); do not start phase N+1 before N is tagged. main is always green.
+- After completing a milestone: update PLAN.md (status, date, SHA, deviations), run the full verify battery, commit (Conventional Commits), tag phaseN-complete.
 - Listening checkpoints (Phases 7, 10, 11): render the battery, then STOP for human review. The human tags the milestone, not you.
 - When compacting: preserve current phase, modified files, test status, open TODOs.
