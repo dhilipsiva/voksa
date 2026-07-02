@@ -11,7 +11,7 @@ Rule: main is always green. Phases are sequential; do not start N+1 before N is 
 
 | # | Phase | Status | Tag | Listening CP | Completed (date / SHA) | Deviations |
 |---|-------|--------|-----|--------------|------------------------|------------|
-| 0 | Repo scaffolding: workspace, Nix flake, CI, hooks, verifier subagent, eSpeak oracle xtask | [ ] | phase0-complete | — | | |
+| 0 | Repo scaffolding: workspace, Nix flake, CI, hooks, verifier subagent, eSpeak oracle xtask | [x] | phase0-complete | — | 2026-07-02 / 6256d1e | flake: crane check + lld override dropped (stale sketch); voksa-web wasm-opt flags (-Oz + bulk-memory/nontrapping-fptoint/sign-ext); fmt hook = fmt --all; oracle WAVs gitignored; CI validated by inspection (not yet pushed) |
 | 1 | Engine spike: klattsch-core integration, hardcoded vowel → WAV, FFT formant harness | [ ] | phase1-complete | — | | |
 | 2 | Lojban phoneme table: 17 C + 6 V + 16 diphthongs, LojbanTable: PhonemeTable | [ ] | phase2-complete | — | | |
 | 3 | Syllabifier + word classifier (pure fns, proptest, CLL vectors) | [ ] | phase3-complete | — | | |
@@ -35,3 +35,5 @@ Rule: main is always green. Phases are sequential; do not start N+1 before N is 
 
 ## Session log
 (append: date, phase, sessions used, notes)
+
+- 2026-07-02 — Phase 0 — 1 session — Workspace (4 crates), flake (fenix stable 1.96.1 + wasm32 std, espeak-ng), CI, portable Windows/WSL hooks, verifier subagent, skills, working oracle (coi-munje.wav RIFF-valid, 58690 B). TDD smoke: red (wrong assertion) → Stop hook blocked exit 2 → fix → 7/7 green → Stop hook passed. Found+fixed: wasm-pack 0.15 silently swallows wasm-opt failures (binaryen 129 rejects rustc's default bulk-memory ops) via per-crate wasm-opt feature flags; wasm 17171 → 15923 B. Fresh-context verifier: all criteria PASS.
