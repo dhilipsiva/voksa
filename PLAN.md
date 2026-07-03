@@ -33,6 +33,35 @@ Rule: main is always green. Phases are sequential; do not start N+1 before N is 
 - Any phase: browser CI flaky? → pin Chrome in the Nix flake; browser test becomes
   advisory, native tests remain required.
 
+## Naturalness backlog (rules-only; owner-approved 2026-07-03)
+
+Clarified intent: "robotic" in the original brief meant MECHANICAL AND
+ALGORITHM-DRIVEN (deterministic, no ML, no recorded data) — NOT "must sound
+like a robot". The v1 monotone baseline is a deliberate starting point, not
+the target. Ceiling for rules-only ≈ high-end 1990s formant TTS (DECtalk
+class); neural-TTS naturalness is out of scope by design. Levers, in impact
+order:
+
+1. **Voice source realism** — LF-model glottal pulse, open quotient (OQ),
+   spectral tilt (TL), aspiration noise in vowels (AH, breathiness). Lands in
+   **Phase 10** (vendored klattsch glottal fork): use these for the DEFAULT
+   voice baseline, not only the attitudinal overlay.
+2. **F0 flutter/jitter** — Klatt FL-style slow quasi-random F0 wobble via a
+   SEEDED PRNG (deterministic ≠ constant; schedule stays reproducible and
+   snapshot-testable). Baseline-on in **Phase 10** (FL is already in the
+   overlay param set).
+3. **Microprosody** — consonant-driven F0 perturbations (dips around voiced,
+   rises after voiceless obstruents), intrinsic vowel F0/duration. NEW work —
+   schedule-compiler transform, post-Phase-10 (fold into Phase 11 or a new
+   phase at owner's call).
+4. **Duration rules** — phrase-final lengthening, cluster shortening (Klatt
+   1976 duration model). NEW work, same placement as (3).
+5. **Deeper coarticulation** — duration-dependent formant target undershoot
+   on top of the existing consonant loci. NEW work, same placement as (3).
+
+All five stay inside the project constraints: pure Rust, deterministic
+pipeline, CLL-only linguistics, no training data.
+
 ## Session log
 (append: date, phase, sessions used, notes)
 
