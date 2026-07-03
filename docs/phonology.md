@@ -148,6 +148,8 @@ MANDATORY:
 7. Before AND after the hesitation cmavo .y. (CLL §4.2 — the trailing pause
    is not derivable from any other rule).
 OPTIONAL: anywhere else between words. The comma is NEVER a pause (§3.3).
+voksa honors EVERY written period as a pause (a period marks a legal pause
+wherever it appears, §3.3; writer-marked pauses merge with rule-mandated ones).
 Pauses at one boundary MERGE into one (§4.2: "the pause after cy. merges with
 the pause before .ibu"). A glottal stop is the minimal pause (§3.3).
 
@@ -158,11 +160,23 @@ la/doi forbidden-substring validation inside cmevla. That exemption removal is
 the ONLY audio-level delta versus classic rules.
 
 ## 6. Buffer vowels (--buffer flag, default OFF)
-An [ɪ]-like vowel, acoustically distinct from all 6 phonemic vowels, as short as
-possible (30–40 ms), never stressed, excluded from stress counting. This is a
-SPEAKER-side accommodation; a synthesizer renders all legal clusters exactly, so
-default is OFF. When ON: insert between cluster consonants; mark the syllable
-as non-countable.
+An [ɪ]-like vowel (seeds 400/1900/2600 Hz, 35 ms, weak), acoustically distinct
+from all 6 phonemic vowels, never stressed, excluded from stress counting
+(CLL §3.8: "the buffering syllables are never stressed, and are not counted").
+This is a SPEAKER-side accommodation; a synthesizer renders all legal clusters
+exactly, so default is OFF.
+
+voksa's deterministic realization when ON — CLL §3.8/§3.9 sanction any
+per-pair choice ("partial buffering is also acceptable"); voksa implements the
+"fully-buffered dialect" minus one option:
+- Insert between EVERY word-internal pair of adjacent onset/coda consonants
+  (including across syllable boundaries, per CLL's xapcke example).
+- NO trailing buffer after a word-final consonant (CLL's full-buffer exemplars
+  include one — [gɪʔ] — but partial buffering is explicitly permitted).
+- Never adjacent to [h], pauses, or syllabic-consonant nuclei (those are not
+  cluster members).
+- Stress is resolved BEFORE insertion ("the stress remains in the same
+  place"); buffer syllable spans are marked uncountable.
 
 ## 7. Word classification (minimal classifier — sufficient for stress + pauses)
 - cmevla: ends in a consonant.

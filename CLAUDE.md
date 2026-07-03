@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 4 complete: stress assignment (penultimate-countable with y/iy-uy/syllabic exclusions, capital-letter marking) and the full CLL mandatory-pause ruleset (§4.9 r1–r7 + §4.2/§17.2 extras, --dotside) live in voksa-core. The front-end pipeline through analyzed word sequences with pauses is done; next is the schedule compiler. Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
+Phase 5 complete: the text→schedule compiler is live — `voksa_core::compiler::compile(text, opts)` produces the deterministic engine-neutral IR (`voksa_core::schedule::{Event, SyllableSpan, UtteranceSchedule}`), including --dotside and --buffer; the klattsch adapter lowers IR events 1:1 (`lower_events`) and renders text end-to-end (`render_utterance`). Klattsch quirks (linear gain, alternating A2) live only in the adapter. Next: Phase 6 normalization, then the Phase-7 prosody transform over this IR (CP1). Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
