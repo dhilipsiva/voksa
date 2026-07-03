@@ -55,15 +55,95 @@ pub enum NumberError {
 /// Convert one written figure (digits with optional `,` groups, `.` decimal
 /// part, `:` compound-base separators) into PA cmavo words.
 pub fn number_words(figure: &str) -> Result<Vec<&'static str>, NumberError> {
-    let _ = figure;
-    todo!("Phase 6 red checkpoint: number conversion lands after the failing tests are committed")
+    if figure.chars().any(|c| c.is_ascii_alphabetic()) {
+        return Err(NumberError::LetterInNumber);
+    }
+    let mut out = Vec::new();
+    for (part_index, part) in figure.split(':').enumerate() {
+        if part_index > 0 {
+            out.push("pi'e");
+        }
+        let mut halves = part.splitn(2, '.');
+        let int = halves.next().unwrap_or("");
+        let frac = halves.next();
+        push_integer(int, &mut out)?;
+        if let Some(frac) = frac {
+            if frac.is_empty() {
+                return Err(NumberError::MalformedGrouping);
+            }
+            out.push("pi");
+            for d in frac.chars() {
+                out.push(digit_word(d).ok_or(NumberError::MalformedGrouping)?);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Integer part: plain digits, or canonical comma groups (first 1–3 digits,
+/// every subsequent group exactly 3) emitted as ki'o-separated FULL groups.
+fn push_integer(int: &str, out: &mut Vec<&'static str>) -> Result<(), NumberError> {
+    if int.is_empty() {
+        return Err(NumberError::MalformedGrouping);
+    }
+    let groups: Vec<&str> = int.split(',').collect();
+    if groups.len() == 1 {
+        // Plain digit run: any length (CLL 18.2.3 strings ten digits).
+        if groups[0].is_empty() {
+            return Err(NumberError::MalformedGrouping);
+        }
+        for d in groups[0].chars() {
+            out.push(digit_word(d).ok_or(NumberError::MalformedGrouping)?);
+        }
+        return Ok(());
+    }
+    // Comma-grouped: canonical grouping only (head 1-3, rest exactly 3).
+    if groups[0].is_empty() || groups[0].len() > 3 {
+        return Err(NumberError::MalformedGrouping);
+    }
+    for (i, group) in groups.iter().enumerate() {
+        if i > 0 {
+            if group.len() != 3 {
+                return Err(NumberError::MalformedGrouping);
+            }
+            out.push("ki'o");
+        }
+        for d in group.chars() {
+            out.push(digit_word(d).ok_or(NumberError::MalformedGrouping)?);
+        }
+    }
+    Ok(())
 }
 
 /// Inverse of [`number_words`] (round-trip property): PA words back to the
 /// canonical written figure. `None` if a word isn't part of a number.
 pub fn read_number(words: &[&str]) -> Option<String> {
-    let _ = words;
-    todo!("Phase 6 red checkpoint")
+    let mut out = String::new();
+    for word in words {
+        match *word {
+            "pi" => out.push('.'),
+            "ki'o" => out.push(','),
+            "pi'e" => out.push(':'),
+            other => out.push(digit_char(other)?),
+        }
+    }
+    Some(out)
+}
+
+fn digit_char(word: &str) -> Option<char> {
+    Some(match word {
+        "no" => '0',
+        "pa" => '1',
+        "re" => '2',
+        "ci" => '3',
+        "vo" => '4',
+        "mu" => '5',
+        "xa" => '6',
+        "ze" => '7',
+        "bi" => '8',
+        "so" => '9',
+        _ => return None,
+    })
 }
 
 /// Lerfu word(s) naming one character (CLL §17.2/§17.4/§17.5). Multi-word
@@ -117,6 +197,15 @@ pub fn lerfu_words(ch: char) -> Option<&'static [&'static str]> {
 /// Spell arbitrary text letter-by-letter as lerfu words (whitespace skipped,
 /// case-insensitive). Errors with the first unnameable character.
 pub fn spell(text: &str) -> Result<Vec<&'static str>, char> {
-    let _ = text;
-    todo!("Phase 6 red checkpoint")
+    let mut out = Vec::new();
+    for ch in text.chars() {
+        if ch.is_whitespace() {
+            continue;
+        }
+        match lerfu_words(ch) {
+            Some(words) => out.extend_from_slice(words),
+            None => return Err(ch),
+        }
+    }
+    Ok(out)
 }
