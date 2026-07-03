@@ -11,12 +11,209 @@ fn main() -> ExitCode {
     match cmd.as_deref() {
         Some("oracle") => oracle(&rest),
         Some("wasm-size") => todo_stub("wasm-size", "Phase 9"),
-        Some("listening-battery") => todo_stub("listening-battery", "Phase 7"),
+        Some("listening-battery") => listening_battery(),
         _ => {
             eprintln!("usage: cargo xtask <oracle|wasm-size|listening-battery> [args]");
             ExitCode::FAILURE
         }
     }
+}
+
+struct BatteryEntry {
+    slug: &'static str,
+    text: &'static str,
+    dotside: bool,
+    buffer: bool,
+    xu: bool,
+}
+
+/// Fixed utterance set — slugs stay stable across phases so batteries diff.
+const BATTERY: &[BatteryEntry] = &[
+    BatteryEntry {
+        slug: "coi-munje",
+        text: "coi munje",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "le-prenu",
+        text: "le prenu cu klama",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "mi-zgana",
+        text: "mi zgana le sance",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "la-djan",
+        text: "coi la djan. cu klama",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "li-pi",
+        text: "li 3.14",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "nelci-buffer",
+        text: "mi nelci le zdani",
+        dotside: false,
+        buffer: true,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "djan-dotside",
+        text: "coi la djan. cu klama",
+        dotside: true,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "xu-rise",
+        text: "xu do klama",
+        dotside: false,
+        buffer: false,
+        xu: true,
+    },
+    BatteryEntry {
+        slug: "declarative",
+        text: "mi tavla do bau la lojban.",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+    BatteryEntry {
+        slug: "djosefin",
+        text: "la DJOsefin. klama",
+        dotside: false,
+        buffer: false,
+        xu: false,
+    },
+];
+
+/// Render the listening battery: per utterance a prosodic render, a flat
+/// (Phase-5) baseline for within-phase ABX, and the eSpeak-NG jbo oracle,
+/// plus an index.html A/B page with MOS note-taking.
+fn listening_battery() -> ExitCode {
+    use voksa_core::compiler::CompileOptions;
+    use voksa_core::prosody::ProsodyOptions;
+
+    let dir = workspace_root().join("artifacts/listening/phase7");
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("error: cannot create {}: {e}", dir.display());
+        return ExitCode::FAILURE;
+    }
+    let sr = voksa_engine_klattsch::SAMPLE_RATE;
+    let mut rows = String::new();
+    for entry in BATTERY {
+        let copts = CompileOptions {
+            dotside: entry.dotside,
+            buffer: entry.buffer,
+        };
+        let popts = ProsodyOptions { xu_rise: entry.xu };
+        let prosodic = match voksa_engine_klattsch::render_utterance_prosodic(
+            entry.text, &copts, &popts, sr,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error: {}: {e:?}", entry.slug);
+                return ExitCode::FAILURE;
+            }
+        };
+        let flat = match voksa_engine_klattsch::render_utterance(entry.text, &copts, sr) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error: {}: {e:?}", entry.slug);
+                return ExitCode::FAILURE;
+            }
+        };
+        for (kind, samples) in [("voksa", &prosodic), ("flat", &flat)] {
+            let peak = samples.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+            if peak >= 1.0 {
+                eprintln!("error: {}_{} clips (peak {peak:.3})", kind, entry.slug);
+                return ExitCode::FAILURE;
+            }
+            voksa_testkit::write_wav(dir.join(format!("{kind}_{}.wav", entry.slug)), samples, sr);
+        }
+        // eSpeak NG oracle (out-of-process; GPLv3 tool, never linked).
+        let oracle_path = dir.join(format!("oracle_{}.wav", entry.slug));
+        let status = Command::new("espeak-ng")
+            .args(["-v", "jbo", "-w"])
+            .arg(&oracle_path)
+            .arg(entry.text.to_ascii_lowercase())
+            .status();
+        match status {
+            Ok(s) if s.success() => {}
+            other => {
+                eprintln!("error: espeak-ng oracle for {}: {other:?}", entry.slug);
+                return ExitCode::FAILURE;
+            }
+        }
+        rows.push_str(&format!(
+            r#"<tr><td>{n}</td><td><code>{text}</code>{flags}</td>
+<td><audio controls src="voksa_{slug}.wav"></audio></td>
+<td><audio controls src="flat_{slug}.wav"></audio></td>
+<td><audio controls src="oracle_{slug}.wav"></audio></td>
+<td><input type="number" min="1" max="5" class="mos-i" data-slug="{slug}"></td>
+<td><input type="number" min="1" max="5" class="mos-n" data-slug="{slug}"></td>
+<td><select class="abx" data-slug="{slug}"><option value=""></option><option>prosodic</option><option>flat</option><option>tie</option></select></td>
+<td><input type="text" class="notes" data-slug="{slug}" size="24"></td></tr>
+"#,
+            n = rows.matches("<tr>").count() + 1,
+            text = entry.text,
+            flags = {
+                let mut f = String::new();
+                if entry.dotside { f.push_str(" <b>[dotside]</b>"); }
+                if entry.buffer { f.push_str(" <b>[buffer]</b>"); }
+                if entry.xu { f.push_str(" <b>[xu rise]</b>"); }
+                f
+            },
+            slug = entry.slug,
+        ));
+    }
+    let html = format!(
+        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>voksa CP1 listening battery (phase 7)</title>
+<style>body{{font-family:sans-serif;margin:2em}}table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:6px}}textarea{{width:100%;height:12em}}</style></head><body>
+<h1>voksa — Listening Checkpoint 1 (Phase 7)</h1>
+<p>Rate each utterance: MOS 1–5 for intelligibility and naturalness; ABX = which of prosodic/flat sounds better.
+Compare with the eSpeak-NG jbo oracle for reference. When done, press the button and paste the markdown into <code>docs/listening/phase7.md</code>.</p>
+<table><tr><th>#</th><th>text</th><th>voksa (prosodic)</th><th>flat (no prosody)</th><th>eSpeak oracle</th><th>MOS int.</th><th>MOS nat.</th><th>ABX</th><th>notes</th></tr>
+{rows}</table>
+<p><button onclick="collect()">Build markdown results</button></p>
+<textarea id="out" readonly placeholder="results appear here — copy into docs/listening/phase7.md"></textarea>
+<script>
+function collect() {{
+  const slugs = [...new Set([...document.querySelectorAll('.mos-i')].map(e => e.dataset.slug))];
+  let md = '| slug | MOS intelligibility | MOS naturalness | ABX | notes |\n|---|---|---|---|---|\n';
+  for (const s of slugs) {{
+    const v = c => (document.querySelector(`.${{c}}[data-slug="${{s}}"]`) || {{}}).value || '';
+    md += `| ${{s}} | ${{v('mos-i')}} | ${{v('mos-n')}} | ${{v('abx')}} | ${{v('notes')}} |\n`;
+  }}
+  document.getElementById('out').value = md;
+}}
+</script></body></html>
+"#
+    );
+    if let Err(e) = fs::write(dir.join("index.html"), html) {
+        eprintln!("error: writing index.html: {e}");
+        return ExitCode::FAILURE;
+    }
+    println!(
+        "listening-battery: wrote {} utterances x3 WAVs + index.html to {}",
+        BATTERY.len(),
+        dir.display()
+    );
+    ExitCode::SUCCESS
 }
 
 fn todo_stub(name: &str, phase: &str) -> ExitCode {

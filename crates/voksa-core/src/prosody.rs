@@ -7,7 +7,8 @@
 //! Declination is applied ADDITIVELY (`f0 += baseline(t) − BASE_F0_HZ`) so
 //! the Phase-10 attitudinal overlay can compose on top.
 
-use crate::schedule::UtteranceSchedule;
+use crate::alloc::vec::Vec;
+use crate::schedule::{BASE_F0_HZ, Event, UtteranceSchedule};
 
 /// Options for [`apply_prosody`]. Declination and stress realization are
 /// always on; the xu terminal rise is per-utterance.
@@ -34,6 +35,129 @@ pub const XU_RISE_HZ: f32 = 25.0;
 /// Apply sentence prosody to a compiled schedule. Deterministic: identical
 /// input and options always yield the identical schedule.
 pub fn apply_prosody(schedule: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSchedule {
-    let _ = (schedule, opts);
-    todo!("Phase 7 red checkpoint: the transform lands after the failing tests are committed")
+    let s = stretch_stressed_spans(schedule);
+    let s = apply_declination(s);
+    let s = apply_stress_excursion(s);
+    if opts.xu_rise { apply_xu_rise(s) } else { s }
+}
+
+/// Span-membership epsilon: span ends and following event times are
+/// independent f32 accumulations that can differ by ULPs.
+const EPS_MS: f32 = 1e-3;
+
+fn stressed_windows(s: &UtteranceSchedule) -> Vec<(f32, f32)> {
+    let mut w: Vec<(f32, f32)> = s
+        .spans
+        .iter()
+        .filter(|sp| sp.stressed)
+        .map(|sp| (sp.start_ms, sp.start_ms + sp.dur_ms))
+        .collect();
+    w.sort_by(|a, b| a.0.partial_cmp(&b.0).expect("finite span times"));
+    w
+}
+
+fn inside(at_ms: f32, (ws, we): (f32, f32)) -> bool {
+    at_ms >= ws - EPS_MS && at_ms < we - EPS_MS
+}
+
+/// Stretch every stressed span to [`STRESS_DURATION_FACTOR`]×, shifting all
+/// later material (events, spans, pauses, total) by the added time.
+fn stretch_stressed_spans(mut s: UtteranceSchedule) -> UtteranceSchedule {
+    let windows = stressed_windows(&s);
+    let factor = STRESS_DURATION_FACTOR;
+    let map_time = |t: f32| -> f32 {
+        let mut delta = 0.0f32;
+        for (ws, we) in &windows {
+            if t >= *we - EPS_MS {
+                delta += (we - ws) * (factor - 1.0);
+            } else if t > *ws - EPS_MS {
+                return ws + delta + (t - ws) * factor;
+            } else {
+                break;
+            }
+        }
+        t + delta
+    };
+    for e in &mut s.events {
+        let in_stressed = windows.iter().any(|w| inside(e.at_ms, *w));
+        e.at_ms = map_time(e.at_ms);
+        if in_stressed {
+            e.transition_ms *= factor;
+        }
+    }
+    for sp in &mut s.spans {
+        let end = map_time(sp.start_ms + sp.dur_ms);
+        sp.start_ms = map_time(sp.start_ms);
+        sp.dur_ms = end - sp.start_ms;
+    }
+    s.total_ms = map_time(s.total_ms);
+    s
+}
+
+/// Additive linear declination: baseline falls [`DECLINATION_START_HZ`] →
+/// [`DECLINATION_END_HZ`] across the (post-stretch) utterance.
+fn apply_declination(mut s: UtteranceSchedule) -> UtteranceSchedule {
+    let total = s.total_ms.max(1.0);
+    for e in &mut s.events {
+        let baseline =
+            DECLINATION_START_HZ + (DECLINATION_END_HZ - DECLINATION_START_HZ) * (e.at_ms / total);
+        e.frame.f0_hz += baseline - BASE_F0_HZ;
+    }
+    s
+}
+
+/// +F0 excursion and amplitude boost inside stressed spans only.
+fn apply_stress_excursion(mut s: UtteranceSchedule) -> UtteranceSchedule {
+    let windows = stressed_windows(&s);
+    for e in &mut s.events {
+        if windows.iter().any(|w| inside(e.at_ms, *w)) {
+            e.frame.f0_hz += STRESS_F0_EXCURSION_HZ;
+            for f in &mut e.frame.targets.formants {
+                f.amp *= STRESS_AMP_FACTOR;
+            }
+        }
+    }
+    s
+}
+
+/// Insert one rise event inside the final syllable: the prevailing frame's
+/// targets, f0 raised by [`XU_RISE_HZ`], ramped across the span remainder.
+fn apply_xu_rise(mut s: UtteranceSchedule) -> UtteranceSchedule {
+    let Some(last_span) = s
+        .spans
+        .iter()
+        .max_by(|a, b| a.start_ms.partial_cmp(&b.start_ms).expect("finite"))
+        .copied()
+    else {
+        return s;
+    };
+    let span_end = last_span.start_ms + last_span.dur_ms;
+    let rise_at = last_span.start_ms + last_span.dur_ms * 0.25;
+    let Some(prevailing) = s
+        .events
+        .iter()
+        .rfind(|e| e.at_ms <= rise_at + EPS_MS)
+        .copied()
+    else {
+        return s;
+    };
+    // Later events inside the final span (e.g. the vowel after a sonorant
+    // onset) would otherwise re-set F0 back down: carry the rise on them.
+    for e in &mut s.events {
+        if e.at_ms > rise_at && e.at_ms < span_end - EPS_MS {
+            e.frame.f0_hz += XU_RISE_HZ;
+        }
+    }
+    let mut frame = prevailing.frame;
+    frame.f0_hz += XU_RISE_HZ;
+    let idx = s.events.partition_point(|e| e.at_ms <= rise_at);
+    s.events.insert(
+        idx,
+        Event {
+            at_ms: rise_at,
+            transition_ms: (span_end - rise_at).max(1.0),
+            frame,
+        },
+    );
+    s
 }

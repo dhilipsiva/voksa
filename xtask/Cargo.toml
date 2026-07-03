@@ -8,3 +8,6 @@ description = "voksa build/verify automation (not published)"
 publish = false
 
 [dependencies]
+voksa-core.workspace = true
+voksa-engine-klattsch.workspace = true
+voksa-testkit.workspace = true
