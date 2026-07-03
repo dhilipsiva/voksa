@@ -6,7 +6,9 @@
 //! own example is the impermissible "sc" in bisycla) — within the first five
 //! letters counted after deleting y and apostrophe → brivla; else cmavo.
 
-use crate::letters::WordError;
+use crate::alloc::vec::Vec;
+use crate::letters::{Letter, WordError, parse_word};
+use crate::phonemes::Vowel;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordClass {
@@ -17,6 +19,36 @@ pub enum WordClass {
 
 /// Classify one word (lowercase letters + apostrophe + comma).
 pub fn classify(word: &str) -> Result<WordClass, WordError> {
-    let _ = word;
-    todo!("Phase 3 red checkpoint: classifier lands after the failing tests are committed")
+    let letters = parse_word(word)?;
+    let core: Vec<Letter> = letters
+        .into_iter()
+        .filter(|l| *l != Letter::Comma)
+        .collect();
+    match core
+        .last()
+        .expect("parse_word rejects empty/trailing-comma input")
+    {
+        Letter::C(_) => return Ok(WordClass::Cmevla),
+        Letter::V(Vowel::Y) => return Ok(WordClass::Cmavo),
+        Letter::V(_) => {}
+        Letter::Apostrophe | Letter::Comma => {
+            unreachable!("parse_word forbids trailing apostrophe/comma")
+        }
+    }
+    // First five letters counted after deleting y and apostrophe (CLL §4.3:
+    // bisycla's "syc" counts as the pair "sc"; ro'inre'o counts "nr").
+    let counted: Vec<Letter> = core
+        .iter()
+        .copied()
+        .filter(|l| !matches!(l, Letter::Apostrophe | Letter::V(Vowel::Y)))
+        .take(5)
+        .collect();
+    let has_pair = counted
+        .windows(2)
+        .any(|w| matches!((w[0], w[1]), (Letter::C(_), Letter::C(_))));
+    Ok(if has_pair {
+        WordClass::Brivla
+    } else {
+        WordClass::Cmavo
+    })
 }
