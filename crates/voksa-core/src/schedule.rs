@@ -45,6 +45,12 @@ pub struct Event {
 pub struct SyllableSpan {
     pub start_ms: f32,
     pub dur_ms: f32,
+    /// Offset from `start_ms` to the vowel-nucleus onset (0 for onsetless
+    /// syllables; includes [h] aspiration and any onset-side epenthetic
+    /// buffer). Stress stretching applies only to the rhyme —
+    /// `[start_ms + nucleus_off_ms, start_ms + dur_ms)` — so onset consonant
+    /// clusters keep unit rate (CP1: they otherwise smear).
+    pub nucleus_off_ms: f32,
     pub word_index: usize,
     pub stressed: bool,
     /// False for y-nucleus / iy-uy / syllabic-consonant / buffer syllables.

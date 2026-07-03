@@ -281,6 +281,7 @@ fn schedule_word(
             b.map(|(start_ms, end_ms)| SyllableSpan {
                 start_ms,
                 dur_ms: end_ms - start_ms,
+                nucleus_off_ms: 0.0,
                 word_index,
                 stressed: *stressed,
                 countable: *countable,

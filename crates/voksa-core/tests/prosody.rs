@@ -67,24 +67,122 @@ fn declination_endpoints_and_monotone_baseline() {
 fn stress_stretches_duration_and_shifts_later_material() {
     let before = compiled("coi munje");
     let after = apply_prosody(before.clone(), &ProsodyOptions::default());
-    // munje = word 1, syllables mun (stressed) + je.
+    // munje = word 1, syllables mun (stressed) + je. Only the rhyme (nucleus
+    // onward) stretches 1.5×; the onset consonants stay at unit rate.
     let b_stressed = stressed_spans(&before)[0];
     let a_stressed = stressed_spans(&after)[0];
-    let ratio = a_stressed.dur_ms / b_stressed.dur_ms;
+    let rhyme = b_stressed.dur_ms - b_stressed.nucleus_off_ms;
+    let added = rhyme * (STRESS_DURATION_FACTOR - 1.0);
     assert!(
-        (ratio - STRESS_DURATION_FACTOR).abs() < 1e-3,
-        "duration ratio {ratio}"
+        (a_stressed.dur_ms - (b_stressed.dur_ms + added)).abs() < 1e-2,
+        "rhyme-only stretch: {} vs {}",
+        a_stressed.dur_ms,
+        b_stressed.dur_ms + added
     );
-    // The following (unstressed) span shifted by the added duration.
+    // The onset is untouched: same start, same offset to the nucleus.
+    assert!((a_stressed.start_ms - b_stressed.start_ms).abs() < 1e-3);
+    assert!((a_stressed.nucleus_off_ms - b_stressed.nucleus_off_ms).abs() < 1e-3);
+    // The following (unstressed) span shifted by the added rhyme duration.
     let b_last = before.spans.last().unwrap();
     let a_last = after.spans.last().unwrap();
-    let added = b_stressed.dur_ms * (STRESS_DURATION_FACTOR - 1.0);
     assert!((a_last.start_ms - (b_last.start_ms + added)).abs() < 1e-2);
     assert!(
         (a_last.dur_ms - b_last.dur_ms).abs() < 1e-3,
         "unstressed spans unstretched"
     );
     assert!((after.total_ms - (before.total_ms + added)).abs() < 1e-2);
+}
+
+#[test]
+fn stretch_leaves_onset_at_unit_rate() {
+    // Event-level CP1 guarantee: the onset consonant's event keeps its unit
+    // transition time; only the nucleus event's transition scales 1.5×.
+    let before = compiled("coi munje");
+    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let stressed = stressed_spans(&after)[0];
+    assert!(stressed.nucleus_off_ms > 0.0, "mun has an onset");
+    let nucleus_at = stressed.start_ms + stressed.nucleus_off_ms;
+    assert_eq!(before.events.len(), after.events.len(), "stretch preserves count");
+    // Onset event: sits at the span start, before the nucleus.
+    let (b_on, a_on) = before
+        .events
+        .iter()
+        .zip(&after.events)
+        .find(|(_, a)| (a.at_ms - stressed.start_ms).abs() < 1e-3)
+        .expect("an onset event at the span start");
+    assert!(
+        (a_on.transition_ms - b_on.transition_ms).abs() < 1e-3,
+        "onset transition must stay at unit rate"
+    );
+    // Nucleus event: at nucleus_at, transition scaled.
+    let (b_nuc, a_nuc) = before
+        .events
+        .iter()
+        .zip(&after.events)
+        .find(|(_, a)| (a.at_ms - nucleus_at).abs() < 1e-3)
+        .expect("a nucleus event");
+    assert!(
+        (a_nuc.transition_ms - b_nuc.transition_ms * STRESS_DURATION_FACTOR).abs() < 1e-3,
+        "nucleus transition must scale ×{STRESS_DURATION_FACTOR}"
+    );
+}
+
+#[test]
+fn excursion_and_amp_boost_remain_whole_span() {
+    // The stretch is nucleus-scoped, but the F0 excursion + amplitude boost
+    // still cover the WHOLE stressed syllable, onset consonants included.
+    let after = prosodic("coi munje");
+    let stressed = stressed_spans(&after)[0];
+    assert!(stressed.nucleus_off_ms > 0.0, "mun has an onset");
+    let onset_event = after
+        .events
+        .iter()
+        .find(|e| {
+            e.at_ms >= stressed.start_ms - 1e-3
+                && e.at_ms < stressed.start_ms + stressed.nucleus_off_ms - 1e-3
+                && e.frame.targets.voicing > 0.0
+        })
+        .expect("a voiced onset event inside the stressed span");
+    let total = after.total_ms;
+    let baseline = DECLINATION_START_HZ
+        + (DECLINATION_END_HZ - DECLINATION_START_HZ) * (onset_event.at_ms / total);
+    assert!(
+        (onset_event.frame.f0_hz - baseline - STRESS_F0_EXCURSION_HZ).abs() < 1.0,
+        "onset event must carry the +{STRESS_F0_EXCURSION_HZ} Hz excursion"
+    );
+}
+
+#[test]
+fn buffered_stressed_onset_not_stretched() {
+    // Buffered vrusi: the epenthetic buffer sits in the stressed onset (before
+    // the nucleus) and must NOT stretch or shift.
+    let opts = CompileOptions {
+        dotside: false,
+        buffer: true,
+    };
+    let before = compile("vrusi", &opts).unwrap();
+    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let b_buf = before.spans.iter().find(|sp| !sp.countable).unwrap();
+    let a_buf = after.spans.iter().find(|sp| !sp.countable).unwrap();
+    assert!(
+        (a_buf.dur_ms - b_buf.dur_ms).abs() < 1e-3,
+        "onset buffer not stretched"
+    );
+    assert!(
+        (a_buf.start_ms - b_buf.start_ms).abs() < 1e-3,
+        "onset buffer not shifted"
+    );
+}
+
+#[test]
+fn xu_rise_with_stressed_final_span_stays_sorted() {
+    // Final span stressed (djan) + xu rise: exactly one added event, sorted.
+    let risen = apply_prosody(compiled("xu la djan."), &ProsodyOptions { xu_rise: true });
+    let flat = apply_prosody(compiled("xu la djan."), &ProsodyOptions::default());
+    assert_eq!(risen.events.len(), flat.events.len() + 1);
+    for w in risen.events.windows(2) {
+        assert!(w[0].at_ms <= w[1].at_ms + 1e-3, "events stay time-sorted");
+    }
 }
 
 #[test]
@@ -150,13 +248,14 @@ fn two_brivla_accumulate_shifts() {
     let b_stressed = stressed_spans(&before);
     let a_stressed = stressed_spans(&after);
     assert_eq!(b_stressed.len(), 2, "prenu + klama");
+    // Each stressed span stretches its rhyme (nucleus onward) by 1.5×.
     for (b, a) in b_stressed.iter().zip(&a_stressed) {
-        let ratio = a.dur_ms / b.dur_ms;
-        assert!((ratio - STRESS_DURATION_FACTOR).abs() < 1e-3);
+        let rhyme = b.dur_ms - b.nucleus_off_ms;
+        assert!((a.dur_ms - (b.dur_ms + rhyme * (STRESS_DURATION_FACTOR - 1.0))).abs() < 1e-2);
     }
     let added: f32 = b_stressed
         .iter()
-        .map(|sp| sp.dur_ms * (STRESS_DURATION_FACTOR - 1.0))
+        .map(|sp| (sp.dur_ms - sp.nucleus_off_ms) * (STRESS_DURATION_FACTOR - 1.0))
         .sum();
     assert!((after.total_ms - (before.total_ms + added)).abs() < 1e-2);
 }

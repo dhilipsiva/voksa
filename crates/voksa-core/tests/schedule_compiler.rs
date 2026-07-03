@@ -96,6 +96,69 @@ fn snapshot_buffer_vrusi() {
     ));
 }
 
+// ---- nucleus offset (Phase 7.1): the stress stretch anchors at the vowel ----
+
+#[test]
+fn nucleus_offset_zero_for_onsetless_syllable() {
+    // e'u: syllable 0 "e" has no onset, so its nucleus sits at the span start.
+    let s = compiled("e'u");
+    assert_eq!(
+        s.spans[0].nucleus_off_ms, 0.0,
+        "onsetless nucleus is at the span start"
+    );
+}
+
+#[test]
+fn nucleus_offset_includes_aspirate() {
+    // e'u: syllable 1 "'u" opens with [h] (70 ms). The breathy transition is
+    // onset material — it stays at unit rate, so it counts toward the offset.
+    let s = compiled("e'u");
+    assert_eq!(s.spans[1].nucleus_off_ms, 70.0);
+}
+
+#[test]
+fn nucleus_offset_spans_onset_cluster() {
+    // klama = kla-ma. kla: k(60+25) + l(80) = 165 ms before the vowel; ma: m(80).
+    let s = compiled("klama");
+    assert_eq!(s.spans[0].nucleus_off_ms, 165.0);
+    assert_eq!(s.spans[1].nucleus_off_ms, 80.0);
+}
+
+#[test]
+fn nucleus_offset_includes_onset_buffer() {
+    // Buffered vrusi = [v ɪ r]u-si: the epenthetic buffer sits in the onset, so
+    // the offset is v(120) + buffer(35) + r(80) = 235; the buffer's own span is
+    // itself a nucleus (offset 0).
+    let s = compiled_with(
+        "vrusi",
+        CompileOptions {
+            dotside: false,
+            buffer: true,
+        },
+    );
+    let vru = s.spans.iter().find(|sp| sp.stressed).expect("vru is stressed");
+    assert_eq!(vru.nucleus_off_ms, 235.0);
+    let buffer_span = s
+        .spans
+        .iter()
+        .find(|sp| !sp.countable)
+        .expect("a buffer span");
+    assert_eq!(buffer_span.nucleus_off_ms, 0.0);
+}
+
+#[test]
+fn nucleus_offset_for_syllabic_consonant() {
+    // kat,r,in: the middle syllabic-r syllable has no onset (offset 0) and is
+    // never stressable (uncountable).
+    let s = compiled("kat,r,in");
+    let syllabic = &s.spans[1];
+    assert_eq!(syllabic.nucleus_off_ms, 0.0);
+    assert!(
+        !syllabic.stressed,
+        "syllabic-consonant syllables are uncountable"
+    );
+}
+
 // ---- tokenizer ----
 
 #[test]
