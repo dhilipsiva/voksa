@@ -1,0 +1,228 @@
+---
+source: crates/voksa-core/tests/schedule_compiler.rs
+expression: "compiled_with(\"klama\", CompileOptions { dotside: false, buffer: true, })"
+---
+UtteranceSchedule {
+    events: [
+        Event {
+            at_ms: 0.0,
+            transition_ms: 20.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2500.0,
+                            bw_hz: 150.0,
+                            amp: 0.0,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 60.0,
+            transition_ms: 5.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2150.0,
+                            bw_hz: 500.0,
+                            amp: 0.85,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 1.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 85.0,
+            transition_ms: 14.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 400.0,
+                            bw_hz: 90.0,
+                            amp: 0.5,
+                        },
+                        Formant {
+                            freq_hz: 1900.0,
+                            bw_hz: 110.0,
+                            amp: 0.3,
+                        },
+                        Formant {
+                            freq_hz: 2600.0,
+                            bw_hz: 150.0,
+                            amp: 0.15,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 120.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 360.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1300.0,
+                            bw_hz: 110.0,
+                            amp: 0.5,
+                        },
+                        Formant {
+                            freq_hz: 2700.0,
+                            bw_hz: 150.0,
+                            amp: 0.2,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 200.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 360.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 300.0,
+                            bw_hz: 100.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1000.0,
+                            bw_hz: 150.0,
+                            amp: 0.1,
+                        },
+                        Formant {
+                            freq_hz: 2200.0,
+                            bw_hz: 200.0,
+                            amp: 0.05,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 440.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+    ],
+    spans: [
+        SyllableSpan {
+            start_ms: 0.0,
+            dur_ms: 360.0,
+            word_index: 0,
+            stressed: true,
+            countable: true,
+        },
+        SyllableSpan {
+            start_ms: 85.0,
+            dur_ms: 35.0,
+            word_index: 0,
+            stressed: false,
+            countable: false,
+        },
+        SyllableSpan {
+            start_ms: 360.0,
+            dur_ms: 240.0,
+            word_index: 0,
+            stressed: false,
+            countable: true,
+        },
+    ],
+    total_ms: 600.0,
+}

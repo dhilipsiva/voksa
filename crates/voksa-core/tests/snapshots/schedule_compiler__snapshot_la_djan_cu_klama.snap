@@ -1,0 +1,494 @@
+---
+source: crates/voksa-core/tests/schedule_compiler.rs
+expression: "compiled(\"la djan. cu klama\")"
+---
+UtteranceSchedule {
+    events: [
+        Event {
+            at_ms: 0.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 360.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1300.0,
+                            bw_hz: 110.0,
+                            amp: 0.5,
+                        },
+                        Formant {
+                            freq_hz: 2700.0,
+                            bw_hz: 150.0,
+                            amp: 0.2,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 80.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 240.0,
+            transition_ms: 20.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 200.0,
+                            bw_hz: 100.0,
+                            amp: 0.3,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2500.0,
+                            bw_hz: 150.0,
+                            amp: 0.0,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 300.0,
+            transition_ms: 5.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 3500.0,
+                            bw_hz: 1000.0,
+                            amp: 0.85,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 1.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 325.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 250.0,
+                            bw_hz: 100.0,
+                            amp: 0.6,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2800.0,
+                            bw_hz: 700.0,
+                            amp: 0.8,
+                        },
+                    ],
+                    voicing: 0.6,
+                    aspiration: 0.6,
+                },
+            },
+        },
+        Event {
+            at_ms: 445.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 605.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 310.0,
+                            bw_hz: 100.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1700.0,
+                            bw_hz: 150.0,
+                            amp: 0.1,
+                        },
+                        Formant {
+                            freq_hz: 2600.0,
+                            bw_hz: 200.0,
+                            amp: 0.05,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 685.0,
+            transition_ms: 5.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2500.0,
+                            bw_hz: 150.0,
+                            amp: 0.0,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 785.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 3000.0,
+                            bw_hz: 800.0,
+                            amp: 0.9,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 1.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 905.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 300.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 870.0,
+                            bw_hz: 110.0,
+                            amp: 0.75,
+                        },
+                        Formant {
+                            freq_hz: 2240.0,
+                            bw_hz: 150.0,
+                            amp: 0.25,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1055.0,
+            transition_ms: 20.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2500.0,
+                            bw_hz: 150.0,
+                            amp: 0.0,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1115.0,
+            transition_ms: 5.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 500.0,
+                            bw_hz: 90.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 1500.0,
+                            bw_hz: 110.0,
+                            amp: 0.0,
+                        },
+                        Formant {
+                            freq_hz: 2150.0,
+                            bw_hz: 500.0,
+                            amp: 0.85,
+                        },
+                    ],
+                    voicing: 0.0,
+                    aspiration: 1.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1140.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 360.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1300.0,
+                            bw_hz: 110.0,
+                            amp: 0.5,
+                        },
+                        Formant {
+                            freq_hz: 2700.0,
+                            bw_hz: 150.0,
+                            amp: 0.2,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1220.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1380.0,
+            transition_ms: 32.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 300.0,
+                            bw_hz: 100.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1000.0,
+                            bw_hz: 150.0,
+                            amp: 0.1,
+                        },
+                        Formant {
+                            freq_hz: 2200.0,
+                            bw_hz: 200.0,
+                            amp: 0.05,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+        Event {
+            at_ms: 1460.0,
+            transition_ms: 35.0,
+            frame: Frame {
+                f0_hz: 120.0,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 730.0,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1090.0,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2440.0,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.0,
+                },
+            },
+        },
+    ],
+    spans: [
+        SyllableSpan {
+            start_ms: 0.0,
+            dur_ms: 240.0,
+            word_index: 0,
+            stressed: false,
+            countable: true,
+        },
+        SyllableSpan {
+            start_ms: 240.0,
+            dur_ms: 445.0,
+            word_index: 1,
+            stressed: true,
+            countable: true,
+        },
+        SyllableSpan {
+            start_ms: 785.0,
+            dur_ms: 270.0,
+            word_index: 2,
+            stressed: false,
+            countable: true,
+        },
+        SyllableSpan {
+            start_ms: 1055.0,
+            dur_ms: 325.0,
+            word_index: 3,
+            stressed: true,
+            countable: true,
+        },
+        SyllableSpan {
+            start_ms: 1380.0,
+            dur_ms: 240.0,
+            word_index: 3,
+            stressed: false,
+            countable: true,
+        },
+    ],
+    total_ms: 1620.0,
+}

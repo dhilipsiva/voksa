@@ -10,7 +10,15 @@
 use crate::alloc::string::String;
 use crate::alloc::vec::Vec;
 use crate::letters::WordError;
-use crate::schedule::UtteranceSchedule;
+use crate::pause::{Segment, Token, insert_pauses};
+use crate::phonemes::{Phoneme, SegmentSpec, buffer_spec, spec};
+use crate::schedule::{
+    BASE_F0_HZ, Event, Frame, PAUSE_MS, SyllableSpan, UtteranceSchedule, schedule_segment,
+    silence_targets,
+};
+use crate::stress::is_countable;
+use crate::syllable::Nucleus;
+use crate::word::{WordAnalysis, analyze_word};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CompileOptions {
@@ -44,12 +52,219 @@ pub enum RawToken {
 /// delimit words; consecutive pause marks merge; commas and apostrophes stay
 /// inside their word.
 pub fn tokenize(text: &str) -> Result<Vec<RawToken>, CompileError> {
-    let _ = text;
-    todo!("Phase 5 red checkpoint: tokenizer lands after the failing tests are committed")
+    fn flush(current: &mut String, tokens: &mut Vec<RawToken>) -> Result<(), CompileError> {
+        if !current.is_empty() {
+            if current.chars().any(|c| c.is_ascii_digit()) {
+                return Err(CompileError::DigitsUnsupported(core::mem::take(current)));
+            }
+            tokens.push(RawToken::Word(core::mem::take(current)));
+        }
+        Ok(())
+    }
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    for ch in text.chars() {
+        if ch.is_whitespace() {
+            flush(&mut current, &mut tokens)?;
+        } else if ch == '.' {
+            flush(&mut current, &mut tokens)?;
+            if tokens.last() != Some(&RawToken::ExplicitPause) {
+                tokens.push(RawToken::ExplicitPause);
+            }
+        } else {
+            current.push(ch);
+        }
+    }
+    flush(&mut current, &mut tokens)?;
+    Ok(tokens)
+}
+
+enum Item {
+    Word(WordAnalysis),
+    Pause,
 }
 
 /// Compile an utterance to its deterministic parameter schedule.
 pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, CompileError> {
-    let _ = (text, opts);
-    todo!("Phase 5 red checkpoint: compiler lands after the failing tests are committed")
+    // Tokenize, remembering which boundaries the writer marked with periods.
+    let mut words: Vec<WordAnalysis> = Vec::new();
+    let mut explicit: Vec<bool> = Vec::new();
+    explicit.push(false); // before word 0
+    for token in tokenize(text)? {
+        match token {
+            RawToken::Word(w) => {
+                let analysis = analyze_word(&w).map_err(|error| CompileError::Word {
+                    word: w.clone(),
+                    error,
+                })?;
+                words.push(analysis);
+                explicit.push(false);
+            }
+            RawToken::ExplicitPause => {
+                if let Some(flag) = explicit.last_mut() {
+                    *flag = true;
+                }
+            }
+        }
+    }
+    if words.is_empty() {
+        return Err(CompileError::Empty);
+    }
+
+    // Mandatory pauses (Phase 4), then union in the writer-marked ones.
+    let segments = insert_pauses(words.into_iter().map(Token::Word).collect(), opts.dotside);
+    let mut items: Vec<Item> = Vec::new();
+    let mut wi = 0usize;
+    for seg in segments {
+        match seg {
+            Segment::Pause => items.push(Item::Pause),
+            Segment::Word(w) => {
+                if explicit[wi] && !matches!(items.last(), Some(Item::Pause)) {
+                    items.push(Item::Pause);
+                }
+                items.push(Item::Word(w));
+                wi += 1;
+            }
+            // The tokenizer never produces foreign text (zoi parsing arrives
+            // with normalization); pause-bracket defensively.
+            Segment::Foreign(_) => items.push(Item::Pause),
+        }
+    }
+    if explicit[wi] && !matches!(items.last(), Some(Item::Pause)) {
+        items.push(Item::Pause);
+    }
+
+    // Fold into events + spans.
+    let mut events: Vec<Event> = Vec::new();
+    let mut spans: Vec<SyllableSpan> = Vec::new();
+    let mut t_ms = 0.0f32;
+    let mut word_index = 0usize;
+    for item in items {
+        match item {
+            Item::Pause => {
+                events.push(Event {
+                    at_ms: t_ms,
+                    transition_ms: 5.0,
+                    frame: Frame {
+                        f0_hz: BASE_F0_HZ,
+                        targets: silence_targets(),
+                    },
+                });
+                t_ms += PAUSE_MS;
+            }
+            Item::Word(w) => {
+                t_ms = schedule_word(&w, word_index, opts.buffer, t_ms, &mut events, &mut spans);
+                word_index += 1;
+            }
+        }
+    }
+    Ok(UtteranceSchedule {
+        events,
+        spans,
+        total_ms: t_ms,
+    })
+}
+
+#[derive(Clone, Copy)]
+struct Entry {
+    seg: SegmentSpec,
+    span: usize,
+    /// True only for onset/coda consonants — the buffer flag inserts between
+    /// adjacent pairs of these (CLL §3.8 buffers consonant clusters; syllabic
+    /// nuclei and [h] are not cluster members).
+    is_consonant: bool,
+}
+
+/// Expand one analyzed word into timed events and syllable spans.
+fn schedule_word(
+    w: &WordAnalysis,
+    word_index: usize,
+    buffer: bool,
+    start_ms: f32,
+    events: &mut Vec<Event>,
+    spans_out: &mut Vec<SyllableSpan>,
+) -> f32 {
+    // (stressed, countable) per span; buffer spans appended as created.
+    let mut metas: Vec<(bool, bool)> = Vec::new();
+    let mut entries: Vec<Entry> = Vec::new();
+    for (si, syl) in w.syllables.iter().enumerate() {
+        let span = metas.len();
+        metas.push((w.stress == Some(si), is_countable(syl)));
+        let push = |entries: &mut Vec<Entry>, seg: SegmentSpec, is_consonant: bool| {
+            entries.push(Entry {
+                seg,
+                span,
+                is_consonant,
+            });
+        };
+        if syl.aspirated {
+            push(&mut entries, spec(Phoneme::H), false);
+        }
+        for c in &syl.onset {
+            push(&mut entries, spec(Phoneme::Consonant(*c)), true);
+        }
+        match syl.nucleus {
+            Nucleus::Vowel(v) => push(&mut entries, spec(Phoneme::Vowel(v)), false),
+            Nucleus::Diphthong(a, b) => push(&mut entries, spec(Phoneme::Diphthong(a, b)), false),
+            // Syllabic sonorant: the consonant's steady targets serve as the
+            // nucleus (vocalic envelope refinement deferred to CP1 listening).
+            Nucleus::Syllabic(c) => push(&mut entries, spec(Phoneme::Consonant(c)), false),
+        }
+        for c in &syl.coda {
+            push(&mut entries, spec(Phoneme::Consonant(*c)), true);
+        }
+    }
+
+    if buffer {
+        let mut buffered: Vec<Entry> = Vec::with_capacity(entries.len() * 2);
+        for (i, e) in entries.iter().enumerate() {
+            if i > 0 && entries[i - 1].is_consonant && e.is_consonant {
+                let span = metas.len();
+                metas.push((false, false));
+                buffered.push(Entry {
+                    seg: buffer_spec(),
+                    span,
+                    is_consonant: false,
+                });
+            }
+            buffered.push(*e);
+        }
+        entries = buffered;
+    }
+
+    // Timing fold ([h] lookahead within the word — apostrophes are
+    // intervocalic, so the following entry is always the shaping nucleus).
+    let mut bounds: Vec<Option<(f32, f32)>> = Vec::new();
+    bounds.resize(metas.len(), None);
+    let mut t_ms = start_ms;
+    for i in 0..entries.len() {
+        let next = entries.get(i + 1).and_then(|e| e.seg.leading_targets());
+        let seg_start = t_ms;
+        t_ms = schedule_segment(&entries[i].seg, next, BASE_F0_HZ, t_ms, events);
+        match &mut bounds[entries[i].span] {
+            slot @ None => *slot = Some((seg_start, t_ms)),
+            Some((_, end)) => *end = t_ms,
+        }
+    }
+
+    let mut word_spans: Vec<SyllableSpan> = bounds
+        .iter()
+        .zip(&metas)
+        .filter_map(|(b, (stressed, countable))| {
+            b.map(|(start_ms, end_ms)| SyllableSpan {
+                start_ms,
+                dur_ms: end_ms - start_ms,
+                word_index,
+                stressed: *stressed,
+                countable: *countable,
+            })
+        })
+        .collect();
+    word_spans.sort_by(|a, b| {
+        a.start_ms
+            .partial_cmp(&b.start_ms)
+            .expect("span times are finite")
+    });
+    spans_out.extend(word_spans);
+    t_ms
 }

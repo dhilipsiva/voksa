@@ -10,7 +10,9 @@ pub mod lower;
 use klattsch_core::schedule::Schedule;
 use klattsch_core::synth::FormantSynth;
 
-pub use lower::{lower_sequence, render_phonemes, render_steady_phoneme};
+pub use lower::{
+    lower_events, lower_sequence, render_phonemes, render_steady_phoneme, render_utterance,
+};
 
 /// Project-wide sample rate (Hz). Matches the klattsch convention and the
 /// typical browser AudioContext rate.

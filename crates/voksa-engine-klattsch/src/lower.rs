@@ -1,17 +1,19 @@
-//! Lowering: voksa-core phoneme IR → klattsch schedules.
+//! Lowering: voksa-core's engine-neutral schedule IR → klattsch schedules.
 //!
-//! Conventions follow klattsch-text's proven shapes: steady segments get one
-//! event with transition min(35 ms, dur·0.4); stops get a closure event then a
-//! burst event; a diphthong is 25% onset / 50% glide / 25% offset where the
-//! glide is a single event whose transition time IS the glide (the synth ramps
-//! parameters linearly per sample).
+//! Since Phase 5 the timing conventions live in voksa-core
+//! (`schedule::schedule_segment` / `schedule_phonemes` / `compiler::compile`);
+//! this module is a 1:1 event translation that owns ONLY the klattsch
+//! specifics: the linear-range gain, the Klatt-1980 alternating A2 polarity,
+//! and the parameter fields the engine has that the IR doesn't.
 
 use klattsch_core::params::ParamUpdate;
 use klattsch_core::schedule::{MsEvent, Schedule};
-use voksa_core::phonemes::{Phoneme, SegmentKind, SegmentSpec, Targets, specs};
+use voksa_core::compiler::{CompileError, CompileOptions, compile};
+use voksa_core::phonemes::{Phoneme, Targets};
+use voksa_core::schedule::{Event, schedule_phonemes};
 
-/// Flat robotic baseline F0 until the prosody layer (Phase 7) exists.
-pub const BASE_F0_HZ: f32 = 120.0;
+/// Flat robotic baseline F0 (defined in core; re-exported for compatibility).
+pub use voksa_core::schedule::BASE_F0_HZ;
 
 /// Steady-measurement F0: 105 Hz is the unique grid whose harmonics land
 /// within tolerance of EVERY docs/formants.md vowel target (e.g. 8×105 = 840
@@ -26,11 +28,7 @@ const MEASUREMENT_F0_HZ: f32 = 105.0;
 /// intermodulation peaks. Keep the adapter's renders linear.
 const LINEAR_GAIN: f32 = 1.0;
 
-fn update_from(t: &Targets) -> ParamUpdate {
-    update_with_f0(t, BASE_F0_HZ)
-}
-
-fn update_with_f0(t: &Targets, f0: f32) -> ParamUpdate {
+fn targets_update(t: &Targets, f0: f32) -> ParamUpdate {
     ParamUpdate {
         f0: Some(f0),
         gain: Some(LINEAR_GAIN),
@@ -46,7 +44,7 @@ fn update_with_f0(t: &Targets, f0: f32) -> ParamUpdate {
         // all-pole/LPC analysis and thins the timbre). Flipping A2 fills the
         // F1-F2 and F2-F3 notches. Magnitude at the resonance peaks is
         // unchanged. klattsch itself sums branches positively, so the
-        // alternation lives here in the lowering.
+        // alternation lives here in the lowering; the core IR stays positive.
         a2: Some(-t.formants[1].amp),
         f3: Some(t.formants[2].freq_hz),
         bw3: Some(t.formants[2].bw_hz),
@@ -56,110 +54,28 @@ fn update_with_f0(t: &Targets, f0: f32) -> ParamUpdate {
     }
 }
 
-/// [h] has no shape of its own: unvoiced noise through the following vowel's
-/// formants at reduced amplitude (docs/formants.md).
-fn aspirate_targets(next: Option<Targets>) -> Targets {
-    let mut t = next.unwrap_or(FALLBACK_SCHWA);
-    t.voicing = 0.0;
-    t.aspiration = 1.0;
-    for f in &mut t.formants {
-        f.amp *= 0.7;
-    }
-    t
+/// 1:1 translation of core IR events into klattsch millisecond events.
+pub fn lower_events(events: &[Event]) -> Vec<MsEvent> {
+    events
+        .iter()
+        .map(|e| {
+            MsEvent::new(
+                e.at_ms,
+                targets_update(&e.frame.targets, e.frame.f0_hz),
+                e.transition_ms,
+            )
+        })
+        .collect()
 }
 
-/// Utterance-final [h] fallback shape (schwa-like); phonotactically the
-/// apostrophe is intervocalic, so this only guards degenerate input.
-const FALLBACK_SCHWA: Targets = Targets {
-    formants: [
-        voksa_core::phonemes::Formant {
-            freq_hz: 500.0,
-            bw_hz: 90.0,
-            amp: 0.5,
-        },
-        voksa_core::phonemes::Formant {
-            freq_hz: 1500.0,
-            bw_hz: 110.0,
-            amp: 0.3,
-        },
-        voksa_core::phonemes::Formant {
-            freq_hz: 2500.0,
-            bw_hz: 150.0,
-            amp: 0.15,
-        },
-    ],
-    voicing: 0.0,
-    aspiration: 1.0,
-};
-
-/// Lower one segment starting at `at_ms`; push its events, return its end time.
-pub fn lower_segment(
-    seg: &SegmentSpec,
-    next: Option<Targets>,
-    at_ms: f32,
-    out: &mut Vec<MsEvent>,
-) -> f32 {
-    match seg.kind {
-        SegmentKind::Steady(t) => {
-            out.push(MsEvent::new(
-                at_ms,
-                update_from(&t),
-                (seg.dur_ms * 0.4).min(35.0),
-            ));
-            at_ms + seg.dur_ms
-        }
-        SegmentKind::Glide { from, to } => {
-            let onset_ms = seg.dur_ms * 0.25;
-            let glide_ms = seg.dur_ms * 0.5;
-            out.push(MsEvent::new(
-                at_ms,
-                update_from(&from),
-                (onset_ms * 0.4).min(35.0),
-            ));
-            out.push(MsEvent::new(at_ms + onset_ms, update_from(&to), glide_ms));
-            at_ms + seg.dur_ms
-        }
-        SegmentKind::Stop {
-            closure,
-            burst,
-            closure_ms,
-            burst_ms,
-        } => {
-            out.push(MsEvent::new(
-                at_ms,
-                update_from(&closure),
-                (closure_ms * 0.4).min(20.0),
-            ));
-            out.push(MsEvent::new(
-                at_ms + closure_ms,
-                update_from(&burst),
-                (burst_ms * 0.2).min(5.0),
-            ));
-            at_ms + closure_ms + burst_ms
-        }
-        SegmentKind::Aspirate => {
-            let t = aspirate_targets(next);
-            out.push(MsEvent::new(
-                at_ms,
-                update_from(&t),
-                (seg.dur_ms * 0.4).min(35.0),
-            ));
-            at_ms + seg.dur_ms
-        }
-    }
-}
-
-/// Lower a phoneme sequence to a schedule. Returns the schedule and the total
-/// duration in ms. Deterministic: same input, same events, always.
+/// Lower a phoneme sequence to a klattsch schedule (Phase-2 compatible path).
+/// Returns the schedule and the total duration in ms.
 pub fn lower_sequence(phonemes: &[Phoneme], sample_rate: u32) -> (Schedule, f32) {
-    let segs = specs(phonemes);
-    let mut events = Vec::new();
-    let mut t_ms = 0.0;
-    for (i, seg) in segs.iter().enumerate() {
-        let next = segs.get(i + 1).and_then(SegmentSpec::leading_targets);
-        t_ms = lower_segment(seg, next, t_ms, &mut events);
-    }
-    (Schedule::from_ms_events(sample_rate, events), t_ms)
+    let (events, total_ms) = schedule_phonemes(phonemes, BASE_F0_HZ);
+    (
+        Schedule::from_ms_events(sample_rate, lower_events(&events)),
+        total_ms,
+    )
 }
 
 /// Render a phoneme sequence offline (short tail appended so final transients
@@ -167,6 +83,21 @@ pub fn lower_sequence(phonemes: &[Phoneme], sample_rate: u32) -> (Schedule, f32)
 pub fn render_phonemes(phonemes: &[Phoneme], sample_rate: u32) -> Vec<f32> {
     let (schedule, total_ms) = lower_sequence(phonemes, sample_rate);
     crate::render_schedule(schedule, sample_rate, (total_ms + 20.0) as u32)
+}
+
+/// Compile Lojban text (voksa-core pipeline) and render it offline.
+pub fn render_utterance(
+    text: &str,
+    opts: &CompileOptions,
+    sample_rate: u32,
+) -> Result<Vec<f32>, CompileError> {
+    let utterance = compile(text, opts)?;
+    let schedule = Schedule::from_ms_events(sample_rate, lower_events(&utterance.events));
+    Ok(crate::render_schedule(
+        schedule,
+        sample_rate,
+        (utterance.total_ms + 20.0) as u32,
+    ))
 }
 
 /// Render one steady-capable phoneme held for `hold_ms` (measurement helper —
@@ -180,7 +111,7 @@ pub fn render_steady_phoneme(p: Phoneme, sample_rate: u32, hold_ms: u32) -> Vec<
         sample_rate,
         [MsEvent::new(
             0.0,
-            update_with_f0(&t, MEASUREMENT_F0_HZ),
+            targets_update(&t, MEASUREMENT_F0_HZ),
             5.0,
         )],
     );
