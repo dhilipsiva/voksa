@@ -102,7 +102,11 @@ fn stretch_leaves_onset_at_unit_rate() {
     let stressed = stressed_spans(&after)[0];
     assert!(stressed.nucleus_off_ms > 0.0, "mun has an onset");
     let nucleus_at = stressed.start_ms + stressed.nucleus_off_ms;
-    assert_eq!(before.events.len(), after.events.len(), "stretch preserves count");
+    assert_eq!(
+        before.events.len(),
+        after.events.len(),
+        "stretch preserves count"
+    );
     // Onset event: sits at the span start, before the nucleus.
     let (b_on, a_on) = before
         .events

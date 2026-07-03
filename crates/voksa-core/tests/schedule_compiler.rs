@@ -136,7 +136,11 @@ fn nucleus_offset_includes_onset_buffer() {
             buffer: true,
         },
     );
-    let vru = s.spans.iter().find(|sp| sp.stressed).expect("vru is stressed");
+    let vru = s
+        .spans
+        .iter()
+        .find(|sp| sp.stressed)
+        .expect("vru is stressed");
     assert_eq!(vru.nucleus_off_ms, 235.0);
     let buffer_span = s
         .spans
