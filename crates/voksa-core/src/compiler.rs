@@ -10,6 +10,7 @@
 use crate::alloc::string::String;
 use crate::alloc::vec::Vec;
 use crate::letters::WordError;
+use crate::normalize::{NumberError, number_words};
 use crate::pause::{Segment, Token, insert_pauses};
 use crate::phonemes::{Phoneme, SegmentSpec, buffer_spec, spec};
 use crate::schedule::{
@@ -34,8 +35,8 @@ pub struct CompileOptions {
 pub enum CompileError {
     /// A word failed morphological analysis.
     Word { word: String, error: WordError },
-    /// Digits await Phase-6 normalization (numbers → PA cmavo).
-    DigitsUnsupported(String),
+    /// A written figure could not be normalized to PA cmavo.
+    MalformedNumber { figure: String, error: NumberError },
     /// No words in the input.
     Empty,
 }
@@ -54,22 +55,48 @@ pub enum RawToken {
 pub fn tokenize(text: &str) -> Result<Vec<RawToken>, CompileError> {
     fn flush(current: &mut String, tokens: &mut Vec<RawToken>) -> Result<(), CompileError> {
         if !current.is_empty() {
-            if current.chars().any(|c| c.is_ascii_digit()) {
-                return Err(CompileError::DigitsUnsupported(core::mem::take(current)));
+            let token = core::mem::take(current);
+            if token.chars().any(|c| c.is_ascii_digit()) {
+                // A written figure: expand to PA cmavo words (Phase 6).
+                match number_words(&token) {
+                    Ok(words) => {
+                        tokens.extend(words.into_iter().map(|w| RawToken::Word(String::from(w))))
+                    }
+                    Err(error) => {
+                        return Err(CompileError::MalformedNumber {
+                            figure: token,
+                            error,
+                        });
+                    }
+                }
+            } else {
+                tokens.push(RawToken::Word(token));
             }
-            tokens.push(RawToken::Word(core::mem::take(current)));
         }
         Ok(())
     }
+    let chars: Vec<char> = text.chars().collect();
     let mut tokens = Vec::new();
     let mut current = String::new();
-    for ch in text.chars() {
+    for (i, &ch) in chars.iter().enumerate() {
         if ch.is_whitespace() {
             flush(&mut current, &mut tokens)?;
         } else if ch == '.' {
-            flush(&mut current, &mut tokens)?;
-            if tokens.last() != Some(&RawToken::ExplicitPause) {
-                tokens.push(RawToken::ExplicitPause);
+            // A period BETWEEN digits is a decimal point and stays inside the
+            // figure token (3.14 → ci pi pa vo); anywhere else it delimits
+            // words and marks a pause.
+            let decimal = current
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_ascii_digit())
+                && chars.get(i + 1).is_some_and(|c| c.is_ascii_digit());
+            if decimal {
+                current.push('.');
+            } else {
+                flush(&mut current, &mut tokens)?;
+                if tokens.last() != Some(&RawToken::ExplicitPause) {
+                    tokens.push(RawToken::ExplicitPause);
+                }
             }
         } else {
             current.push(ch);

@@ -121,10 +121,17 @@ fn tokenize_preserves_capitals_and_word_internals() {
 }
 
 #[test]
-fn tokenize_rejects_digits_for_phase_6() {
+fn tokenize_expands_figures_to_pa_cmavo() {
+    // Supersedes the Phase-5 placeholder (tokenize_rejects_digits_for_phase_6).
+    use RawToken::Word as W;
     assert_eq!(
-        tokenize("mi 42 klama"),
-        Err(CompileError::DigitsUnsupported("42".into()))
+        tokenize("mi 42 klama").unwrap(),
+        [
+            W("mi".into()),
+            W("vo".into()),
+            W("re".into()),
+            W("klama".into()),
+        ]
     );
 }
 

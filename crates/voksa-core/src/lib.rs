@@ -14,6 +14,7 @@ pub mod classify;
 pub mod clusters;
 pub mod compiler;
 pub mod letters;
+pub mod normalize;
 pub mod pause;
 pub mod phonemes;
 pub mod schedule;
