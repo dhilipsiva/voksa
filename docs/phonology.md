@@ -219,6 +219,28 @@ productions is acceptable.
   boost on the stressed syllable.
 - Pause: 50–150 ms silence; word-initial-vowel pause minimally a glottal stop.
 - Optional xu terminal rise (non-canonical nicety; flag-gated).
+
+### 9.1 Pinned constants (Phase 7 implementation, voksa-core prosody.rs)
+These are voksa's chosen values within the bands above (CLL mandates no
+prosody; this is a documented convention):
+- `DECLINATION_START_HZ = 120`, `DECLINATION_END_HZ = 95` — linear over the
+  post-stretch utterance, applied ADDITIVELY (`f0 += baseline(t) − 120`) so
+  the Phase-10 attitudinal overlay composes on top.
+- `STRESS_DURATION_FACTOR = 1.5` — stressed spans stretch first; everything
+  later shifts by the added time.
+- `STRESS_F0_EXCURSION_HZ = +20` (middle of the 10–30 band), applied above
+  the declination baseline, in-span only.
+- `STRESS_AMP_FACTOR = ×1.2` on formant amplitudes, in-span only.
+- `XU_RISE_HZ = +25` — one rise event at 25% into the final syllable, ramped
+  across the span remainder; later in-span events carry the rise too (else a
+  following vowel event would re-set F0 down).
+- Composition order: stretch → declination → stress excursion → xu rise.
+
+Known v1 caveats (CP1 listening notes):
+- In-span `transition_ms` scales ×1.5 as well, so stop bursts inside stressed
+  syllables stretch with the vowel (slightly slow bursts; revisit if CP1 flags).
+- A voiceless final segment makes the xu rise inaudible (nothing voiced to
+  carry it); Lojban questions ending in vowels — the normal case — are fine.
 - Attitudinal overlay: see docs/research/02-architecture-v2.md §11 table
   (F0 mean/range in semitones, rate multipliers, voice quality via OQ TL FL DI AH AV).
   This is an INVENTED, documented, non-normative convention — CLL mandates none.

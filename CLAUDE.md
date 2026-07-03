@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 6 complete: figures speak — the tokenizer expands digit runs to PA cmavo (`voksa_core::normalize`: pi/ki'o/pi'e, round-trip-tested inverse, hex vocabulary unwired in v1) and the full CLL lerfu table (incl. h/q/w) ships with `spell()` for later foreign-text use. `compile("mi 42 klama")` just works. Next: Phase 7 — the prosody transform over the schedule IR, ending in listening checkpoint CP1 (human review required before tagging). Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
+Phase 7 implemented, **awaiting CP1 sign-off**: the prosody transform (`voksa_core::prosody::apply_prosody` — stressed-span stretch 1.5× → additive declination 120→95 Hz → +20 Hz/×1.2 in-span → optional xu +25 Hz rise; constants pinned in docs/phonology.md §9.1) plus `render_utterance_prosodic` in the adapter and the real `cargo xtask listening-battery` (10 utterances × prosodic/flat/oracle WAVs + index.html MOS page in artifacts/listening/phase7/). F0 measurement in voksa-testkit is a hand-rolled NSDF (pitch-detection 0.3 formant-locks; rejected by the smoke gate). Phase 7 is committed but NOT tagged — the human listens, fills docs/listening/phase7.md, and tags phase7-complete. Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
