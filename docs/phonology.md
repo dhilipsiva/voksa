@@ -193,11 +193,22 @@ productions is acceptable.
 
 ## 8. Normalization
 - Digits → PA cmavo: 0 no, 1 pa, 2 re, 3 ci, 4 vo, 5 mu, 6 xa, 7 ze, 8 bi, 9 so.
-  Decimal point = pi. Thousands separator = ki'o. Hex A–F = dau fei gai jau rei vai.
-  Mixed-base separator = pi'e. Concatenate digit-by-digit (10 = pano).
-- Lerfu (letterals): consonants = C+y (by cy dy fy gy jy ky ly my ny py ry sy ty
-  vy xy zy); vowels = V+bu (.abu .ebu .ibu .obu .ubu .ybu); apostrophe = .y'y;
-  period = denpa bu; comma = slaka bu.
+  Read digit-by-digit as SEPARATE words (10 = pa no; CLL §18.2 style — §4.2
+  makes compound/separate identical in speech). Decimal point = pi (§18.3).
+  Thousands separator = ki'o: CLL permits short-group elision (left-zero-padded,
+  §18.3) but voksa always EMITS full three-digit groups (1,000 = pa ki'o no no
+  no); non-canonical figure grouping (1,00) is a typed error. Mixed-base
+  separator = pi'e — ":" between digits maps to it (clock times, §18.10).
+  Hex A–F = dau fei gai jau rei vai (§18.10) — vocabulary only in v1, NOT
+  auto-detected (letters inside figures are errors; 0x gating = future work).
+- Lerfu (letterals, CLL §17.2/§17.4/§17.5): consonants = C+y (by cy dy fy gy jy
+  ky ly my ny py ry sy ty vy xy zy); vowels = V+bu (.abu .ebu .ibu .obu .ubu
+  .ybu); apostrophe = .y'y; h = .y'y.bu, q = ky.bu, w = vy.bu (§17.5);
+  period = denpa bu; comma = slaka bu (no pause needed before bu). The written
+  dots in .y'y.bu / ky.bu are exactly the vowel-initial and y-final pause
+  rules firing — emit the words separately and §5 does the rest. Case shifts
+  (ga'e/to'a/tau) change letter meaning, not sound: spelling is
+  case-insensitive, shifts never emitted.
 - zoi / la'o quoted foreign text: bracket with mandatory pauses; policy for the
   content itself = spell out via lerfu (v1 default) or pass through literally.
 
