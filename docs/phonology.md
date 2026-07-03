@@ -226,19 +226,27 @@ prosody; this is a documented convention):
 - `DECLINATION_START_HZ = 120`, `DECLINATION_END_HZ = 95` — linear over the
   post-stretch utterance, applied ADDITIVELY (`f0 += baseline(t) − 120`) so
   the Phase-10 attitudinal overlay composes on top.
-- `STRESS_DURATION_FACTOR = 1.5` — stressed spans stretch first; everything
-  later shifts by the added time.
+- `STRESS_DURATION_FACTOR = 1.5` — a stressed syllable's RHYME (nucleus
+  onward) stretches by 1.5×; its onset consonants keep unit rate. The stretch
+  window opens at `start_ms + nucleus_off_ms` (the `SyllableSpan` records the
+  nucleus offset: onset consonants + [h] + any onset-side epenthetic buffer).
+  Everything later shifts by the added rhyme time. (Phase-7.1 CP1 fix — see
+  below.)
 - `STRESS_F0_EXCURSION_HZ = +20` (middle of the 10–30 band), applied above
-  the declination baseline, in-span only.
-- `STRESS_AMP_FACTOR = ×1.2` on formant amplitudes, in-span only.
+  the declination baseline, over the WHOLE stressed span (onset included).
+- `STRESS_AMP_FACTOR = ×1.2` on formant amplitudes, whole stressed span.
 - `XU_RISE_HZ = +25` — one rise event at 25% into the final syllable, ramped
   across the span remainder; later in-span events carry the rise too (else a
   following vowel event would re-set F0 down).
-- Composition order: stretch → declination → stress excursion → xu rise.
+- Composition order: rhyme stretch → declination → stress excursion → xu rise.
 
-Known v1 caveats (CP1 listening notes):
-- In-span `transition_ms` scales ×1.5 as well, so stop bursts inside stressed
-  syllables stretch with the vowel (slightly slow bursts; revisit if CP1 flags).
+Phase-7.1 CP1 fix (resolved): the original v1 stretched the WHOLE stressed
+syllable, lengthening onset consonant clusters — the CP1 rater heard this as
+"CC strong + long" on gismu-initial stressed syllables (pre/kla/zga/dja/DJO)
+and preferred the flat baseline 8/10 in ABX. The stretch now scopes to the
+rhyme only, so onsets stay crisp; excursion + amplitude stay whole-span.
+
+Remaining v1 caveats:
 - A voiceless final segment makes the xu rise inaudible (nothing voiced to
   carry it); Lojban questions ending in vowels — the normal case — are fine.
 - Attitudinal overlay: see docs/research/02-architecture-v2.md §11 table

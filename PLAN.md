@@ -68,14 +68,15 @@ Rater: dhilipsiva. Caveat recorded in docs/listening/phase7.md: self-taught
 Lojban (never heard another speaker), scored with eSpeak as the reference.
 MOS intelligibility avg 2.6, naturalness avg 2.3; ABX: flat preferred 8/10.
 
-6. **Nucleus-scoped stress stretch** — HIGHEST PRIORITY; explains the 8/10
-   flat preference. The whole stressed span (incl. onset cluster transitions)
-   stretches ×1.5 → "CC strong + long" on gismu-initial stressed syllables
-   (pre/kla/zga/dja/DJO). This is the phonology.md §9.1 stop-burst caveat,
-   now CONFIRMED by listening. Fix: apply STRESS_DURATION_FACTOR to the
-   syllable nucleus(+coda) only; onset consonant transitions stay ≈1.0–1.1×.
-   Small transform change; invalidates prosody snapshots (regenerate) and
-   deserves a re-battery.
+6. ✅ **DONE (Phase 7.1, 2026-07-03)** — **Nucleus-scoped stress stretch.**
+   The whole stressed span (incl. onset cluster transitions) stretched ×1.5 →
+   "CC strong + long" on gismu-initial stressed syllables (pre/kla/zga/dja/
+   DJO), which explained the 8/10 flat ABX preference. FIXED: `SyllableSpan`
+   now carries `nucleus_off_ms`; the stretch window opens at the nucleus so
+   only the rhyme stretches — onsets keep unit rate. Excursion + amplitude
+   stay whole-span. Snapshots regenerated, battery re-rendered; awaiting a
+   quick owner ABX re-check (the fix is committed, NOT re-tagged — phase7
+   stays the tag).
 7. **Segment tuning** — coi-munje heard as "soi-oon-shae" (MOS 1/1): /c/ [ʃ]
    not distinct enough from [s], nasal /m/ murmur weak, /j/ [ʒ] reads
    devoiced. Phoneme-table work (docs/formants.md), independent of prosody.
@@ -89,6 +90,8 @@ MOS intelligibility avg 2.6, naturalness avg 2.3; ABX: flat preferred 8/10.
 
 ## Session log
 (append: date, phase, sessions used, notes)
+
+- 2026-07-03 — Phase 7.1 — nucleus-scoped stress stretch (CP1 backlog item 6). `SyllableSpan` gained `nucleus_off_ms` (onset consonants + [h] + onset-side buffer, computed in schedule_word via an is_nucleus flag on Entry); prosody's `stretch_stressed_spans` now uses a rhyme-only window `[start+nucleus_off, end)` while the F0 excursion + amplitude boost stay whole-span. Onsets keep unit rate (e.g. coi-munje "mun" 465→425 ms, total 1055→1015). 165/165 tests (6 new compiler/prosody + 2 rewritten to rhyme arithmetic); 12 core snapshots regenerated (8 compiler + normalize field-only, 3 prosody field+timing), engine snapshots byte-identical (lowering reads events, not spans). Battery re-rendered. Committed, NOT re-tagged (phase7-complete stands); owner to ABX-recheck the onset-cluster items.
 
 - 2026-07-03 — Phase 7 CP1 — human sign-off: owner tagged phase7-complete (at e3f3c74). Scores in docs/listening/phase7.md: MOS int avg 2.6 / nat avg 2.3, ABX flat preferred 8/10. Dominant artifact = whole-span stress stretch lengthening onset clusters ("CC strong + long" on pre/kla/zga/dja/DJO) — the §9.1 stop-burst caveat confirmed; nucleus-only stretch queued (backlog item 6). Segmental c/m/j clarity issues on coi-munje (item 7). Rater caught eSpeak being WRONG twice (xu → [k]-like; raw-digit "4") — voksa correct per CLL; oracle-comparability tweak queued (item 8). Rater caveat recorded: self-taught Lojban, eSpeak-referenced scoring.
 - 2026-07-03 — Phase 7 — 1 session — Prosody green, 156/156 tests (15 new: 10 schedule-level + 3 insta snapshots in core, 3 acoustic in the adapter, plus testkit F0 self-tests). Deterministic transform: stretch stressed spans 1.5× (piecewise time map; pauses shift, not stretch) → additive declination 120→95 → +20 Hz/×1.2 in-span → optional xu +25 Hz. Measured: declination slope negative with endpoints 120±8/95±8; stressed F0 > unstressed +5 Hz and peak-window RMS higher; xu ending >110 Hz vs flat ~98. pitch-detection 0.3 failed the smoke gate (McLeod formant-locked ~490 Hz) → dropped for a hand-rolled NSDF (plan's designated fallback). Fixed during green: xu rise must also raise later events inside the final span. Battery: 10 utterances × 3 WAVs (prosodic/flat/oracle) + index.html with MOS/ABX capture, clipping assert clean. COMMITTED, NOT TAGGED — CP1 human listening pending.
