@@ -36,6 +36,9 @@
           ];
           # cpal links libasound on Linux; expose it via pkg-config.
           buildInputs = [ pkgs.alsa-lib ];
+          # ...and on the runtime linker path so the native binary loads
+          # libasound.so.2 from the nix store inside the dev shell.
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.alsa-lib ];
         };
       });
 }

@@ -42,11 +42,35 @@ impl fmt::Display for ArgError {
     }
 }
 
-/// Parse an argument iterator (already skipping argv[0]).
-pub fn parse(args: impl Iterator<Item = String>) -> Result<CliArgs, ArgError> {
-    // STUB (Phase 8 red): real parsing lands after the failing tests commit.
-    let _ = args;
-    Ok(CliArgs::default())
+/// Parse an argument iterator (already skipping argv[0]). Non-flag tokens are
+/// the text, joined by single spaces; flags may interleave with the text.
+pub fn parse(mut args: impl Iterator<Item = String>) -> Result<CliArgs, ArgError> {
+    let mut parsed = CliArgs::default();
+    let mut words: Vec<String> = Vec::new();
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--dotside" => parsed.dotside = true,
+            "--buffer" => parsed.buffer = true,
+            "--xu" => parsed.xu = true,
+            "--flat" => parsed.flat = true,
+            "--out" => {
+                let path = args.next().ok_or(ArgError::MissingOutPath)?;
+                parsed.out = Some(PathBuf::from(path));
+            }
+            other if other.starts_with("--") => {
+                return Err(ArgError::UnknownFlag(other.to_string()));
+            }
+            word => words.push(word.to_string()),
+        }
+    }
+    if parsed.xu && parsed.flat {
+        return Err(ArgError::XuWithFlat);
+    }
+    if words.is_empty() {
+        return Err(ArgError::NoText);
+    }
+    parsed.text = words.join(" ");
+    Ok(parsed)
 }
 
 #[cfg(test)]
