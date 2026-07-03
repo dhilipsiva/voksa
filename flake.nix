@@ -32,7 +32,10 @@
             pkgs.cargo-insta
             pkgs.twiggy
             pkgs.espeak-ng # regression oracle voice (jbo)
+            pkgs.pkg-config # locates alsa.pc for cpal's alsa-sys (Phase 8)
           ];
+          # cpal links libasound on Linux; expose it via pkg-config.
+          buildInputs = [ pkgs.alsa-lib ];
         };
       });
 }

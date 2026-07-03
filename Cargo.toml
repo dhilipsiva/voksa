@@ -20,6 +20,10 @@ voksa-core = { path = "crates/voksa-core" }
 voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
 voksa-testkit = { path = "crates/voksa-testkit" }
 wasm-bindgen = "0.2.126"
+# Native CLI audio (Phase 8): cpal Apache-2.0, rtrb MIT/Apache — realtime-safe
+# SPSC ring feeding the cpal output callback (docs/research/02-architecture-v2.md).
+cpal = "0.18"
+rtrb = "0.3"
 # 0.1.0 was yanked; the crate is 3 commits young — pin exactly, revisit at the
 # Phase-2 engine decision gate.
 klattsch-core = "=0.1.1"
