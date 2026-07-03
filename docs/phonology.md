@@ -65,16 +65,35 @@ A CC pair is permissible medially iff:
 4. Not one of the specifically forbidden: cx kx xc xk mz
 
 CCC medial: C1C2 must be a permissible pair AND C2C3 must be a permissible
-INITIAL pair.
+INITIAL pair. Additionally, the four triples ndj ndz ntc nts are FORBIDDEN
+(CLL §3.7; live example §4.7: lerldjamo takes an l-hyphen because *lerndjamo
+would contain ndj).
 
 ## 3. Syllabification (CLL §3.9)
 - Every vowel, diphthong, or syllabic consonant is exactly one nucleus.
+- Vowel runs pair from the LEFT into nuclei (CLL §3.5: meiin. → mei,in.);
+  written commas override the default pairing.
 - Single C between nuclei → onset of the FOLLOWING syllable.
 - CC between nuclei → split C.C, UNLESS the pair is one of the 48 initial pairs,
   in which case both go to the following syllable (.CC).
 - CCC → split after the first consonant (C.CC), consistent with the
   medial-triple rule above.
 - Apostrophe and comma force a syllable boundary.
+
+### voksa's deterministic realization (chosen among CLL-valid variants)
+CLL leaves two choices to the speaker; voksa fixes them deterministically:
+1. **Onset maximization**: each inter-nucleus consonant run gives its maximal
+   suffix that is a legal onset (every adjacent pair one of the 48 — CLL §4.7's
+   fu'ivla-initial rule) to the following syllable; the rest is coda. This
+   reproduces C.C / .CC / C.CC exactly for all standard words and degrades
+   gracefully for cmevla clusters where CLL has "no definitive rules" (§3.9).
+2. **Syllabic sonorants only where forced**: CLL §3.4/§3.9 make syllabicity the
+   speaker's choice ("any l m n r may be pronounced syllabically") and
+   guarantee it never affects stress. voksa makes a sonorant syllabic ONLY in
+   a region with no vowel nucleus (a vowel-less comma segment: kat,r,in.; a
+   vowel-less word: rl.; or a word-initial residue beyond the legal onset:
+   brlgan. → b‑r̩,l̩,gan). Codas next to vowels are never split (ARM keeps rm).
+   A vowel-less region with no sonorant is a typed error (no nucleus possible).
 
 ## 4. Stress (CLL §3.9 — the corrected rule)
 Primary stress falls on the PENULTIMATE COUNTABLE syllable of brivla and
@@ -127,9 +146,13 @@ as non-countable.
 
 ## 7. Word classification (minimal classifier — sufficient for stress + pauses)
 - cmevla: ends in a consonant.
-- brivla: contains a permissible consonant pair within the first five letters
-  (ignoring y and apostrophe), ends in a vowel.
-- cmavo: everything else (V, VV, CV, CVV, CV'V, Cy forms).
+- ends in y → cmavo (no brivla may end in y, CLL §4.1/§4.7 — this also keeps
+  solid Cy sequences from exposing a false pair).
+- brivla: contains A consonant pair — permissibility NOT required (CLL §4.3's
+  own qualifying example is the impermissible "sc" in bisycla) — within the
+  first five letters counted after deleting y and apostrophe ("bisycla" has
+  the pair via "syc"; "ro'inre'o" has "nr"), and ends in a vowel.
+- cmavo: everything else (V, VV, CV, CVV, CV'V forms).
 Rigorous fallback for dense text: BPFK PEG morphology (camxes); camxes-rs exists
 but verify license/completeness before linking — porting the needed PEG
 productions is acceptable.
