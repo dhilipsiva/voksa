@@ -1,9 +1,11 @@
 //! Sentence prosody as a deterministic schedule transform (phonology.md §9).
 //!
-//! Composition order matters: stressed-syllable duration stretching first
-//! (it re-times everything), then declination against the NEW total, then the
-//! stress F0 excursion + amplitude boost inside stressed spans (additive
-//! above the declination baseline), then the optional xu terminal rise.
+//! Composition order matters: stressed-syllable RHYME stretching first (the
+//! rhyme = nucleus onward; it re-times everything), then declination against
+//! the NEW total, then the stress F0 excursion + amplitude boost inside the
+//! WHOLE stressed span (additive above the declination baseline), then the
+//! optional xu terminal rise. Stretching the rhyme only (not the onset
+//! consonants) is the CP1 fix — whole-span stretch smeared onset clusters.
 //! Declination is applied ADDITIVELY (`f0 += baseline(t) − BASE_F0_HZ`) so
 //! the Phase-10 attitudinal overlay can compose on top.
 
@@ -21,8 +23,9 @@ pub struct ProsodyOptions {
 pub const DECLINATION_START_HZ: f32 = 120.0;
 /// Utterance-final F0 baseline.
 pub const DECLINATION_END_HZ: f32 = 95.0;
-/// Stressed syllables stretch to 1.5× duration (CLL-derived convention,
-/// docs/formants.md).
+/// A stressed syllable's rhyme (nucleus onward) stretches to 1.5× duration;
+/// its onset consonants keep unit rate (CLL-derived convention, phonology.md
+/// §9.1).
 pub const STRESS_DURATION_FACTOR: f32 = 1.5;
 /// Stress F0 excursion above the declination baseline (middle of the
 /// documented +10–30 Hz band).
@@ -45,6 +48,8 @@ pub fn apply_prosody(schedule: UtteranceSchedule, opts: &ProsodyOptions) -> Utte
 /// independent f32 accumulations that can differ by ULPs.
 const EPS_MS: f32 = 1e-3;
 
+/// Whole-syllable windows (start .. end): the F0 excursion and amplitude
+/// boost cover the entire stressed syllable, onset consonants included.
 fn stressed_windows(s: &UtteranceSchedule) -> Vec<(f32, f32)> {
     let mut w: Vec<(f32, f32)> = s
         .spans
@@ -56,14 +61,29 @@ fn stressed_windows(s: &UtteranceSchedule) -> Vec<(f32, f32)> {
     w
 }
 
+/// Rhyme windows (nucleus onset .. end): only the rhyme stretches, so onset
+/// consonant clusters keep unit rate (CP1 — they otherwise smear).
+fn stressed_stretch_windows(s: &UtteranceSchedule) -> Vec<(f32, f32)> {
+    let mut w: Vec<(f32, f32)> = s
+        .spans
+        .iter()
+        .filter(|sp| sp.stressed)
+        .map(|sp| (sp.start_ms + sp.nucleus_off_ms, sp.start_ms + sp.dur_ms))
+        .collect();
+    w.sort_by(|a, b| a.0.partial_cmp(&b.0).expect("finite span times"));
+    w
+}
+
 fn inside(at_ms: f32, (ws, we): (f32, f32)) -> bool {
     at_ms >= ws - EPS_MS && at_ms < we - EPS_MS
 }
 
-/// Stretch every stressed span to [`STRESS_DURATION_FACTOR`]×, shifting all
-/// later material (events, spans, pauses, total) by the added time.
+/// Stretch every stressed syllable's RHYME (nucleus onward) to
+/// [`STRESS_DURATION_FACTOR`]×, shifting all later material (events, spans,
+/// pauses, total) by the added time. Onset consonants keep unit rate — the
+/// stretch window opens at the nucleus, not the span start (CP1 fix).
 fn stretch_stressed_spans(mut s: UtteranceSchedule) -> UtteranceSchedule {
-    let windows = stressed_windows(&s);
+    let windows = stressed_stretch_windows(&s);
     let factor = STRESS_DURATION_FACTOR;
     let map_time = |t: f32| -> f32 {
         let mut delta = 0.0f32;

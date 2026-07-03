@@ -36,7 +36,7 @@ UtteranceSchedule {
             at_ms: 120.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 117.156395,
+                f0_hz: 117.044334,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -64,7 +64,7 @@ UtteranceSchedule {
             at_ms: 170.0,
             transition_ms: 100.0,
             frame: Frame {
-                f0_hz: 115.971565,
+                f0_hz: 115.812805,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -90,9 +90,9 @@ UtteranceSchedule {
         },
         Event {
             at_ms: 320.0,
-            transition_ms: 48.0,
+            transition_ms: 32.0,
             frame: Frame {
-                f0_hz: 132.41705,
+                f0_hz: 132.11823,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -117,10 +117,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 440.0,
+            at_ms: 400.0,
             transition_ms: 52.5,
             frame: Frame {
-                f0_hz: 129.57346,
+                f0_hz: 130.14778,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -145,10 +145,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 665.0,
+            at_ms: 625.0,
             transition_ms: 48.0,
             frame: Frame {
-                f0_hz: 124.24171,
+                f0_hz: 124.60591,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -173,10 +173,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 785.0,
+            at_ms: 745.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 101.3981,
+                f0_hz: 101.650246,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -201,10 +201,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 905.0,
+            at_ms: 865.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 98.554504,
+                f0_hz: 98.69458,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -233,24 +233,27 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 0.0,
             dur_ms: 320.0,
+            nucleus_off_ms: 120.0,
             word_index: 0,
             stressed: false,
             countable: true,
         },
         SyllableSpan {
             start_ms: 320.0,
-            dur_ms: 465.0,
+            dur_ms: 425.0,
+            nucleus_off_ms: 80.0,
             word_index: 1,
             stressed: true,
             countable: true,
         },
         SyllableSpan {
-            start_ms: 785.0,
+            start_ms: 745.0,
             dur_ms: 270.0,
+            nucleus_off_ms: 120.0,
             word_index: 1,
             stressed: false,
             countable: true,
         },
     ],
-    total_ms: 1055.0,
+    total_ms: 1015.0,
 }

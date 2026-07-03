@@ -177,6 +177,7 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 0.0,
             dur_ms: 385.0,
+            nucleus_off_ms: 235.0,
             word_index: 0,
             stressed: true,
             countable: true,
@@ -184,6 +185,7 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 120.0,
             dur_ms: 35.0,
+            nucleus_off_ms: 0.0,
             word_index: 0,
             stressed: false,
             countable: false,
@@ -191,6 +193,7 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 385.0,
             dur_ms: 270.0,
+            nucleus_off_ms: 120.0,
             word_index: 0,
             stressed: false,
             countable: true,

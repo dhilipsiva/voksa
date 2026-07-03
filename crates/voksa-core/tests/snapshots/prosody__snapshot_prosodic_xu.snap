@@ -36,7 +36,7 @@ UtteranceSchedule {
             at_ms: 120.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 117.565926,
+                f0_hz: 117.391304,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -64,7 +64,7 @@ UtteranceSchedule {
             at_ms: 270.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 114.52333,
+                f0_hz: 114.13043,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -92,7 +92,7 @@ UtteranceSchedule {
             at_ms: 330.0,
             transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 113.30629,
+                f0_hz: 112.82609,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -120,7 +120,7 @@ UtteranceSchedule {
             at_ms: 355.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 112.79919,
+                f0_hz: 112.28261,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -146,9 +146,9 @@ UtteranceSchedule {
         },
         Event {
             at_ms: 505.0,
-            transition_ms: 30.0,
+            transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 129.75659,
+                f0_hz: 129.02173,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -173,10 +173,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 595.0,
-            transition_ms: 7.5,
+            at_ms: 565.0,
+            transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 127.93104,
+                f0_hz: 127.71739,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -201,10 +201,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 632.5,
-            transition_ms: 48.0,
+            at_ms: 590.0,
+            transition_ms: 32.0,
             frame: Frame {
-                f0_hz: 127.17039,
+                f0_hz: 127.17391,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -229,10 +229,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 752.5,
+            at_ms: 670.0,
             transition_ms: 52.5,
             frame: Frame {
-                f0_hz: 124.736305,
+                f0_hz: 125.434784,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -257,10 +257,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 992.5,
+            at_ms: 910.0,
             transition_ms: 32.0,
             frame: Frame {
-                f0_hz: 99.86816,
+                f0_hz: 100.21739,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -285,10 +285,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 1052.5,
+            at_ms: 970.0,
             transition_ms: 180.0,
             frame: Frame {
-                f0_hz: 124.86816,
+                f0_hz: 125.21739,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -313,10 +313,10 @@ UtteranceSchedule {
             },
         },
         Event {
-            at_ms: 1072.5,
+            at_ms: 990.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 123.24544,
+                f0_hz: 123.47826,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -345,6 +345,7 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 0.0,
             dur_ms: 270.0,
+            nucleus_off_ms: 120.0,
             word_index: 0,
             stressed: false,
             countable: true,
@@ -352,24 +353,27 @@ UtteranceSchedule {
         SyllableSpan {
             start_ms: 270.0,
             dur_ms: 235.0,
+            nucleus_off_ms: 85.0,
             word_index: 1,
             stressed: false,
             countable: true,
         },
         SyllableSpan {
             start_ms: 505.0,
-            dur_ms: 487.5,
+            dur_ms: 405.0,
+            nucleus_off_ms: 165.0,
             word_index: 2,
             stressed: true,
             countable: true,
         },
         SyllableSpan {
-            start_ms: 992.5,
+            start_ms: 910.0,
             dur_ms: 240.0,
+            nucleus_off_ms: 80.0,
             word_index: 2,
             stressed: false,
             countable: true,
         },
     ],
-    total_ms: 1232.5,
+    total_ms: 1150.0,
 }

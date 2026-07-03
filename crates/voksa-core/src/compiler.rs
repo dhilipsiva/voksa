@@ -200,6 +200,10 @@ struct Entry {
     /// adjacent pairs of these (CLL §3.8 buffers consonant clusters; syllabic
     /// nuclei and [h] are not cluster members).
     is_consonant: bool,
+    /// The syllable nucleus (vowel / diphthong / syllabic consonant, or a
+    /// buffer span's single entry). The stress stretch anchors here so onset
+    /// consonants stay at unit rate (CP1 fix).
+    is_nucleus: bool,
 }
 
 /// Expand one analyzed word into timed events and syllable spans.
@@ -217,28 +221,32 @@ fn schedule_word(
     for (si, syl) in w.syllables.iter().enumerate() {
         let span = metas.len();
         metas.push((w.stress == Some(si), is_countable(syl)));
-        let push = |entries: &mut Vec<Entry>, seg: SegmentSpec, is_consonant: bool| {
-            entries.push(Entry {
-                seg,
-                span,
-                is_consonant,
-            });
-        };
+        let push =
+            |entries: &mut Vec<Entry>, seg: SegmentSpec, is_consonant: bool, is_nucleus: bool| {
+                entries.push(Entry {
+                    seg,
+                    span,
+                    is_consonant,
+                    is_nucleus,
+                });
+            };
         if syl.aspirated {
-            push(&mut entries, spec(Phoneme::H), false);
+            push(&mut entries, spec(Phoneme::H), false, false);
         }
         for c in &syl.onset {
-            push(&mut entries, spec(Phoneme::Consonant(*c)), true);
+            push(&mut entries, spec(Phoneme::Consonant(*c)), true, false);
         }
         match syl.nucleus {
-            Nucleus::Vowel(v) => push(&mut entries, spec(Phoneme::Vowel(v)), false),
-            Nucleus::Diphthong(a, b) => push(&mut entries, spec(Phoneme::Diphthong(a, b)), false),
+            Nucleus::Vowel(v) => push(&mut entries, spec(Phoneme::Vowel(v)), false, true),
+            Nucleus::Diphthong(a, b) => {
+                push(&mut entries, spec(Phoneme::Diphthong(a, b)), false, true)
+            }
             // Syllabic sonorant: the consonant's steady targets serve as the
             // nucleus (vocalic envelope refinement deferred to CP1 listening).
-            Nucleus::Syllabic(c) => push(&mut entries, spec(Phoneme::Consonant(c)), false),
+            Nucleus::Syllabic(c) => push(&mut entries, spec(Phoneme::Consonant(c)), false, true),
         }
         for c in &syl.coda {
-            push(&mut entries, spec(Phoneme::Consonant(*c)), true);
+            push(&mut entries, spec(Phoneme::Consonant(*c)), true, false);
         }
     }
 
@@ -252,6 +260,8 @@ fn schedule_word(
                     seg: buffer_spec(),
                     span,
                     is_consonant: false,
+                    // A buffer syllable is its own nucleus (offset 0).
+                    is_nucleus: true,
                 });
             }
             buffered.push(*e);
@@ -263,6 +273,8 @@ fn schedule_word(
     // intervocalic, so the following entry is always the shaping nucleus).
     let mut bounds: Vec<Option<(f32, f32)>> = Vec::new();
     bounds.resize(metas.len(), None);
+    let mut nucleus_at: Vec<Option<f32>> = Vec::new();
+    nucleus_at.resize(metas.len(), None);
     let mut t_ms = start_ms;
     for i in 0..entries.len() {
         let next = entries.get(i + 1).and_then(|e| e.seg.leading_targets());
@@ -272,16 +284,20 @@ fn schedule_word(
             slot @ None => *slot = Some((seg_start, t_ms)),
             Some((_, end)) => *end = t_ms,
         }
+        if entries[i].is_nucleus && nucleus_at[entries[i].span].is_none() {
+            nucleus_at[entries[i].span] = Some(seg_start);
+        }
     }
 
     let mut word_spans: Vec<SyllableSpan> = bounds
         .iter()
         .zip(&metas)
-        .filter_map(|(b, (stressed, countable))| {
+        .zip(&nucleus_at)
+        .filter_map(|((b, (stressed, countable)), nucleus)| {
             b.map(|(start_ms, end_ms)| SyllableSpan {
                 start_ms,
                 dur_ms: end_ms - start_ms,
-                nucleus_off_ms: 0.0,
+                nucleus_off_ms: nucleus.map_or(0.0, |n| n - start_ms),
                 word_index,
                 stressed: *stressed,
                 countable: *countable,
