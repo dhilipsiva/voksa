@@ -17,6 +17,7 @@ pub mod letters;
 pub mod normalize;
 pub mod pause;
 pub mod phonemes;
+pub mod prosody;
 pub mod schedule;
 pub mod stress;
 pub mod syllable;

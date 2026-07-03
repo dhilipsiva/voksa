@@ -17,6 +17,7 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 voksa-core = { path = "crates/voksa-core" }
+voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
 voksa-testkit = { path = "crates/voksa-testkit" }
 wasm-bindgen = "0.2.126"
 # 0.1.0 was yanked; the crate is 3 commits young — pin exactly, revisit at the

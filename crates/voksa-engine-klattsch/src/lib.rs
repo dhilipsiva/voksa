@@ -12,6 +12,7 @@ use klattsch_core::synth::FormantSynth;
 
 pub use lower::{
     lower_events, lower_sequence, render_phonemes, render_steady_phoneme, render_utterance,
+    render_utterance_prosodic,
 };
 
 /// Project-wide sample rate (Hz). Matches the klattsch convention and the

@@ -7,8 +7,9 @@ rust-version.workspace = true
 description = "voksa dev-only test harness: FFT formant measurement + WAV helpers"
 publish = false
 
-# This crate may only ever appear in other crates' [dev-dependencies], so
-# hound/spectrum-analyzer never enter the shipping dependency tree.
+# This crate never ships: it is consumed only by other crates'
+# [dev-dependencies] and by the unpublished xtask tool, so hound /
+# spectrum-analyzer / pitch-detection never enter the shipping tree.
 [dependencies]
 spectrum-analyzer.workspace = true
 hound.workspace = true

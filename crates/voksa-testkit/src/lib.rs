@@ -544,6 +544,133 @@ pub fn track_band_peak(
     track
 }
 
+/// Framewise F0 track of a rendered utterance (window 2048 @ 48 kHz ≈ 42.7 ms,
+/// hop 480 = 10 ms), 5-point median smoothed. Returns (t_ms at window center,
+/// f0_hz).
+///
+/// Hand-rolled NSDF (McLeod's normalized square difference) with the lag
+/// range RESTRICTED to 70–200 Hz: the pitch-detection crate proved unusable
+/// on formant-synth output (its first-peak picking locks onto the formant
+/// period — measured ~490 Hz for a 120 Hz pulse train through a 500 Hz
+/// resonator), while a restricted lag range structurally cannot.
+pub fn measure_f0_track(samples: &[f32], sample_rate: u32) -> Vec<(f32, f32)> {
+    const WIN: usize = 2048;
+    const HOP: usize = 480;
+    let mut raw: Vec<(f32, f32)> = Vec::new();
+    let mut start = 0;
+    while start + WIN <= samples.len() {
+        if let Some(f0) = nsdf_pitch(&samples[start..start + WIN], sample_rate) {
+            let t_ms = (start as f32 + WIN as f32 / 2.0) * 1000.0 / sample_rate as f32;
+            raw.push((t_ms, f0));
+        }
+        start += HOP;
+    }
+    median_filter_f0(raw, 5)
+}
+
+/// NSDF pitch of one frame, searching only lags for 70–200 Hz. `None` for
+/// silence (RMS gate) or aperiodic frames (peak NSDF < 0.8).
+fn nsdf_pitch(frame: &[f32], sample_rate: u32) -> Option<f32> {
+    let rms = (frame.iter().map(|s| s * s).sum::<f32>() / frame.len() as f32).sqrt();
+    if rms < 0.001 {
+        // Silence gate. Periodicity (NSDF >= 0.8 in the 70-200 Hz lag range)
+        // rejects aperiodic decay tails that sneak past this level.
+        return None;
+    }
+    let min_lag = (sample_rate as f32 / 200.0) as usize;
+    let max_lag = (sample_rate as f32 / 70.0) as usize;
+    if frame.len() <= max_lag + 1 {
+        return None;
+    }
+    let n = frame.len();
+    let mut nsdf = alloc_nsdf(max_lag + 2);
+    for (tau, slot) in nsdf
+        .iter_mut()
+        .enumerate()
+        .take(max_lag + 2)
+        .skip(min_lag - 1)
+    {
+        let mut acf = 0.0f64;
+        let mut m = 0.0f64;
+        for i in 0..(n - tau) {
+            let (a, b) = (f64::from(frame[i]), f64::from(frame[i + tau]));
+            acf += a * b;
+            m += a * a + b * b;
+        }
+        *slot = if m > 0.0 { (2.0 * acf / m) as f32 } else { 0.0 };
+    }
+    let (mut best_tau, mut best) = (0usize, 0.0f32);
+    for (tau, &value) in nsdf.iter().enumerate().take(max_lag + 1).skip(min_lag) {
+        if value > best {
+            best = value;
+            best_tau = tau;
+        }
+    }
+    if best < 0.8 {
+        return None;
+    }
+    // Parabolic refinement over the NSDF peak.
+    let (m0, m1, m2) = (nsdf[best_tau - 1], nsdf[best_tau], nsdf[best_tau + 1]);
+    let denom = m0 - 2.0 * m1 + m2;
+    let delta = if denom.abs() < f32::EPSILON {
+        0.0
+    } else {
+        (0.5 * (m0 - m2) / denom).clamp(-0.5, 0.5)
+    };
+    Some(sample_rate as f32 / (best_tau as f32 + delta))
+}
+
+fn alloc_nsdf(len: usize) -> Vec<f32> {
+    let mut v = Vec::with_capacity(len);
+    v.resize(len, 0.0);
+    v
+}
+
+fn median_filter_f0(track: Vec<(f32, f32)>, k: usize) -> Vec<(f32, f32)> {
+    if track.len() < k {
+        return track;
+    }
+    let half = k / 2;
+    (0..track.len())
+        .map(|i| {
+            let lo = i.saturating_sub(half);
+            let hi = (i + half + 1).min(track.len());
+            let mut vals: Vec<f32> = track[lo..hi].iter().map(|(_, f)| *f).collect();
+            vals.sort_by(|a, b| a.partial_cmp(b).expect("finite f0"));
+            (track[i].0, vals[vals.len() / 2])
+        })
+        .collect()
+}
+
+/// Least-squares line fit over (t_ms, f0) points → (slope_hz_per_ms, intercept_hz).
+pub fn fit_line(track: &[(f32, f32)]) -> (f32, f32) {
+    let n = track.len() as f32;
+    assert!(n >= 2.0, "need at least two points to fit");
+    let (sx, sy) = track
+        .iter()
+        .fold((0.0f32, 0.0f32), |(sx, sy), (x, y)| (sx + x, sy + y));
+    let (mx, my) = (sx / n, sy / n);
+    let (num, den) = track.iter().fold((0.0f32, 0.0f32), |(num, den), (x, y)| {
+        (num + (x - mx) * (y - my), den + (x - mx) * (x - mx))
+    });
+    let slope = num / den.max(f32::EPSILON);
+    (slope, my - slope * mx)
+}
+
+/// Mean F0 of track points within ±window_ms of t_ms (None if no points).
+pub fn f0_near(track: &[(f32, f32)], t_ms: f32, window_ms: f32) -> Option<f32> {
+    let vals: Vec<f32> = track
+        .iter()
+        .filter(|(t, _)| (t - t_ms).abs() <= window_ms)
+        .map(|(_, f)| *f)
+        .collect();
+    if vals.is_empty() {
+        None
+    } else {
+        Some(vals.iter().sum::<f32>() / vals.len() as f32)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -697,6 +824,61 @@ mod tests {
             (c - 3000.0).abs() < 120.0,
             "centroid {c:.1} Hz should be near 3000 Hz"
         );
+    }
+
+    /// Pulse train at an arbitrary F0 through three parallel resonators
+    /// (scaled up so frame RMS clears the F0 tracker's silence gate).
+    fn pulse_vowel(sr: u32, f0: f32, f: [f32; 3], len: usize) -> Vec<f32> {
+        let period = (sr as f32 / f0) as usize;
+        let mut bps: Vec<Biquad> = f
+            .iter()
+            .map(|fc| Biquad::bandpass(sr as f32, *fc, 0.12 * fc))
+            .collect();
+        let amps = [1.0, 0.6, 0.3];
+        (0..len)
+            .map(|n| {
+                let x = if n % period == 0 { 1.0 } else { 0.0 };
+                bps.iter_mut()
+                    .zip(amps)
+                    .map(|(bp, a)| a * bp.process(x))
+                    .sum::<f32>()
+                    * 4.0
+            })
+            .collect()
+    }
+
+    #[test]
+    fn f0_smoke_gate_pulse_train_reads_120() {
+        // THE pitch-detection crate gate (Phase 7): if McLeod cannot read a
+        // 120 Hz glottal-ish pulse train, the hand-rolled NSDF fallback
+        // replaces it. Do not weaken this tolerance.
+        let samples = pulse_vowel(SR, 120.0, [500.0, 1500.0, 2500.0], 24_000);
+        let track = measure_f0_track(&samples, SR);
+        assert!(track.len() >= 5, "voiced frames must be detected");
+        let mut vals: Vec<f32> = track.iter().map(|(_, f)| *f).collect();
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = vals[vals.len() / 2];
+        assert!(
+            (median - 120.0).abs() <= 1.0,
+            "median F0 {median:.2} Hz should be 120 ±1"
+        );
+    }
+
+    #[test]
+    fn f0_track_follows_a_step_and_fits_positive_slope() {
+        let mut samples = pulse_vowel(SR, 100.0, [500.0, 1500.0, 2500.0], 24_000);
+        samples.extend(pulse_vowel(SR, 140.0, [500.0, 1500.0, 2500.0], 24_000));
+        let track = measure_f0_track(&samples, SR);
+        assert!(track.len() >= 10);
+        let (slope, _) = fit_line(&track);
+        assert!(
+            slope > 0.0,
+            "rising F0 must fit a positive slope, got {slope}"
+        );
+        let early = f0_near(&track, 100.0, 100.0).expect("early frames");
+        let late = f0_near(&track, 900.0, 100.0).expect("late frames");
+        assert!((early - 100.0).abs() < 5.0, "early {early:.1}");
+        assert!((late - 140.0).abs() < 5.0, "late {late:.1}");
     }
 
     #[test]

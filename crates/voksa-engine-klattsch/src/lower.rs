@@ -100,6 +100,23 @@ pub fn render_utterance(
     ))
 }
 
+/// Compile Lojban text, apply sentence prosody (declination + stress + xu),
+/// and render offline.
+pub fn render_utterance_prosodic(
+    text: &str,
+    opts: &CompileOptions,
+    prosody: &voksa_core::prosody::ProsodyOptions,
+    sample_rate: u32,
+) -> Result<Vec<f32>, CompileError> {
+    let utterance = voksa_core::prosody::apply_prosody(compile(text, opts)?, prosody);
+    let schedule = Schedule::from_ms_events(sample_rate, lower_events(&utterance.events));
+    Ok(crate::render_schedule(
+        schedule,
+        sample_rate,
+        (utterance.total_ms + 20.0) as u32,
+    ))
+}
+
 /// Render one steady-capable phoneme held for `hold_ms` (measurement helper —
 /// per-vowel/fricative acceptance tests need long stationary segments).
 pub fn render_steady_phoneme(p: Phoneme, sample_rate: u32, hold_ms: u32) -> Vec<f32> {
