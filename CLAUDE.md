@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 0 complete: workspace (4 crates), nix flake, CI, Claude Code harness (hooks + verifier subagent + /phase-start //verify //phase-commit skills), and the working eSpeak oracle xtask. No DSP code yet — see PLAN.md for live phase status.
+Phase 1 complete: the klattsch-core engine spike renders a steady /a/ with FFT-verified formants (±10% gate; measured within 3.3%). Project sample rate: 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
@@ -46,6 +46,8 @@ Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete
 - crates/voksa-core — no_std + alloc. Front-end + schedule compiler + DSP.
 - crates/voksa-cli — native binary: cpal playback + offline WAV render.
 - crates/voksa-web — wasm-bindgen + AudioWorklet glue + demo page.
+- crates/voksa-engine-klattsch — std adapter; the ONLY crate allowed to depend on klattsch-core (pinned =0.1.1); swappable at the Phase-2 engine gate.
+- crates/voksa-testkit — dev-only FFT formant harness + WAV helpers; only ever referenced from [dev-dependencies].
 - xtask/ — automation: wasm-opt, size gate, oracle, listening battery.
 - tests/ — integration tests + insta schedule snapshots.
 - fixtures/oracle/ — eSpeak-NG jbo WAVs — REGRESSION ORACLE ONLY. Never copy its data.
