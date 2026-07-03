@@ -1,0 +1,16 @@
+[package]
+name = "voksa-engine-klattsch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "voksa engine adapter: lowers schedules to klattsch-core (swappable at the Phase-2 gate)"
+
+# The ONLY crate allowed to depend on klattsch-core (std-only; may be replaced
+# by a hand-rolled engine at the end-of-Phase-2 decision gate).
+[dependencies]
+klattsch-core.workspace = true
+
+[dev-dependencies]
+voksa-testkit.workspace = true
+insta.workspace = true

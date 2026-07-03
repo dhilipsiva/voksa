@@ -1,0 +1,14 @@
+[package]
+name = "voksa-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "voksa dev-only test harness: FFT formant measurement + WAV helpers"
+publish = false
+
+# This crate may only ever appear in other crates' [dev-dependencies], so
+# hound/spectrum-analyzer never enter the shipping dependency tree.
+[dependencies]
+spectrum-analyzer.workspace = true
+hound.workspace = true

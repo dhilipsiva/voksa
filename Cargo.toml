@@ -4,6 +4,8 @@ members = [
     "crates/voksa-core",
     "crates/voksa-cli",
     "crates/voksa-web",
+    "crates/voksa-engine-klattsch",
+    "crates/voksa-testkit",
     "xtask",
 ]
 
@@ -15,7 +17,15 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 voksa-core = { path = "crates/voksa-core" }
+voksa-testkit = { path = "crates/voksa-testkit" }
 wasm-bindgen = "0.2.126"
+# 0.1.0 was yanked; the crate is 3 commits young — pin exactly, revisit at the
+# Phase-2 engine decision gate.
+klattsch-core = "=0.1.1"
+# dev-only stack (must never enter the shipping dependency tree)
+spectrum-analyzer = "1.7"
+hound = "3.5"
+insta = "1"
 
 # Size-optimized release profile (spec: the web crate). Applied workspace-wide
 # because cargo only allows `panic` in the root [profile.release]; tests are
