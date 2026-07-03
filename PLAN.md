@@ -18,7 +18,7 @@ Rule: main is always green. Phases are sequential; do not start N+1 before N is 
 | 4 | Stress + pause insertion (penultimate w/ exclusions; mandatory + --dotside) | [x] | phase4-complete | — | 2026-07-03 / 335975f | phonology.md gained two MISSING mandatory rules (CLL §4.9 r4 pause-before-cmevla w/ la-family exemption; §4.2 .y. double pause) + y-final generalization (§17.2) + §4.2 stressed+stressed rule; iy/uy ruled uncountable; capitals map char→syllable, brivla misplacement = error |
 | 5 | Schedule compiler: text → deterministic param schedule; --buffer flag | [x] | phase5-complete | — | 2026-07-03 / d1bc60f | Engine-neutral IR realized in core (schedule.rs: Frame limited to current engine vocabulary — OQ/TL/FL/DI deferred to Phase-10 fork); adapter reduced to 1:1 lowering (gain + A2-polarity quirks isolated); Phase-2 snapshots byte-identical through the refactor; buffering = fully-buffered dialect minus trailing buffer; every written period honored as pause; syllabic nuclei reuse consonant steady spec (revisit at CP1) |
 | 6 | Number/lerfu normalization (PA cmavo, pi, ki'o, hex; by/.abu/.y'y) | [x] | phase6-complete | — | 2026-07-03 / 48c3e15 | ki'o emitted as FULL 3-digit groups (elision never emitted); hex = vocabulary only, not auto-detected (letters in figures = typed error); ":"→pi'e; h/q/w lerfu resolved per CLL §17.5 (.y'y.bu / ky.bu / vy.bu); lerfu written dots reproduced by existing pause rules — zero new pause code |
-| 7 | Prosody layer: declination, stress realization, xu rise | [~] awaiting CP1 sign-off | phase7-complete | **CP1** | 2026-07-03 / 4a40e53 | pitch-detection 0.3 REJECTED by smoke gate (formant-locks ~490 Hz on the buzzy source; clarity/power gates reject everything at recommended settings) → hand-rolled NSDF in testkit (lag range 70–200 Hz, 0.8 peak gate, parabolic refinement, 5-pt median); xu rise also raises later in-span events (a following vowel event re-set F0 down); acoustic RMS check = peak 30 ms window (stop closures stretch); human tags after listening |
+| 7 | Prosody layer: declination, stress realization, xu rise | [x] | phase7-complete | **CP1** | 2026-07-03 / 4a40e53 | pitch-detection 0.3 REJECTED by smoke gate (formant-locks ~490 Hz on the buzzy source; clarity/power gates reject everything at recommended settings) → hand-rolled NSDF in testkit (lag range 70–200 Hz, 0.8 peak gate, parabolic refinement, 5-pt median); xu rise also raises later in-span events (a following vowel event re-set F0 down); acoustic RMS check = peak 30 ms window (stop closures stretch); human tags after listening |
 | 8 | Native CLI adapter: cpal + rtrb, offline WAV mode | [ ] | phase8-complete | — | | |
 | 9 | Web adapter: wasm-bindgen, AudioWorklet, demo page, size budget | [ ] | phase9-complete | — | | |
 | 10 | Attitudinal layer: F0/voice-quality overlay, OQ/DI, cai/sai/ru'e/nai | [ ] | phase10-complete | **CP2** | | |
@@ -62,9 +62,35 @@ order:
 All five stay inside the project constraints: pure Rust, deterministic
 pipeline, CLL-only linguistics, no training data.
 
+### CP1 findings (Phase 7 listening, 2026-07-03) → queued fixes
+
+Rater: dhilipsiva. Caveat recorded in docs/listening/phase7.md: self-taught
+Lojban (never heard another speaker), scored with eSpeak as the reference.
+MOS intelligibility avg 2.6, naturalness avg 2.3; ABX: flat preferred 8/10.
+
+6. **Nucleus-scoped stress stretch** — HIGHEST PRIORITY; explains the 8/10
+   flat preference. The whole stressed span (incl. onset cluster transitions)
+   stretches ×1.5 → "CC strong + long" on gismu-initial stressed syllables
+   (pre/kla/zga/dja/DJO). This is the phonology.md §9.1 stop-burst caveat,
+   now CONFIRMED by listening. Fix: apply STRESS_DURATION_FACTOR to the
+   syllable nucleus(+coda) only; onset consonant transitions stay ≈1.0–1.1×.
+   Small transform change; invalidates prosody snapshots (regenerate) and
+   deserves a re-battery.
+7. **Segment tuning** — coi-munje heard as "soi-oon-shae" (MOS 1/1): /c/ [ʃ]
+   not distinct enough from [s], nasal /m/ murmur weak, /j/ [ʒ] reads
+   devoiced. Phoneme-table work (docs/formants.md), independent of prosody.
+8. **Oracle comparability** — eSpeak jbo found WRONG twice: xu rendered
+   [k]-like (CLL x = [x], German Bach — voksa judged better by the rater)
+   and raw-digit reading of "4" in "li 3.14" (voksa's CLL §18 expansion to
+   "vo" is correct). Battery tweak: also feed eSpeak the normalized
+   PA-cmavo string for number utterances so the oracle column stays
+   comparable; never treat eSpeak as ground truth (fixture policy already
+   says regression-oracle-only).
+
 ## Session log
 (append: date, phase, sessions used, notes)
 
+- 2026-07-03 — Phase 7 CP1 — human sign-off: owner tagged phase7-complete (at e3f3c74). Scores in docs/listening/phase7.md: MOS int avg 2.6 / nat avg 2.3, ABX flat preferred 8/10. Dominant artifact = whole-span stress stretch lengthening onset clusters ("CC strong + long" on pre/kla/zga/dja/DJO) — the §9.1 stop-burst caveat confirmed; nucleus-only stretch queued (backlog item 6). Segmental c/m/j clarity issues on coi-munje (item 7). Rater caught eSpeak being WRONG twice (xu → [k]-like; raw-digit "4") — voksa correct per CLL; oracle-comparability tweak queued (item 8). Rater caveat recorded: self-taught Lojban, eSpeak-referenced scoring.
 - 2026-07-03 — Phase 7 — 1 session — Prosody green, 156/156 tests (15 new: 10 schedule-level + 3 insta snapshots in core, 3 acoustic in the adapter, plus testkit F0 self-tests). Deterministic transform: stretch stressed spans 1.5× (piecewise time map; pauses shift, not stretch) → additive declination 120→95 → +20 Hz/×1.2 in-span → optional xu +25 Hz. Measured: declination slope negative with endpoints 120±8/95±8; stressed F0 > unstressed +5 Hz and peak-window RMS higher; xu ending >110 Hz vs flat ~98. pitch-detection 0.3 failed the smoke gate (McLeod formant-locked ~490 Hz) → dropped for a hand-rolled NSDF (plan's designated fallback). Fixed during green: xu rise must also raise later events inside the final span. Battery: 10 utterances × 3 WAVs (prosodic/flat/oracle) + index.html with MOS/ABX capture, clipping assert clean. COMMITTED, NOT TAGGED — CP1 human listening pending.
 - 2026-07-02 — Phase 0 — 1 session — Workspace (4 crates), flake (fenix stable 1.96.1 + wasm32 std, espeak-ng), CI, portable Windows/WSL hooks, verifier subagent, skills, working oracle (coi-munje.wav RIFF-valid, 58690 B). TDD smoke: red (wrong assertion) → Stop hook blocked exit 2 → fix → 7/7 green → Stop hook passed. Found+fixed: wasm-pack 0.15 silently swallows wasm-opt failures (binaryen 129 rejects rustc's default bulk-memory ops) via per-crate wasm-opt feature flags; wasm 17171 → 15923 B. Fresh-context verifier: all criteria PASS.
 - 2026-07-02 — policy — Auto-push enabled at owner request: PostToolUse hook pushes `origin HEAD --follow-tags` after every git commit/tag. Guard hook now blocks only force pushes and stray rm -rf (push-to-main block removed).
