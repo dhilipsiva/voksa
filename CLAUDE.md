@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 7 complete and tagged (CP1 signed off 2026-07-03; scores in docs/listening/phase7.md). The prosody transform (`voksa_core::prosody::apply_prosody` — stressed-span stretch 1.5× → additive declination 120→95 Hz → +20 Hz/×1.2 in-span → optional xu +25 Hz rise; constants in docs/phonology.md §9.1), `render_utterance_prosodic`, and the real `cargo xtask listening-battery` all shipped. F0 measurement in voksa-testkit is a hand-rolled NSDF (pitch-detection 0.3 formant-locks; rejected by the smoke gate). CP1 verdict: ABX favored the FLAT baseline 8/10 because the whole-span stress stretch lengthened onset clusters — FIXED in Phase 7.1 (nucleus-scoped stretch: `SyllableSpan.nucleus_off_ms`, rhyme-only stretch window; onsets keep unit rate). Remaining CP1 backlog: items 7–8 (segment tuning, oracle comparability) + rules-only naturalness levers 1–5, all in PLAN.md "Naturalness backlog". Next: Phase 8 — native CLI adapter (cpal + rtrb, offline WAV). Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
+Phase 7 complete and tagged (CP1 signed off 2026-07-03; scores in docs/listening/phase7.md). The prosody transform (`voksa_core::prosody::apply_prosody` — stressed-span stretch 1.5× → additive declination 120→95 Hz → +20 Hz/×1.2 in-span → optional xu +25 Hz rise; constants in docs/phonology.md §9.1), `render_utterance_prosodic`, and the real `cargo xtask listening-battery` all shipped. F0 measurement in voksa-testkit is a hand-rolled NSDF (pitch-detection 0.3 formant-locks; rejected by the smoke gate). CP1 verdict: ABX favored the FLAT baseline 8/10 because the whole-span stress stretch lengthened onset clusters — FIXED in Phase 7.1 (nucleus-scoped stretch: `SyllableSpan.nucleus_off_ms`, rhyme-only stretch window; onsets keep unit rate). Remaining CP1 backlog: items 7–8 (segment tuning, oracle comparability) + rules-only naturalness levers 1–5, all in PLAN.md "Naturalness backlog".
+
+Phase 8 complete and tagged: the native CLI (`voksa-cli`). `voksa [FLAGS] <text>` plays live via cpal (whole utterance rendered up front → rtrb SPSC ring → callback only pops + zero-fills, no alloc); `voksa --out FILE <text>` renders a 48 kHz mono WAV without touching an audio device (CI-safe). Flags: `--flat --xu --dotside --buffer`. Hand-rolled RIFF writer keeps hound dev-only; the no-alloc callback path is proven by a hand-rolled counting global allocator (assert_no_alloc is BSD-1-Clause, banned). Next: Phase 9 — web adapter (wasm-bindgen, AudioWorklet, demo page, size budget). Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
@@ -39,6 +41,8 @@ Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete
 - Browser test: `wasm-pack test --headless --chrome crates/voksa-web` (from Phase 9)
 - eSpeak oracle: `cargo xtask oracle -- <lojban text>` → fixtures/oracle/<slug>.wav
 - Listening battery: `cargo xtask listening-battery` (stub until Phase 7)
+- CLI play: `cargo run -p voksa-cli -- <lojban text>` (needs an audio device)
+- CLI render: `cargo run -p voksa-cli -- --out out.wav <lojban text>` (flags: `--flat --xu --dotside --buffer`)
 - Dev shell: `nix develop`
 
 ## Workspace map
