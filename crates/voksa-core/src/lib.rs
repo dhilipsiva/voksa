@@ -10,7 +10,11 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod classify;
+pub mod clusters;
+pub mod letters;
 pub mod phonemes;
+pub mod syllable;
 
 use alloc::format;
 use alloc::string::String;

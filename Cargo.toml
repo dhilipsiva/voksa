@@ -26,6 +26,7 @@ klattsch-core = "=0.1.1"
 spectrum-analyzer = "1.7"
 hound = "3.5"
 insta = "1"
+proptest = "1.11"
 
 # Size-optimized release profile (spec: the web crate). Applied workspace-wide
 # because cargo only allows `panic` in the root [profile.release]; tests are

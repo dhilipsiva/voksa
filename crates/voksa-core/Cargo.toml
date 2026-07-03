@@ -7,3 +7,6 @@ rust-version.workspace = true
 description = "voksa TTS core: no_std + alloc Lojban synthesis engine"
 
 [dependencies]
+
+[dev-dependencies]
+proptest.workspace = true
