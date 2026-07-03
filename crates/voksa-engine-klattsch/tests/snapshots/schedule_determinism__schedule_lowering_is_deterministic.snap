@@ -1,0 +1,53 @@
+---
+source: crates/voksa-engine-klattsch/tests/schedule_determinism.rs
+expression: schedule.events()
+---
+[
+    ScheduleEvent {
+        at_sample: 0,
+        target: ParamUpdate {
+            f0: Some(
+                120.0,
+            ),
+            voicing: Some(
+                1.0,
+            ),
+            f1: Some(
+                730.0,
+            ),
+            bw1: Some(
+                90.0,
+            ),
+            a1: Some(
+                1.0,
+            ),
+            f2: Some(
+                1090.0,
+            ),
+            bw2: Some(
+                110.0,
+            ),
+            a2: Some(
+                0.6,
+            ),
+            f3: Some(
+                2440.0,
+            ),
+            bw3: Some(
+                150.0,
+            ),
+            a3: Some(
+                0.3,
+            ),
+            gain: None,
+            vibrato_depth: None,
+            vibrato_rate: None,
+            tremolo_depth: None,
+            tremolo_rate: None,
+            aspiration: None,
+            tilt: None,
+            effort: None,
+        },
+        transition_samples: 240,
+    },
+]
