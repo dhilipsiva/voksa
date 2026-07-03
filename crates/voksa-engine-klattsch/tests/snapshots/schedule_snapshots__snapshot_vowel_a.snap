@@ -1,7 +1,8 @@
 ---
-source: crates/voksa-engine-klattsch/tests/schedule_determinism.rs
-expression: schedule.events()
+source: crates/voksa-engine-klattsch/tests/schedule_snapshots.rs
+expression: "events_of(&[Phoneme::Vowel(Vowel::A)])"
 ---
+total_ms: 160
 [
     ScheduleEvent {
         at_sample: 0,

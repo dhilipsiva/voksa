@@ -2,9 +2,9 @@
 //!
 //! This is voksa's OWN intermediate representation — deliberately richer than
 //! any engine's table type (durations, per-phoneme aspiration, stop timing).
-//! The engine adapter (voksa-engine-klattsch) lowers it; core never depends
-//! on an engine. Inventory per docs/phonology.md §1 (CLL chapters 3–4);
-//! acoustic seeds per docs/formants.md — tests assert against that table.
+//! The engine adapter crate lowers it; core never depends on an engine.
+//! Inventory per docs/phonology.md §1 (CLL chapters 3–4); acoustic seeds per
+//! docs/formants.md — tests assert against that table.
 
 use crate::alloc::vec::Vec;
 
@@ -196,11 +196,12 @@ pub fn specs(phonemes: &[Phoneme]) -> Vec<SegmentSpec> {
 }
 
 mod data {
-    //! Acoustic seed data (docs/formants.md).
-    //!
-    //! RED-CHECKPOINT SKELETON: durations and timing are real, but every
-    //! amplitude/voicing/aspiration is zeroed — the table renders silence.
-    //! Real values land after the failing acceptance tests are committed.
+    //! Acoustic seed data (docs/formants.md — the single source of truth;
+    //! if values here are retuned, update that table and the schedule
+    //! snapshots together). Amplitudes fall with formant number so band
+    //! peak-picking resolves each formant against glottal-source rolloff;
+    //! voiced fricatives/closures carry a low murmur resonator as the
+    //! voice bar.
 
     use super::{Consonant, Formant, SegmentKind, SegmentSpec, Targets, Vowel};
 
@@ -211,30 +212,71 @@ mod data {
     const STOP_CLOSURE_MS: f32 = 60.0;
     const STOP_BURST_MS: f32 = 25.0;
 
-    const SILENT: Targets = Targets {
-        formants: [
-            Formant {
-                freq_hz: 500.0,
-                bw_hz: 90.0,
-                amp: 0.0,
-            },
-            Formant {
-                freq_hz: 1500.0,
-                bw_hz: 110.0,
-                amp: 0.0,
-            },
-            Formant {
-                freq_hz: 2500.0,
-                bw_hz: 150.0,
-                amp: 0.0,
-            },
-        ],
-        voicing: 0.0,
-        aspiration: 0.0,
-    };
+    #[allow(clippy::too_many_arguments)]
+    fn t(
+        f1: f32,
+        b1: f32,
+        a1: f32,
+        f2: f32,
+        b2: f32,
+        a2: f32,
+        f3: f32,
+        b3: f32,
+        a3: f32,
+        voicing: f32,
+        aspiration: f32,
+    ) -> Targets {
+        Targets {
+            formants: [
+                Formant {
+                    freq_hz: f1,
+                    bw_hz: b1,
+                    amp: a1,
+                },
+                Formant {
+                    freq_hz: f2,
+                    bw_hz: b2,
+                    amp: a2,
+                },
+                Formant {
+                    freq_hz: f3,
+                    bw_hz: b3,
+                    amp: a3,
+                },
+            ],
+            voicing,
+            aspiration,
+        }
+    }
 
-    pub(super) fn vowel_targets(_v: Vowel) -> Targets {
-        SILENT
+    /// Total silence (voiceless stop closures).
+    fn silence() -> Targets {
+        t(
+            500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 2500.0, 150.0, 0.0, 0.0, 0.0,
+        )
+    }
+
+    pub(super) fn vowel_targets(v: Vowel) -> Targets {
+        match v {
+            Vowel::A => t(
+                730.0, 90.0, 1.0, 1090.0, 110.0, 0.8, 2440.0, 150.0, 0.3, 1.0, 0.0,
+            ),
+            Vowel::E => t(
+                530.0, 90.0, 1.0, 1840.0, 110.0, 0.6, 2480.0, 150.0, 0.3, 1.0, 0.0,
+            ),
+            Vowel::I => t(
+                270.0, 90.0, 1.0, 2290.0, 110.0, 0.7, 3010.0, 150.0, 0.45, 1.0, 0.0,
+            ),
+            Vowel::O => t(
+                570.0, 90.0, 1.0, 840.0, 110.0, 0.8, 2410.0, 150.0, 0.25, 1.0, 0.0,
+            ),
+            Vowel::U => t(
+                300.0, 90.0, 1.0, 870.0, 110.0, 0.75, 2240.0, 150.0, 0.25, 1.0, 0.0,
+            ),
+            Vowel::Y => t(
+                500.0, 90.0, 1.0, 1500.0, 110.0, 0.6, 2500.0, 150.0, 0.3, 1.0, 0.0,
+            ),
+        }
     }
 
     pub(super) fn vowel_duration_ms(v: Vowel) -> f32 {
@@ -247,34 +289,122 @@ mod data {
 
     pub(super) fn consonant_spec(c: Consonant) -> SegmentSpec {
         match c {
-            Consonant::B
-            | Consonant::D
-            | Consonant::G
-            | Consonant::P
+            // Stops: closure (silence / voice bar) + release burst.
+            Consonant::P
             | Consonant::T
-            | Consonant::K => SegmentSpec {
-                kind: SegmentKind::Stop {
-                    closure: SILENT,
-                    burst: SILENT,
-                    closure_ms: STOP_CLOSURE_MS,
-                    burst_ms: STOP_BURST_MS,
-                },
-                dur_ms: STOP_CLOSURE_MS + STOP_BURST_MS,
-            },
-            Consonant::C
-            | Consonant::F
-            | Consonant::J
-            | Consonant::S
-            | Consonant::V
-            | Consonant::X
-            | Consonant::Z => SegmentSpec {
-                kind: SegmentKind::Steady(SILENT),
-                dur_ms: FRICATIVE_MS,
-            },
-            Consonant::L | Consonant::M | Consonant::N | Consonant::R => SegmentSpec {
-                kind: SegmentKind::Steady(SILENT),
-                dur_ms: SONORANT_MS,
-            },
+            | Consonant::K
+            | Consonant::B
+            | Consonant::D
+            | Consonant::G => {
+                let voiced = matches!(c, Consonant::B | Consonant::D | Consonant::G);
+                let closure = if voiced {
+                    // Voice bar: low-amplitude murmur during voiced closure.
+                    t(
+                        200.0, 100.0, 0.3, 1500.0, 110.0, 0.0, 2500.0, 150.0, 0.0, 1.0, 0.0,
+                    )
+                } else {
+                    silence()
+                };
+                let burst = match c {
+                    // Bilabial: diffuse low-frequency burst.
+                    Consonant::P | Consonant::B => t(
+                        500.0, 90.0, 0.0, 700.0, 700.0, 0.6, 2500.0, 150.0, 0.0, 0.0, 1.0,
+                    ),
+                    // Alveolar: 3000-4000 Hz emphasis.
+                    Consonant::T | Consonant::D => t(
+                        500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 3500.0, 1000.0, 0.85, 0.0, 1.0,
+                    ),
+                    // Velar: compact mid burst near the velar locus.
+                    _ => t(
+                        500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 2150.0, 500.0, 0.85, 0.0, 1.0,
+                    ),
+                };
+                SegmentSpec {
+                    kind: SegmentKind::Stop {
+                        closure,
+                        burst,
+                        closure_ms: STOP_CLOSURE_MS,
+                        burst_ms: STOP_BURST_MS,
+                    },
+                    dur_ms: STOP_CLOSURE_MS + STOP_BURST_MS,
+                }
+            }
+            // Fricatives: noise-band resonator; voiced ones add a murmur bar.
+            Consonant::S => steady(
+                t(
+                    500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 6000.0, 1700.0, 0.9, 0.0, 1.0,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::Z => steady(
+                t(
+                    250.0, 100.0, 0.6, 1500.0, 110.0, 0.0, 6000.0, 1700.0, 0.8, 0.6, 0.6,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::C => steady(
+                t(
+                    500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 3000.0, 800.0, 0.9, 0.0, 1.0,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::J => steady(
+                t(
+                    250.0, 100.0, 0.6, 1500.0, 110.0, 0.0, 2800.0, 700.0, 0.8, 0.6, 0.6,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::X => steady(
+                t(
+                    500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 2000.0, 600.0, 0.85, 0.0, 1.0,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::F => steady(
+                t(
+                    500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 4500.0, 3500.0, 0.3, 0.0, 0.8,
+                ),
+                FRICATIVE_MS,
+            ),
+            Consonant::V => steady(
+                t(
+                    250.0, 100.0, 0.6, 1500.0, 110.0, 0.0, 4500.0, 3500.0, 0.3, 0.6, 0.5,
+                ),
+                FRICATIVE_MS,
+            ),
+            // Nasals: low murmur, attenuated mid/high (anti-resonance approx).
+            Consonant::M => steady(
+                t(
+                    300.0, 100.0, 1.0, 1000.0, 150.0, 0.1, 2200.0, 200.0, 0.05, 1.0, 0.0,
+                ),
+                SONORANT_MS,
+            ),
+            Consonant::N => steady(
+                t(
+                    310.0, 100.0, 1.0, 1700.0, 150.0, 0.1, 2600.0, 200.0, 0.05, 1.0, 0.0,
+                ),
+                SONORANT_MS,
+            ),
+            // Liquids: l lateral; r rhotic = lowered F3.
+            Consonant::L => steady(
+                t(
+                    360.0, 90.0, 1.0, 1300.0, 110.0, 0.5, 2700.0, 150.0, 0.2, 1.0, 0.0,
+                ),
+                SONORANT_MS,
+            ),
+            Consonant::R => steady(
+                t(
+                    490.0, 90.0, 1.0, 1350.0, 110.0, 0.4, 1750.0, 130.0, 0.45, 1.0, 0.0,
+                ),
+                SONORANT_MS,
+            ),
+        }
+    }
+
+    fn steady(targets: Targets, dur_ms: f32) -> SegmentSpec {
+        SegmentSpec {
+            kind: SegmentKind::Steady(targets),
+            dur_ms,
         }
     }
 }

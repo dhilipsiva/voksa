@@ -1,0 +1,109 @@
+---
+source: crates/voksa-engine-klattsch/tests/schedule_snapshots.rs
+expression: "events_of(&[Phoneme::Consonant(Consonant::T)])"
+---
+total_ms: 85
+[
+    ScheduleEvent {
+        at_sample: 0,
+        target: ParamUpdate {
+            f0: Some(
+                120.0,
+            ),
+            voicing: Some(
+                0.0,
+            ),
+            f1: Some(
+                500.0,
+            ),
+            bw1: Some(
+                90.0,
+            ),
+            a1: Some(
+                0.0,
+            ),
+            f2: Some(
+                1500.0,
+            ),
+            bw2: Some(
+                110.0,
+            ),
+            a2: Some(
+                -0.0,
+            ),
+            f3: Some(
+                2500.0,
+            ),
+            bw3: Some(
+                150.0,
+            ),
+            a3: Some(
+                0.0,
+            ),
+            gain: Some(
+                1.0,
+            ),
+            vibrato_depth: None,
+            vibrato_rate: None,
+            tremolo_depth: None,
+            tremolo_rate: None,
+            aspiration: Some(
+                0.0,
+            ),
+            tilt: None,
+            effort: None,
+        },
+        transition_samples: 960,
+    },
+    ScheduleEvent {
+        at_sample: 2880,
+        target: ParamUpdate {
+            f0: Some(
+                120.0,
+            ),
+            voicing: Some(
+                0.0,
+            ),
+            f1: Some(
+                500.0,
+            ),
+            bw1: Some(
+                90.0,
+            ),
+            a1: Some(
+                0.0,
+            ),
+            f2: Some(
+                1500.0,
+            ),
+            bw2: Some(
+                110.0,
+            ),
+            a2: Some(
+                -0.0,
+            ),
+            f3: Some(
+                3500.0,
+            ),
+            bw3: Some(
+                1000.0,
+            ),
+            a3: Some(
+                0.85,
+            ),
+            gain: Some(
+                1.0,
+            ),
+            vibrato_depth: None,
+            vibrato_rate: None,
+            tremolo_depth: None,
+            tremolo_rate: None,
+            aspiration: Some(
+                1.0,
+            ),
+            tilt: None,
+            effort: None,
+        },
+        transition_samples: 240,
+    },
+]
