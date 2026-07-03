@@ -5,9 +5,12 @@
 //! voksa-core's schedule IR into klattsch schedules. Kept deliberately thin:
 //! the end-of-Phase-2 decision gate may swap the engine for a hand-rolled one.
 
-use klattsch_core::params::ParamUpdate;
-use klattsch_core::schedule::{MsEvent, Schedule};
+pub mod lower;
+
+use klattsch_core::schedule::Schedule;
 use klattsch_core::synth::FormantSynth;
+
+pub use lower::{lower_sequence, render_phonemes, render_steady_phoneme};
 
 /// Project-wide sample rate (Hz). Matches the klattsch convention and the
 /// typical browser AudioContext rate.
@@ -16,27 +19,11 @@ pub const SAMPLE_RATE: u32 = 48_000;
 /// Fixed noise seed so every render is bit-reproducible within a platform.
 const NOISE_SEED: u32 = 0x766f_6b73; // "voks"
 
-/// Hardcoded steady /a/ vowel schedule (Phase-1 engine spike).
-/// Targets and bandwidth seeds from docs/formants.md: F1 730/90, F2 1090/110,
-/// F3 2440/150 Hz; amplitudes fall with formant number so band peak-picking
-/// resolves each formant. klattsch defaults are silent, so voicing and a1–a3
-/// must be set explicitly.
+/// Steady /a/ vowel schedule (Phase-1 engine spike, now sourced from the
+/// Phase-2 phoneme table so the spike acceptance test guards the table too).
 pub fn steady_a_schedule(sample_rate: u32) -> Schedule {
-    let a_target = ParamUpdate {
-        f0: Some(120.0),
-        voicing: Some(1.0),
-        f1: Some(730.0),
-        bw1: Some(90.0),
-        a1: Some(1.0),
-        f2: Some(1090.0),
-        bw2: Some(110.0),
-        a2: Some(0.6),
-        f3: Some(2440.0),
-        bw3: Some(150.0),
-        a3: Some(0.3),
-        ..ParamUpdate::default()
-    };
-    Schedule::from_ms_events(sample_rate, [MsEvent::new(0.0, a_target, 5.0)])
+    use voksa_core::phonemes::{Phoneme, Vowel};
+    lower_sequence(&[Phoneme::Vowel(Vowel::A)], sample_rate).0
 }
 
 /// Render a schedule offline to mono f32 PCM in [-1, 1].

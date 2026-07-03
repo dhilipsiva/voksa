@@ -10,6 +10,8 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod phonemes;
+
 use alloc::format;
 use alloc::string::String;
 
