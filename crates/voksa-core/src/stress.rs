@@ -22,8 +22,20 @@ pub fn is_countable(syl: &Syllable) -> bool {
 /// (a single countable syllable takes it; none countable → unstressed);
 /// cmavo are unstressed by default (CLL §4.2).
 pub fn default_stress(syllables: &[Syllable], class: WordClass) -> Option<usize> {
-    let _ = (syllables, class);
-    todo!("Phase 4 red checkpoint: stress lands after the failing tests are committed")
+    if class == WordClass::Cmavo {
+        return None;
+    }
+    let countable: crate::alloc::vec::Vec<usize> = syllables
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| is_countable(s))
+        .map(|(i, _)| i)
+        .collect();
+    match countable.len() {
+        0 => None,
+        1 => Some(countable[0]),
+        n => Some(countable[n - 2]),
+    }
 }
 
 /// Resolve stress given an optional explicit (capital-marked) syllable.
@@ -34,6 +46,14 @@ pub fn resolve_stress(
     class: WordClass,
     explicit: Option<usize>,
 ) -> Result<Option<usize>, WordError> {
-    let _ = (syllables, class, explicit);
-    todo!("Phase 4 red checkpoint")
+    let Some(idx) = explicit else {
+        return Ok(default_stress(syllables, class));
+    };
+    if idx >= syllables.len() || !is_countable(&syllables[idx]) {
+        return Err(WordError::InvalidStressMark);
+    }
+    if class == WordClass::Brivla && Some(idx) != default_stress(syllables, class) {
+        return Err(WordError::InvalidStressMark);
+    }
+    Ok(Some(idx))
 }
