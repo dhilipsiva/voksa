@@ -71,6 +71,33 @@ vibrato depth/rate, tremolo, gain, F0, F1–F3+A/BW. OQ modulation and a
 diplophonia/alternate-pulse path likely need ADDING for the attitudinal layer
 (.oi creak) — this is the Phase-2 decision-gate question.
 
+## Duration seeds (ms)
+
+| Class | Duration |
+|-------|----------|
+| Vowels | a 160; e i o u 150; y 100 (short; never stressed) |
+| Diphthongs | 200 (25% onset / 50% glide / 25% offset) |
+| Fricatives | 120 |
+| Nasals / liquids | 80 |
+| Stops | closure 60 + burst 25 |
+| ' [h] | 70 |
+
+## Measurement conventions (Phase 2, see ADR 0001)
+
+- Steady-phoneme measurement renders use F0 = 105 Hz: the unique harmonic
+  grid landing within tolerance of every vowel target above. Sequences use
+  the 120 Hz robotic baseline.
+- FFT formant readout: ordered band search + log-parabolic interpolation
+  across the ±F0 harmonic neighbours, whitened by +2·ln f against glottal
+  rolloff (voksa-testkit `measure_formants_fft_harmonic`).
+- LPC verification is hand-rolled in voksa-testkit (loqa-voice-dsp 0.5
+  returned garbage on textbook synthetic vowels): 3:1 decimation to 16 kHz,
+  pre-emphasis 0.97, Hamming, autocorrelation, Levinson-Durbin order 18,
+  Durand-Kerner roots; median over 3 frames.
+- The adapter lowers A2 with NEGATIVE polarity (Klatt 1980 alternating signs)
+  to fill the parallel-topology spectral zeros, and renders at gain 1.0 to
+  stay inside klattsch's linear (un-soft-clipped) range.
+
 ## Test tolerances (from docs/research/03 §c)
 - Formants: ±5% or ±50 Hz for F1 (whichever larger); F2/F3 ±5–8%; relax to ±10%
   in CI to avoid flakes. Verify with BOTH FFT peak-picking (2048-pt Hann,

@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 1 complete: the klattsch-core engine spike renders a steady /a/ with FFT-verified formants (±10% gate; measured within 3.3%). Project sample rate: 48 000 Hz. See PLAN.md for live phase status.
+Phase 2 complete: the full CLL phoneme inventory (6 V + 16 diphthongs + 17 C + [h]) renders with dual-verified acoustics — all vowels within ±5% by FFT AND LPC, sibilant centroids in-band, /ai/ glide monotonic. Engine gate decided: klattsch-core stays (ADR 0001). Project sample rate: 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
@@ -55,7 +55,7 @@ Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete
 
 ## Architecture (settled — do not re-research; details in docs/)
 
-- Engine: klattsch-core (MIT) parallel-formant synth; implement `LojbanTable: PhonemeTable`. Fallback (decide by end of Phase 2): hand-rolled cascade/parallel or fundsp graphs.
+- Engine: klattsch-core (MIT, pinned =0.1.1) parallel-formant synth — KEPT at the Phase-2 gate (docs/adr/0001-engine-choice.md). voksa-core owns the phoneme IR (`phonemes::SegmentSpec`; klattsch's PhonemeTable trait is lossy and deliberately not implemented); voksa-engine-klattsch lowers IR → schedules with Klatt-1980 alternating A2 polarity and gain 1.0 (linear range). Phase 10 (OQ/diplophonia): vendored fork of the glottal source.
 - Front-end from the CLL specification ONLY: 17 consonants, 6 vowels (a e i o u y=[ə]), 16 diphthongs, NO triphthongs. Apostrophe=[h], period=pause/glottal stop, comma=syllable separator (never a pause).
 - Syllabification per CLL §3.9: single C → following vowel; CC split unless valid initial pair (48 pairs); CCC split after first C.
 - Stress: penultimate over COUNTABLE syllables. Countable excludes: y-syllables, syllabic-consonant syllables (l m n r as nucleus), buffer-vowel syllables.
