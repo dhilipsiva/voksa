@@ -195,6 +195,37 @@ pub fn specs(phonemes: &[Phoneme]) -> Vec<SegmentSpec> {
     phonemes.iter().map(|p| spec(*p)).collect()
 }
 
+/// The epenthetic buffer vowel (--buffer flag): [ɪ]-like, acoustically
+/// distinct from all six Lojban vowels, as short and weak as possible
+/// (CLL §3.8; seeds from docs/formants.md). Never written, never stressed,
+/// never counted.
+pub fn buffer_spec() -> SegmentSpec {
+    SegmentSpec {
+        kind: SegmentKind::Steady(Targets {
+            formants: [
+                Formant {
+                    freq_hz: 400.0,
+                    bw_hz: 90.0,
+                    amp: 0.5,
+                },
+                Formant {
+                    freq_hz: 1900.0,
+                    bw_hz: 110.0,
+                    amp: 0.3,
+                },
+                Formant {
+                    freq_hz: 2600.0,
+                    bw_hz: 150.0,
+                    amp: 0.15,
+                },
+            ],
+            voicing: 1.0,
+            aspiration: 0.0,
+        }),
+        dur_ms: 35.0,
+    }
+}
+
 mod data {
     //! Acoustic seed data (docs/formants.md — the single source of truth;
     //! if values here are retuned, update that table and the schedule

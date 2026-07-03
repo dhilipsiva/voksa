@@ -12,9 +12,11 @@ extern crate std;
 
 pub mod classify;
 pub mod clusters;
+pub mod compiler;
 pub mod letters;
 pub mod pause;
 pub mod phonemes;
+pub mod schedule;
 pub mod stress;
 pub mod syllable;
 pub mod word;
