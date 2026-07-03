@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 3 complete: CLL syllabifier (onset maximization, left-paired vowel nuclei, deterministic syllabic-sonorant rule) and word classifier live in voksa-core as pure no_std fns, proven by CLL worked-example vectors + proptest properties. Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
+Phase 4 complete: stress assignment (penultimate-countable with y/iy-uy/syllabic exclusions, capital-letter marking) and the full CLL mandatory-pause ruleset (§4.9 r1–r7 + §4.2/§17.2 extras, --dotside) live in voksa-core. The front-end pipeline through analyzed word sequences with pauses is done; next is the schedule compiler. Engine: klattsch-core (ADR 0001); sample rate 48 000 Hz. See PLAN.md for live phase status.
 
 Environment: the repo lives in WSL Ubuntu at `/home/dhilipsiva/projects/dhilipsiva/voksa`; all Rust/nix commands run inside `nix develop` there. From a Windows-side session, wrap every command as
 `wsl.exe -d Ubuntu --cd /home/dhilipsiva/projects/dhilipsiva/voksa -- bash -lc "nix develop --command <cmd>"`
@@ -60,7 +60,7 @@ Precedence on any conflict: v2 report > v1 report > other reports. CLL (Complete
 - Syllabification per CLL §3.9: single C → following vowel; CC split unless valid initial pair (48 pairs); CCC split after first C.
 - Stress: penultimate over COUNTABLE syllables. Countable excludes: y-syllables, syllabic-consonant syllables (l m n r as nucleus), buffer-vowel syllables.
 - Word classifier: cmevla = ends in consonant; ends in y = cmavo; brivla = a consonant pair (ANY pair, permissibility not required — CLL §4.3) in the first five letters counted after deleting y and apostrophe + ends in vowel; cmavo = otherwise.
-- Mandatory pauses: before vowel-initial words; after consonant-final words (all cmevla); around zoi/la'o foreign text; after Cy cmavo; stressed-final-cmavo before brivla. Flags: `--dotside` (leading pause before every cmevla), `--buffer` (short [ɪ] epenthesis, excluded from stress counting; default OFF).
+- Mandatory pauses: before vowel-initial words; after consonant-final words (all cmevla); BEFORE every cmevla unless preceded by la/lai/la'i/doi (CLL §4.9 r4); around zoi/la'o foreign text; after y-final cmavo unless another follows (generalizes Cy, §17.2); stressed-final word before brivla or before stressed-first word; before AND after hesitation .y.; boundaries merge to one pause. Flags: `--dotside` (drop the la-family exemption → leading pause before every cmevla), `--buffer` (short [ɪ] epenthesis, excluded from stress counting; default OFF).
 - Normalization: digits → PA cmavo (no pa re ci vo mu xa ze bi so; pi decimal; ki'o thousands; dau fei gai jau rei vai hex). Lerfu: by cy dy…, .abu…, .y'y.
 - Prosody: declination 120→95 Hz; stress = ~1.5× duration + F0 excursion (+10–30 Hz) + amplitude boost; optional xu terminal rise.
 - Attitudinal overlay (UI cmavo): F0 + voice-quality per docs/research/02-architecture-v2.md §11 table (.ui joy, .uu sadness, .oi creak/diplophonia, .ii vibrato/flutter, .o'o monotone; intensity via cai/sai/ru'e/nai). Params: F0 AV AH OQ TL FL DI.

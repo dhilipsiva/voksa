@@ -114,28 +114,48 @@ buffer vowel."
 - cmavo: unstressed by default. A stressed syllable immediately before a brivla
   REQUIRES a pause after it (else the words merge).
 - cmevla: stressed anywhere; non-penultimate stress must be marked by capitals.
+  Default (no capitals) = penultimate countable, same as brivla (CLL §4.8).
+- The iy/uy diphthongs (cmevla-only) are NOT countable and never stressed:
+  CLL §3.4 defines their vowel as [ə] and §3.9 requires weak stress for
+  "syllables containing y".
+- Capital marking: ANY capitalized character marks its containing syllable
+  ("it is sufficient to capitalize the vowel letter", CLL §3.1). Cmevla:
+  normative. Cmavo: legal spoken-stress annotation (CLL's own e'U examples).
+  Brivla: capitals off the computed penultimate are an ERROR (§3.9 forbids a
+  false primary stress in brivla). Capitals on uncountable syllables or across
+  two syllables are errors.
 - Note CLL §4.1: syllabic l m n r count as CONSONANTS for morphology/word-shape,
   while being excluded from STRESS counting. Two different rules; don't conflate.
 
 Test vectors: .erNAce, VEcnu, POFygau, BRIvla, DI,ky,jvo (dikyjvo),
 .ARMstrong. (armstrong), DJOsefin.
 
-## 5. Pauses (CLL §3.3, §4.9)
+## 5. Pauses (CLL §3.3, §4.2, §4.9, §17.2)
 MANDATORY:
-1. Before any word beginning with a vowel.
+1. Before any word beginning with a vowel (y counts as a vowel: .ybu, .y'y).
 2. After any word ending in a consonant (i.e., after every cmevla).
-3. Before and after non-Lojban text (zoi / la'o quotes).
-4. After a Cy-form cmavo unless another Cy cmavo follows.
-5. Between a finally-stressed syllable and a following brivla
-   (the stress-collision rule).
-OPTIONAL: anywhere else between words. The comma is never a pause.
+3. Before and after non-Lojban text (zoi / la'o quotes — the pauses bracket
+   the delimiter words and the quoted text, CLL §19.10).
+4. BEFORE every cmevla, unless the immediately preceding word is one of the
+   cmavo la, lai, la'i, doi (CLL §4.9 rule 4 — which is why those strings are
+   forbidden inside cmevla).
+5. Between a finally-stressed syllable and a following brivla (the
+   stress-collision rule, CLL §4.9 rule 5 / §3.9). Generalized by §4.2: a
+   finally-stressed word before a stressed-first-syllable word also pauses
+   (le RE. NANmu). Only capital-marked cmavo can fire these in synthesis.
+6. After any y-final cmavo unless another y-final cmavo follows (CLL §17.2's
+   safe generalization of §4.9 rule 6's Cy rule; covers cy, .y'y, .ybu).
+7. Before AND after the hesitation cmavo .y. (CLL §4.2 — the trailing pause
+   is not derivable from any other rule).
+OPTIONAL: anywhere else between words. The comma is NEVER a pause (§3.3).
+Pauses at one boundary MERGE into one (§4.2: "the pause after cy. merges with
+the pause before .ibu"). A glottal stop is the minimal pause (§3.3).
 
 ### Dotside flag (--dotside, default OFF)
-Community convention (not BPFK-mandated): every cmevla gets a pause BEFORE as
-well as after, and the la/lai/la'i/doi forbidden-substring rules inside cmevla
-are dropped. Audio-level effect is small (classic rules already pause after
-cmevla and before vowel-initial words). Implement as: force leading pause before
-every cmevla; disable la/doi substring warnings in the tokenizer.
+Community convention (not BPFK-mandated): drop the la/lai/la'i/doi exemption
+in rule 4 (every cmevla gets a leading pause unconditionally) and drop the
+la/doi forbidden-substring validation inside cmevla. That exemption removal is
+the ONLY audio-level delta versus classic rules.
 
 ## 6. Buffer vowels (--buffer flag, default OFF)
 An [ɪ]-like vowel, acoustically distinct from all 6 phonemic vowels, as short as
