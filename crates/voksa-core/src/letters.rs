@@ -27,6 +27,11 @@ pub enum WordError {
     /// A comma-delimited stretch with no vowel and no sonorant to serve as a
     /// syllabic nucleus.
     NoNucleus,
+    /// Capital stress marking that cannot be honored: capitals across two or
+    /// more syllables, a capital on an unstressable (y / iy / uy / syllabic)
+    /// syllable, or a brivla capital off the penultimate (CLL §3.9 forbids a
+    /// false primary stress in brivla).
+    InvalidStressMark,
 }
 
 pub fn vowel_from_char(ch: char) -> Option<Vowel> {

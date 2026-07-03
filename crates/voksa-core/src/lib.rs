@@ -13,8 +13,11 @@ extern crate std;
 pub mod classify;
 pub mod clusters;
 pub mod letters;
+pub mod pause;
 pub mod phonemes;
+pub mod stress;
 pub mod syllable;
+pub mod word;
 
 use alloc::format;
 use alloc::string::String;
