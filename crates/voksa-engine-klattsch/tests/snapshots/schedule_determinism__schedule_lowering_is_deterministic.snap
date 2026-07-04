@@ -51,6 +51,8 @@ expression: schedule.events()
             ),
             tilt: None,
             effort: None,
+            open_quotient: None,
+            diplophonia: None,
         },
         transition_samples: 1680,
     },

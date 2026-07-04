@@ -94,9 +94,12 @@ impl Default for BandpassBiquad {
 #[inline]
 pub fn glottal_pulse(phase: f64, effort: f32, open_quotient: f32) -> f32 {
     let e = effort.clamp(0.0, 1.0) as f64;
-    // STUB (voksa fork red): open_quotient is ignored until the failing test.
-    let _ = open_quotient;
-    let tp = 0.5 - e * 0.2; // 0.5 (lax) -> 0.3 (tense)
+    // Open quotient scales the open-phase width Tp. OQ=1.0 leaves the baseline
+    // 0.5 - e*0.2 untouched (∈ [0.3, 0.5] ⊂ [0.05, 0.7]) so the pulse is
+    // byte-identical to upstream; the clamp only guards pathological OQ (never
+    // let Tp reach 0 → division by zero, nor Tp+Tn exceed one cycle).
+    let oq = (open_quotient as f64).clamp(0.1, 2.0);
+    let tp = ((0.5 - e * 0.2) * oq).clamp(0.05, 0.7); // 0.5 (lax) -> 0.3 (tense), × OQ
     let tn = 0.25 - e * 0.17; // 0.25 (lax) -> 0.08 (tense)
     const NORM: f64 = 0.1;
     let result = if phase < tp {
@@ -232,6 +235,33 @@ mod tests {
             (neutral - creaky).abs() > 1e-4,
             "open_quotient must reshape the pulse: neutral={neutral}, creaky={creaky}"
         );
+    }
+
+    #[test]
+    fn open_quotient_neutral_matches_upstream() {
+        // Byte-identity guard: OQ=1.0 must reproduce the exact upstream Rosenberg
+        // pulse for every (phase, effort), so the fork's default output is
+        // indistinguishable from registry 0.1.1.
+        for &phase in &[0.0, 0.1, 0.25, 0.4, 0.5, 0.7, 0.95] {
+            for &effort in &[0.0f32, 0.3, 0.5, 1.0] {
+                let e = effort.clamp(0.0, 1.0) as f64;
+                let tp = 0.5 - e * 0.2;
+                let tn = 0.25 - e * 0.17;
+                const NORM: f64 = 0.1;
+                let expected = (if phase < tp {
+                    NORM * 0.5 * (PI / tp) * (PI * phase / tp).sin()
+                } else if phase < tp + tn {
+                    -NORM * (PI / (2.0 * tn)) * (PI * (phase - tp) / (2.0 * tn)).sin()
+                } else {
+                    0.0
+                }) as f32;
+                assert_eq!(
+                    glottal_pulse(phase, effort, 1.0),
+                    expected,
+                    "OQ=1.0 must equal upstream at phase={phase}, effort={effort}"
+                );
+            }
+        }
     }
 
     #[test]

@@ -64,6 +64,9 @@ pub struct FormantSynth {
     transition_samples: u32,
 
     glottal_phase: f64,
+    // Voksa fork: flips every glottal cycle (on phase wrap). Diplophonia dips the
+    // excitation on odd cycles to inject an F0/2 subharmonic (creak/vocal fry).
+    glottal_parity: bool,
     vibrato_phase: f64,
     tremolo_phase: f64,
     tilt_prev: f32,
@@ -98,6 +101,7 @@ impl FormantSynth {
             increment: ZERO_INCREMENTS,
             transition_samples: 0,
             glottal_phase: 0.0_f64,
+            glottal_parity: false,
             vibrato_phase: 0.0_f64,
             tremolo_phase: 0.0_f64,
             tilt_prev: 0.0,
@@ -130,6 +134,7 @@ impl FormantSynth {
         self.increment = ZERO_INCREMENTS;
         self.transition_samples = 0;
         self.glottal_phase = 0.0;
+        self.glottal_parity = false;
         self.vibrato_phase = 0.0;
         self.tremolo_phase = 0.0;
         self.tilt_prev = 0.0;
@@ -231,10 +236,21 @@ impl FormantSynth {
                 self.current.open_quotient,
             );
             let voiced_gain = 1.0 - self.current.aspiration * 0.85;
-            let exc = v * pulse_val * voiced_gain
+            // Diplophonia: attenuate the voiced pulse on odd glottal cycles so the
+            // pulse train alternates strong/weak → an F0/2 subharmonic (creak).
+            // DI=0 leaves the gain at 1.0 → byte-identical to upstream.
+            let di_gain = if self.glottal_parity {
+                1.0 - self.current.diplophonia.clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+            let exc = v * pulse_val * voiced_gain * di_gain
                 + (1.0 - v) * noise_sample * 0.35
                 + self.current.aspiration * noise_sample * 0.5;
             self.glottal_phase += eff_f0 as f64 / sr64;
+            if self.glottal_phase >= 1.0 {
+                self.glottal_parity = !self.glottal_parity;
+            }
             self.glottal_phase -= self.glottal_phase.floor();
 
             self.bp1
