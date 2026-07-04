@@ -1088,6 +1088,8 @@ dependencies = [
 name = "voksa-web"
 version = "0.0.1"
 dependencies = [
+ "serde",
+ "serde_json",
  "voksa-core",
  "voksa-engine-klattsch",
  "wasm-bindgen-test",

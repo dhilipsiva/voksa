@@ -22,6 +22,10 @@ voksa-engine-klattsch.workspace = true
 # `#[wasm_bindgen_test]` harness for `wasm-pack test --headless --chrome`. The
 # functions under test are plain Rust, so no wasm-bindgen runtime dep is needed.
 wasm-bindgen-test.workspace = true
+# Native-only sentence-picker gate (tests/sentences.rs): parses www/sentences.json
+# and synthesizes every entry. Dev-only — serde never enters the cdylib.
+serde.workspace = true
+serde_json.workspace = true
 
 # rustc emits bulk-memory / nontrapping-fptoint / sign-ext by default for wasm32
 # these days, and `-C target-feature=+simd128` (see .cargo/config.toml) adds
