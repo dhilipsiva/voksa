@@ -26,11 +26,23 @@ pub const PARAM_COUNT: usize = 7;
 /// order). Missing or non-finite entries fall back to the defaults, so an empty
 /// slice reproduces `voksa_render` and the layout is forward-compatible.
 fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
-    // STUB (D1 web red): the real param decode lands after the failing test.
-    let _ = params;
+    let d = ProsodyOptions::default();
+    let g = |i: usize, fallback: f32| {
+        params
+            .get(i)
+            .copied()
+            .filter(|v| v.is_finite())
+            .unwrap_or(fallback)
+    };
     ProsodyOptions {
         xu_rise: flags & FLAG_XU != 0,
-        ..Default::default()
+        declination_start_hz: g(0, d.declination_start_hz),
+        declination_end_hz: g(1, d.declination_end_hz),
+        stress_duration_factor: g(2, d.stress_duration_factor),
+        stress_f0_excursion_hz: g(3, d.stress_f0_excursion_hz),
+        stress_amp_factor: g(4, d.stress_amp_factor),
+        xu_rise_hz: g(5, d.xu_rise_hz),
+        rate: g(6, d.rate),
     }
 }
 
