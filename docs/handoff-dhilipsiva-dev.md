@@ -52,19 +52,28 @@ in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
   memory immediately (memory growth detaches views), then `voksa_free_f32(ptr, len)`.
 - `flags` bits: `1` flat (no prosody), `2` xu rise, `4` dotside, `8` buffer.
 
-## The f32 param block (63 floats; shorter blocks default the rest)
+## The f32 param block (440 floats; shorter blocks default the rest)
 
 Indices 0–6 (prosody): `declination_start_hz, declination_end_hz,
 stress_duration_factor, stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz,
-rate`. Defaults: `120, 95, 1.5, 20, 1.2, 25, 1`.
+rate`.
 
 Indices 7–62 (attitudinals): 7 kinds × 8 fields, kind-major. Kind order:
 `ui, uu, oi, ii, o'o, au, o'onai`. Field order: `f0_mean_hz, f0_range_mult,
-rate_mult, oq, tilt, di, vibrato_hz, aspiration`. The pinned defaults live in
-the reference page's `ATTITUDINALS` descriptor (and in
-`crates/voksa-core/src/attitudinal.rs` — `AttitudinalKind::deviation()`).
-**Do not reorder either axis** — the layout is the contract with the engine and
-the CLI.
+rate_mult, oq, tilt, di, vibrato_hz, aspiration`.
+
+Indices 63–439 (per-phoneme voice table, 377 floats): the normative ordering is
+the `VoiceTable::to_array` doc comment in `crates/voksa-core/src/phonemes.rs` —
+vowels a e i o u y (12 each: f1,bw1,amp1, f2,bw2,amp2, f3,bw3,amp3, voicing,
+aspiration, dur_ms) → 16 diphthong durations → stops p t k b d g (24 each:
+closure 11 + burst 11 + closure_ms + burst_ms) → fricatives f v s z c j x →
+nasals m n → liquids l r → [h] duration → buffer vowel.
+
+**Do not hand-copy defaults and do not reorder** — call the
+`voksa_default_params()` export (length via `voksa_out_len()`, free with
+`voksa_free_f32`) from a main-thread instance and seed every slider from it,
+exactly as the reference page does. UI defaults then equal the engine's tables
+by construction.
 
 ## The config JSON (what users share back)
 
@@ -95,7 +104,13 @@ accepts any finite value and web/CLI replay must stay identical.
   `mi klama .uu`, `coi munje .oi`, `coi munje .ii`, `mi klama .o'o`,
   `mi djica .au`, `mi fengu .o'onai`).
 - Two tiers: Basic (7 prosody sliders + 4 flags) and Advanced (7 attitudinal
-  panels × 8 sliders). Reset per panel + global.
+  panels × 8 sliders, plus the per-phoneme voice table: six sections of
+  collapsible panels, 377 sliders). Reset per panel + global.
+- A **phonetic sentence picker**: copy `www/sentences.json` (18 curated
+  coverage sentences, each with an English what-it-exercises gloss + optional
+  flags) and render it as a dropdown + a "next" cycle button that sets text +
+  flags and auto-speaks. Every entry is gated by a native test in the voksa
+  repo, so the list is guaranteed synthesizable.
 - Download config JSON / Load config JSON / Download WAV (16-bit mono RIFF —
   the reference page has a 15-line encoder) / a notes field that lands in the
   JSON / a waveform or equivalent visual.
