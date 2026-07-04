@@ -3,11 +3,30 @@
 //! demo's f32 param layout + flags; unknown fields (notes, sampleRate,
 //! timestamp, version) are ignored.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use serde::Deserialize;
+use voksa_core::attitudinal::{AttitudinalKind, AttitudinalTable};
 use voksa_core::compiler::CompileOptions;
 use voksa_core::prosody::ProsodyOptions;
+
+/// One attitudinal's deviation-vector overrides (D2a advanced tab). Only the
+/// fields present in the JSON override the pinned vector; the rest stay
+/// default. Keys mirror `voksa_core::attitudinal::Deviation` minus the `d_`
+/// prefix (the demo exports these names).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct AttitudinalOverride {
+    pub f0_mean_hz: Option<f32>,
+    pub f0_range_mult: Option<f32>,
+    pub rate_mult: Option<f32>,
+    pub oq: Option<f32>,
+    pub tilt: Option<f32>,
+    pub di: Option<f32>,
+    pub vibrato_hz: Option<f32>,
+    pub aspiration: Option<f32>,
+}
 
 /// A deserialized tuning config. Missing fields fall back to the defaults.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -25,6 +44,9 @@ pub struct Config {
     pub stress_amp_factor: f32,
     pub xu_rise_hz: f32,
     pub rate: f32,
+    /// Attitudinal deviation overrides keyed by cmavo (`"ui"`, `"uu"`, `"oi"`,
+    /// `"ii"`, `"o'o"`, `"au"`, `"o'onai"`). Absent = pinned defaults.
+    pub attitudinals: BTreeMap<String, AttitudinalOverride>,
 }
 
 impl Default for Config {
@@ -43,6 +65,7 @@ impl Default for Config {
             stress_amp_factor: p.stress_amp_factor,
             xu_rise_hz: p.xu_rise_hz,
             rate: p.rate,
+            attitudinals: BTreeMap::new(),
         }
     }
 }
@@ -78,6 +101,14 @@ impl Config {
             xu_rise_hz: self.xu_rise_hz,
             rate: self.rate,
         }
+    }
+
+    /// Build the runtime [`AttitudinalTable`]: pinned defaults with this
+    /// config's per-cmavo overrides applied.
+    pub fn attitudinal_table(&self) -> AttitudinalTable {
+        // RED stub (D2a): overrides are ignored until the failing test.
+        let _ = (&self.attitudinals, AttitudinalKind::ALL);
+        AttitudinalTable::default()
     }
 }
 
@@ -116,6 +147,41 @@ mod tests {
         assert_eq!(
             Config::default().prosody_options(),
             ProsodyOptions::default()
+        );
+    }
+
+    #[test]
+    fn config_without_attitudinals_is_default_table() {
+        assert_eq!(
+            Config::from_json("{}").unwrap().attitudinal_table(),
+            AttitudinalTable::default()
+        );
+    }
+
+    #[test]
+    fn attitudinals_block_overrides_pinned_vector() {
+        // Community JSON overrides only what it names; the rest stays pinned.
+        let json = r#"{
+            "text": "coi munje .ui",
+            "attitudinals": {
+                "ui": { "f0_mean_hz": 40.0, "di": 0.3 },
+                "o'onai": { "tilt": 0.5 }
+            }
+        }"#;
+        let t = Config::from_json(json).unwrap().attitudinal_table();
+        let joy = t.get(AttitudinalKind::Joy);
+        assert_eq!(joy.f0_mean_hz, 40.0);
+        assert_eq!(joy.d_di, 0.3);
+        assert_eq!(
+            joy.f0_range_mult,
+            AttitudinalKind::Joy.deviation().f0_range_mult,
+            "unnamed fields stay pinned"
+        );
+        assert_eq!(t.get(AttitudinalKind::Anger).d_tilt, 0.5);
+        assert_eq!(
+            t.get(AttitudinalKind::Sadness),
+            AttitudinalKind::Sadness.deviation(),
+            "unnamed kinds stay pinned"
         );
     }
 }

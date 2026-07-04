@@ -2,7 +2,9 @@
 //! intensity, and the voice-quality overlay. INVENTED / non-normative (see
 //! `voksa_core::attitudinal`); these assert voksa's own realization, not CLL.
 
-use voksa_core::attitudinal::{AttitudinalKind, apply_attitudinal};
+use voksa_core::attitudinal::{
+    AttitudinalKind, AttitudinalTable, Deviation, apply_attitudinal, apply_attitudinal_with,
+};
 use voksa_core::compiler::{CompileOptions, compile};
 use voksa_core::prosody::{ProsodyOptions, apply_prosody};
 use voksa_core::schedule::UtteranceSchedule;
@@ -178,6 +180,77 @@ fn modal_utterance_overlay_is_identity() {
     let prosodic = apply_prosody(compiled("coi munje"), &ProsodyOptions::default());
     let after = apply_attitudinal(prosodic.clone());
     assert_eq!(prosodic, after);
+}
+
+// ---- runtime deviation table (demo tuning console D2a) -----------------------
+
+#[test]
+fn default_table_matches_pinned_vectors() {
+    // Byte-identity guard: the runtime table defaults to the pinned constants,
+    // so every existing snapshot stays valid.
+    let t = AttitudinalTable::default();
+    for k in AttitudinalKind::ALL {
+        assert_eq!(
+            t.get(k),
+            k.deviation(),
+            "{k:?} must default to its pinned deviation vector"
+        );
+    }
+}
+
+#[test]
+fn deviation_array_round_trip() {
+    // The flat-f32 crossing (wasm param block) must be lossless for every kind.
+    for k in AttitudinalKind::ALL {
+        let d = k.deviation();
+        assert_eq!(Deviation::from_array(d.to_array()), d, "{k:?}");
+    }
+}
+
+#[test]
+fn kind_index_matches_all_order() {
+    for (i, k) in AttitudinalKind::ALL.iter().enumerate() {
+        assert_eq!(k.index(), i, "{k:?} index must equal its ALL slot");
+    }
+}
+
+#[test]
+fn apply_with_default_table_equals_pinned() {
+    let s = apply_prosody(compiled("coi munje .ui"), &ProsodyOptions::default());
+    assert_eq!(
+        apply_attitudinal(s.clone()),
+        apply_attitudinal_with(s, &AttitudinalTable::default()),
+        "the default table must reproduce the pinned overlay byte-identically"
+    );
+}
+
+#[test]
+fn custom_table_changes_overlay() {
+    // A community-tuned Joy vector (bigger mean-F0 shift) must color munje
+    // further than the pinned one.
+    let s = apply_prosody(compiled("coi munje .ui"), &ProsodyOptions::default());
+    let mut table = AttitudinalTable::default();
+    table.deviations[AttitudinalKind::Joy.index()].f0_mean_hz = 40.0;
+    let pinned = apply_attitudinal_with(s.clone(), &AttitudinalTable::default());
+    let custom = apply_attitudinal_with(s, &table);
+    let (p, c) = (mean_word_f0(&pinned, 1), mean_word_f0(&custom, 1));
+    assert!(
+        c > p + 10.0,
+        "a 40 Hz Joy shift must out-raise the pinned 14 Hz: pinned={p:.1}, custom={c:.1}"
+    );
+}
+
+#[test]
+fn custom_table_is_deterministic() {
+    let mut table = AttitudinalTable::default();
+    table.deviations[AttitudinalKind::Complaint.index()].d_di = 0.5;
+    let mk = || {
+        apply_attitudinal_with(
+            apply_prosody(compiled("coi munje .oi"), &ProsodyOptions::default()),
+            &table,
+        )
+    };
+    assert_eq!(mk(), mk());
 }
 
 // ---- per-attitudinal schedule snapshots (compile → prosody → attitudinal) ----

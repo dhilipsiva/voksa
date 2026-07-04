@@ -75,6 +75,45 @@ pub struct Deviation {
 }
 
 impl AttitudinalKind {
+    /// All categories in the CANONICAL order — the index into
+    /// [`AttitudinalTable::deviations`] and the wasm f32 block (demo tuning
+    /// console D2a). Do not reorder: JS + CLI mirror this.
+    pub const ALL: [AttitudinalKind; 7] = [
+        AttitudinalKind::Joy,
+        AttitudinalKind::Sadness,
+        AttitudinalKind::Complaint,
+        AttitudinalKind::Fear,
+        AttitudinalKind::Patience,
+        AttitudinalKind::Desire,
+        AttitudinalKind::Anger,
+    ];
+
+    /// This kind's slot in [`Self::ALL`] / [`AttitudinalTable::deviations`].
+    pub const fn index(self) -> usize {
+        match self {
+            AttitudinalKind::Joy => 0,
+            AttitudinalKind::Sadness => 1,
+            AttitudinalKind::Complaint => 2,
+            AttitudinalKind::Fear => 3,
+            AttitudinalKind::Patience => 4,
+            AttitudinalKind::Desire => 5,
+            AttitudinalKind::Anger => 6,
+        }
+    }
+
+    /// The cmavo (without the leading period) — the tuning-config JSON key.
+    pub const fn cmavo(self) -> &'static str {
+        match self {
+            AttitudinalKind::Joy => "ui",
+            AttitudinalKind::Sadness => "uu",
+            AttitudinalKind::Complaint => "oi",
+            AttitudinalKind::Fear => "ii",
+            AttitudinalKind::Patience => "o'o",
+            AttitudinalKind::Desire => "au",
+            AttitudinalKind::Anger => "o'onai",
+        }
+    }
+
     /// The invented deviation vector for this category (v2 §11-derived).
     pub const fn deviation(self) -> Deviation {
         match self {
@@ -152,6 +191,77 @@ impl AttitudinalKind {
     }
 }
 
+impl Deviation {
+    /// Number of f32 fields — one attitudinal's stride in the wasm f32 block.
+    pub const FIELDS: usize = 8;
+
+    /// The CANONICAL field order for the flat-f32 crossings (wasm param block;
+    /// the demo's JS descriptor mirrors it):
+    /// `[f0_mean_hz, f0_range_mult, rate_mult, d_oq, d_tilt, d_di,
+    ///   d_vibrato_hz, d_aspiration]`. Do not reorder.
+    pub const fn to_array(self) -> [f32; Self::FIELDS] {
+        [
+            self.f0_mean_hz,
+            self.f0_range_mult,
+            self.rate_mult,
+            self.d_oq,
+            self.d_tilt,
+            self.d_di,
+            self.d_vibrato_hz,
+            self.d_aspiration,
+        ]
+    }
+
+    /// Inverse of [`Self::to_array`].
+    pub const fn from_array(a: [f32; Self::FIELDS]) -> Self {
+        Self {
+            f0_mean_hz: a[0],
+            f0_range_mult: a[1],
+            rate_mult: a[2],
+            d_oq: a[3],
+            d_tilt: a[4],
+            d_di: a[5],
+            d_vibrato_hz: a[6],
+            d_aspiration: a[7],
+        }
+    }
+}
+
+/// A RUNTIME table of the 7 deviation vectors (demo tuning console D2a),
+/// indexed by [`AttitudinalKind::index`]. Defaults to the pinned constants, so
+/// `apply_attitudinal_with(s, &AttitudinalTable::default())` is byte-identical
+/// to [`apply_attitudinal`] — every snapshot stays pinned.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AttitudinalTable {
+    pub deviations: [Deviation; 7],
+}
+
+impl AttitudinalTable {
+    /// The pinned (docs/phonology.md §10.1) vectors.
+    pub const PINNED: Self = Self {
+        deviations: [
+            AttitudinalKind::Joy.deviation(),
+            AttitudinalKind::Sadness.deviation(),
+            AttitudinalKind::Complaint.deviation(),
+            AttitudinalKind::Fear.deviation(),
+            AttitudinalKind::Patience.deviation(),
+            AttitudinalKind::Desire.deviation(),
+            AttitudinalKind::Anger.deviation(),
+        ],
+    };
+
+    /// The deviation vector for `kind`.
+    pub const fn get(&self, kind: AttitudinalKind) -> Deviation {
+        self.deviations[kind.index()]
+    }
+}
+
+impl Default for AttitudinalTable {
+    fn default() -> Self {
+        Self::PINNED
+    }
+}
+
 /// Map a lowercased word (the tokenizer strips the leading `.`, so `.ui` →
 /// `ui`) to its attitudinal category, or `None` if it is not one voksa
 /// realizes. `.o'onai` is recognized as a fused single token (anger); the
@@ -222,6 +332,15 @@ fn scale_time(mut s: UtteranceSchedule, mult: f32) -> UtteranceSchedule {
     }
     s.total_ms *= mult;
     s
+}
+
+/// Like [`apply_attitudinal`] but with a RUNTIME deviation table (demo tuning
+/// console D2a). `apply_attitudinal_with(s, &AttitudinalTable::default())` is
+/// byte-identical to [`apply_attitudinal`].
+pub fn apply_attitudinal_with(s: UtteranceSchedule, table: &AttitudinalTable) -> UtteranceSchedule {
+    // RED stub (D2a): the runtime table is ignored until the failing test.
+    let _ = table;
+    apply_attitudinal(s)
 }
 
 /// Apply the attitudinal overlay stored on `s` (by the compiler) to its event

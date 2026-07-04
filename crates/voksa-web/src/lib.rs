@@ -7,9 +7,10 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use voksa_core::attitudinal::AttitudinalTable;
 use voksa_core::compiler::{CompileError, CompileOptions};
 use voksa_core::prosody::ProsodyOptions;
-use voksa_engine_klattsch::{render_utterance, render_utterance_prosodic};
+use voksa_engine_klattsch::{render_utterance, render_utterance_expressive};
 
 /// `flags` bit layout, mirroring the native CLI (default 0 = prosodic).
 pub const FLAG_FLAT: u32 = 0x1;
@@ -21,6 +22,15 @@ pub const FLAG_BUFFER: u32 = 0x8;
 /// `[declination_start_hz, declination_end_hz, stress_duration_factor,
 /// stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz, rate]`.
 pub const PARAM_COUNT: usize = 7;
+
+/// Count of f32 attitudinal knobs appended after the prosody block (D2a):
+/// 7 kinds ([`voksa_core::attitudinal::AttitudinalKind::ALL`] order) × 8
+/// fields ([`voksa_core::attitudinal::Deviation::to_array`] order).
+pub const ATTITUDINAL_PARAM_COUNT: usize = 56;
+
+/// Full f32 block: prosody then attitudinals. Shorter blocks default the rest,
+/// so 7-float (demo-basic) and empty blocks stay valid forever.
+pub const FULL_PARAM_COUNT: usize = PARAM_COUNT + ATTITUDINAL_PARAM_COUNT;
 
 /// Build [`ProsodyOptions`] from the flag bits + the f32 param block (fixed
 /// order). Missing or non-finite entries fall back to the defaults, so an empty
@@ -46,8 +56,20 @@ fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
     }
 }
 
+/// Build the runtime [`AttitudinalTable`] from the f32 block's attitudinal
+/// section (`params[PARAM_COUNT..FULL_PARAM_COUNT]`). Missing or non-finite
+/// entries fall back to the pinned defaults, so a 7-float (demo-basic) or
+/// empty block reproduces `AttitudinalTable::default()` exactly.
+fn attitudinal_from(params: &[f32]) -> AttitudinalTable {
+    // RED stub (D2a): the attitudinal section is ignored until the failing test.
+    let _ = params;
+    AttitudinalTable::default()
+}
+
 /// Render Lojban `text` to mono f32 PCM at `sample_rate`. `params` is the f32
-/// prosody block (empty = all defaults). Shared by the C-ABI exports + tests.
+/// block: prosody ([`PARAM_COUNT`]) then attitudinals
+/// ([`ATTITUDINAL_PARAM_COUNT`]); shorter blocks (or empty) default the rest.
+/// Shared by the C-ABI exports + tests.
 pub fn synth(
     text: &str,
     flags: u32,
@@ -61,7 +83,13 @@ pub fn synth(
     if flags & FLAG_FLAT != 0 {
         render_utterance(text, &opts, sample_rate)
     } else {
-        render_utterance_prosodic(text, &opts, &prosody_from(flags, params), sample_rate)
+        render_utterance_expressive(
+            text,
+            &opts,
+            &prosody_from(flags, params),
+            &attitudinal_from(params),
+            sample_rate,
+        )
     }
 }
 
@@ -247,6 +275,62 @@ mod tests {
             "rate 2x should roughly halve the sample count ({} vs {})",
             fast.len(),
             base.len()
+        );
+    }
+
+    /// The full 63-float block at its default values (prosody + pinned
+    /// attitudinal vectors, in the canonical layout).
+    fn default_full_block() -> Vec<f32> {
+        let mut full = vec![120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
+        for k in voksa_core::attitudinal::AttitudinalKind::ALL {
+            full.extend(k.deviation().to_array());
+        }
+        assert_eq!(full.len(), FULL_PARAM_COUNT);
+        full
+    }
+
+    #[test]
+    fn full_default_block_reproduces_defaults() {
+        // A full block carrying exactly the default values must render
+        // byte-identically to the empty block (layout correctness guard).
+        assert_eq!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &default_full_block()).unwrap(),
+        );
+    }
+
+    #[test]
+    fn attitudinal_params_change_output() {
+        // Bumping Joy's f0_mean_hz (first attitudinal slot) must change a .ui
+        // render — the advanced tab's knobs reach the engine.
+        let mut tuned = default_full_block();
+        tuned[PARAM_COUNT] = 60.0;
+        assert_ne!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &tuned).unwrap(),
+            "a tuned Joy vector must change the .ui render"
+        );
+    }
+
+    #[test]
+    fn attitudinal_params_inert_without_marker() {
+        // Modal text carries no attitudinal scope, so table changes are inert.
+        let mut tuned = default_full_block();
+        tuned[PARAM_COUNT] = 60.0;
+        assert_eq!(
+            synth("coi munje", 0, SR, &[]).unwrap(),
+            synth("coi munje", 0, SR, &tuned).unwrap(),
+        );
+    }
+
+    #[test]
+    fn basic_seven_float_block_stays_valid() {
+        // demo-basic clients send exactly 7 floats; that must keep working
+        // (attitudinals default) even for attitudinal-bearing text.
+        let basic = [120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
+        assert_eq!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &basic).unwrap(),
         );
     }
 }
