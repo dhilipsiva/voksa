@@ -25,6 +25,10 @@
       textarea { width: 100%; height: 4rem; box-sizing: border-box; }
       code { background: #f2f2f2; padding: 0 0.2em; }
       .muted { color: #777; font-size: 0.85rem; }
+      #attitudinals details { border: 1px solid #e2e2e2; margin: 0.4rem 0; padding: 0.3rem 0.6rem; }
+      #attitudinals summary { cursor: pointer; }
+      #attitudinals summary b { font-size: 1.05rem; }
+      #attitudinals summary button { font-size: 0.8rem; padding: 0.15rem 0.5rem; margin-left: 0.4rem; }
     </style>
   </head>
   <body>
@@ -45,8 +49,15 @@
       <div id="sliders"></div>
     </div>
     <div id="panel-advanced" class="panel" hidden>
+      <p class="muted"><b>cnima'o — attitudinals.</b> A UI cmavo colors the word
+        <em>before</em> it with an emotion (<code>coi munje .ui</code> = a joyful
+        <code>munje</code>). Follow it with <code>nai</code> to flip the emotion,
+        <code>sai</code>/<code>ru'e</code> to weaken it. These deviation vectors are
+        voksa's own invention (the CLL defines meaning, not sound) — tune them and
+        share your config JSON.</p>
+      <div id="attitudinals"></div>
       <p class="muted">Per-phoneme acoustics (vowel formants, consonant loci,
-        durations) land in the Advanced pass.</p>
+        durations) land in a later Advanced pass.</p>
     </div>
 
     <div class="actions">
@@ -66,7 +77,7 @@
 
     <script type="module">
       // ?v= cache-busts the worklet (addModule caches aggressively).
-      const V = '3';
+      const V = '4';
 
       // The 7 prosody knobs, IN THE ORDER of the wasm f32 layout + CLI keys.
       const PARAMS = [
@@ -92,6 +103,38 @@
         'Slow & calm': { rate: 0.8, stress_f0_excursion_hz: 12, declination_start_hz: 110, declination_end_hz: 90 },
       };
 
+      // The 8 deviation fields, IN THE ORDER of Deviation::to_array (the wasm
+      // f32 stride) — keys mirror the CLI config JSON. Do not reorder.
+      const ATT_FIELDS = [
+        { key: 'f0_mean_hz',    label: 'Pitch shift (Hz)',        min: -40,  max: 40,  step: 1    },
+        { key: 'f0_range_mult', label: 'Pitch range ×',           min: 0,    max: 3,   step: 0.05 },
+        { key: 'rate_mult',     label: 'Tempo × (>1 = slower)',   min: 0.5,  max: 2,   step: 0.05 },
+        { key: 'oq',            label: 'Open quotient Δ (breath)',min: -0.6, max: 0.8, step: 0.01 },
+        { key: 'tilt',          label: 'Brightness Δ',            min: -0.9, max: 0.9, step: 0.01 },
+        { key: 'di',            label: 'Creak (diplophonia)',     min: 0,    max: 1,   step: 0.01 },
+        { key: 'vibrato_hz',    label: 'Flutter (vibrato Hz)',    min: 0,    max: 15,  step: 0.5  },
+        { key: 'aspiration',    label: 'Breathiness Δ',           min: 0,    max: 0.6, step: 0.01 },
+      ];
+      // The 7 attitudinals, IN THE ORDER of AttitudinalKind::ALL (the wasm f32
+      // block after the prosody knobs). `def` = the pinned vectors
+      // (docs/phonology.md §10.1). Lojban label + English sub-text.
+      const ATTITUDINALS = [
+        { key: 'ui',     label: '.ui',     sub: 'happiness / joy',    example: 'coi munje .ui',
+          def: { f0_mean_hz: 14,  f0_range_mult: 1.4, rate_mult: 0.95, oq: 0.05,  tilt: 0.15,  di: 0,    vibrato_hz: 0, aspiration: 0 } },
+        { key: 'uu',     label: '.uu',     sub: 'pity / sadness',     example: 'mi klama .uu',
+          def: { f0_mean_hz: -12, f0_range_mult: 0.6, rate_mult: 1.15, oq: 0.20,  tilt: -0.20, di: 0,    vibrato_hz: 0, aspiration: 0.15 } },
+        { key: 'oi',     label: '.oi',     sub: 'complaint / pain',   example: 'coi munje .oi',
+          def: { f0_mean_hz: -4,  f0_range_mult: 0.9, rate_mult: 1.05, oq: -0.10, tilt: -0.05, di: 0.10, vibrato_hz: 0, aspiration: 0 } },
+        { key: 'ii',     label: '.ii',     sub: 'fear',               example: 'coi munje .ii',
+          def: { f0_mean_hz: 18,  f0_range_mult: 1.2, rate_mult: 0.90, oq: 0.05,  tilt: 0.05,  di: 0,    vibrato_hz: 6, aspiration: 0.10 } },
+        { key: "o'o",    label: ".o'o",    sub: 'patience / calm',    example: "mi klama .o'o",
+          def: { f0_mean_hz: -6,  f0_range_mult: 0.3, rate_mult: 1.0,  oq: 0,     tilt: -0.05, di: 0,    vibrato_hz: 0, aspiration: 0 } },
+        { key: 'au',     label: '.au',     sub: 'desire',             example: 'mi djica .au',
+          def: { f0_mean_hz: 8,   f0_range_mult: 1.1, rate_mult: 1.0,  oq: 0.10,  tilt: 0,     di: 0,    vibrato_hz: 0, aspiration: 0.08 } },
+        { key: "o'onai", label: ".o'onai", sub: 'anger',              example: "mi fengu .o'onai",
+          def: { f0_mean_hz: 10,  f0_range_mult: 1.3, rate_mult: 0.90, oq: -0.20, tilt: 0.25,  di: 0.15, vibrato_hz: 0, aspiration: 0 } },
+      ];
+
       // ---- build the UI from the descriptors ----
       const flagsBox = document.getElementById('flags');
       for (const f of FLAGS) {
@@ -116,23 +159,82 @@
         slideEl(p.key).addEventListener('input', () => { outEl(p.key).textContent = slideEl(p.key).value; });
       }
 
-      // flat greys out the prosody knobs; xu is meaningless with flat.
+      // ---- advanced tab: one panel per attitudinal ----
+      const attBox = document.getElementById('attitudinals');
+      for (const a of ATTITUDINALS) {
+        const det = document.createElement('details');
+        det.innerHTML =
+          `<summary><b>${a.label}</b> <span class="muted">${a.sub}</span> ` +
+          `<button type="button" class="att-try" data-att="${a.key}">▶ try <code>${a.example}</code></button> ` +
+          `<button type="button" class="att-reset" data-att="${a.key}">reset</button></summary>`;
+        for (const f of ATT_FIELDS) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.innerHTML =
+            `<label for="a-${a.key}-${f.key}">${f.label}</label>` +
+            `<input type="range" id="a-${a.key}-${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" value="${a.def[f.key]}">` +
+            `<output id="ao-${a.key}-${f.key}">${a.def[f.key]}</output>`;
+          det.appendChild(row);
+        }
+        attBox.appendChild(det);
+      }
+      const attEl = (k, f) => document.getElementById(`a-${k}-${f}`);
+      const attOut = (k, f) => document.getElementById(`ao-${k}-${f}`);
+      function setAtt(k, f, v) { attEl(k, f).value = v; attOut(k, f).textContent = v; }
+      function resetAtt(a) { for (const f of ATT_FIELDS) setAtt(a.key, f.key, a.def[f.key]); }
+      for (const a of ATTITUDINALS) {
+        for (const f of ATT_FIELDS) {
+          attEl(a.key, f.key).addEventListener('input', () => { attOut(a.key, f.key).textContent = attEl(a.key, f.key).value; });
+        }
+      }
+      attBox.addEventListener('click', (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        e.preventDefault(); // don't toggle the <details>
+        const a = ATTITUDINALS.find((x) => x.key === b.dataset.att); if (!a) return;
+        if (b.classList.contains('att-reset')) resetAtt(a);
+        else if (b.classList.contains('att-try')) {
+          document.getElementById('text').value = a.example;
+          if (!speakBtn.disabled) speakBtn.click();
+        }
+      });
+
+      // flat greys out the prosody + attitudinal knobs; xu is meaningless with flat.
       function syncFlatState() {
         const flat = flagEl('flat').checked;
         flagEl('xu').disabled = flat;
         if (flat) flagEl('xu').checked = false;
         document.getElementById('sliders').classList.toggle('disabled', flat);
         for (const p of PARAMS) slideEl(p.key).disabled = flat;
+        attBox.classList.toggle('disabled', flat);
+        for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) attEl(a.key, f.key).disabled = flat;
       }
       flagEl('flat').addEventListener('change', syncFlatState);
 
       // ---- config <-> UI ----
-      function readParamsArray() { return Float32Array.from(PARAMS.map((p) => parseFloat(slideEl(p.key).value))); }
+      // The wasm f32 block: 7 prosody knobs, then 7 attitudinals x 8 fields
+      // (AttitudinalKind::ALL x Deviation::to_array order) = 63 floats.
+      function readParamsArray() {
+        const arr = PARAMS.map((p) => parseFloat(slideEl(p.key).value));
+        for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) arr.push(parseFloat(attEl(a.key, f.key).value));
+        return Float32Array.from(arr);
+      }
       function readFlagsBits() { return FLAGS.reduce((b, f) => b | (flagEl(f.key).checked ? f.bit : 0), 0); }
       function currentConfig() {
         const c = { text: document.getElementById('text').value };
         for (const f of FLAGS) c[f.key] = flagEl(f.key).checked;
         for (const p of PARAMS) c[p.key] = parseFloat(slideEl(p.key).value);
+        // Attitudinals export ONLY the deltas from the pinned vectors — the CLI
+        // treats missing keys as pinned, so shared JSON stays small + readable.
+        const atts = {};
+        for (const a of ATTITUDINALS) {
+          const o = {};
+          for (const f of ATT_FIELDS) {
+            const v = parseFloat(attEl(a.key, f.key).value);
+            if (Math.abs(v - a.def[f.key]) > 1e-9) o[f.key] = v;
+          }
+          if (Object.keys(o).length) atts[a.key] = o;
+        }
+        if (Object.keys(atts).length) c.attitudinals = atts;
         c.notes = document.getElementById('notes').value;
         c.sampleRate = ctx ? ctx.sampleRate : 48000;
         c.voksaVersion = '0.0.1';
@@ -144,12 +246,22 @@
         for (const p of PARAMS) {
           if (typeof c[p.key] === 'number') { slideEl(p.key).value = c[p.key]; outEl(p.key).textContent = c[p.key]; }
         }
+        // Delta semantics: reset to pinned, then apply the config's overrides.
+        for (const a of ATTITUDINALS) resetAtt(a);
+        if (c.attitudinals && typeof c.attitudinals === 'object') {
+          for (const a of ATTITUDINALS) {
+            const o = c.attitudinals[a.key];
+            if (!o) continue;
+            for (const f of ATT_FIELDS) if (typeof o[f.key] === 'number') setAtt(a.key, f.key, o[f.key]);
+          }
+        }
         if (typeof c.notes === 'string') document.getElementById('notes').value = c.notes;
         syncFlatState();
       }
       function resetDefaults() {
         for (const f of FLAGS) flagEl(f.key).checked = false;
         for (const p of PARAMS) { slideEl(p.key).value = p.def; outEl(p.key).textContent = p.def; }
+        for (const a of ATTITUDINALS) resetAtt(a);
         syncFlatState();
       }
 
