@@ -671,6 +671,72 @@ pub fn f0_near(track: &[(f32, f32)], t_ms: f32, window_ms: f32) -> Option<f32> {
     }
 }
 
+// ---- Phase-10 attitudinal voice-quality measures ----------------------------
+
+/// Spectral balance in dB: `10·log10(high-band / low-band energy)` over a
+/// centered [`FFT_LEN`] window (low = 150–1000 Hz, high = 2000–6000 Hz). A
+/// tenser/brighter voice (low open quotient, positive engine tilt) raises it;
+/// a breathy/dark voice lowers it. A relative measure — compare two renders,
+/// don't read the absolute value.
+pub fn measure_spectral_tilt(samples: &[f32], sample_rate: u32) -> f32 {
+    let low = band_energy(samples, sample_rate, 150.0, 1000.0, FFT_LEN);
+    let high = band_energy(samples, sample_rate, 2000.0, 6000.0, FFT_LEN);
+    10.0 * (high.max(1e-12) / low.max(1e-12)).log10()
+}
+
+/// Residual F0 variability (Hz RMS) after removing the linear declination
+/// trend from the [`measure_f0_track`] contour. A smooth (possibly declining)
+/// pitch reads near zero; vibrato/flutter raises it. Returns 0 for tracks too
+/// short to fit.
+pub fn measure_f0_variance(samples: &[f32], sample_rate: u32) -> f32 {
+    let track = measure_f0_track(samples, sample_rate);
+    if track.len() < 3 {
+        return 0.0;
+    }
+    let (slope, intercept) = fit_line(&track);
+    let sum: f32 = track
+        .iter()
+        .map(|(t, f)| {
+            let resid = f - (slope * t + intercept);
+            resid * resid
+        })
+        .sum();
+    (sum / track.len() as f32).sqrt()
+}
+
+/// Normalized square-difference autocorrelation of `frame` at lag `tau`
+/// (McLeod's NSDF term, 2·Σab / Σ(a²+b²)); 1.0 = perfect periodicity at `tau`.
+fn norm_autocorr(frame: &[f32], tau: usize) -> f32 {
+    if frame.len() <= tau {
+        return 0.0;
+    }
+    let n = frame.len() - tau;
+    let mut acf = 0.0f64;
+    let mut m = 0.0f64;
+    for i in 0..n {
+        let (a, b) = (f64::from(frame[i]), f64::from(frame[i + tau]));
+        acf += a * b;
+        m += a * a + b * b;
+    }
+    if m > 0.0 { (2.0 * acf / m) as f32 } else { 0.0 }
+}
+
+/// Diplophonia / subharmonic strength at the known fundamental `f0`: the
+/// normalized correlation at the DOUBLE period (F0/2 lag) minus that at the
+/// single period. A clean voice repeats every period → both ≈ 1 → ≈ 0.
+/// Alternate-cycle amplitude modulation makes consecutive periods differ, so
+/// the single-period correlation drops while the double-period one holds →
+/// strictly positive. Measured over a centered [`FFT_LEN`] window.
+pub fn measure_diplophonia(samples: &[f32], sample_rate: u32, f0: f32) -> f32 {
+    let win = FFT_LEN.min(samples.len());
+    let start = (samples.len() - win) / 2;
+    let frame = &samples[start..start + win];
+    let period = sample_rate as f32 / f0;
+    let lag1 = period.round() as usize;
+    let lag2 = (2.0 * period).round() as usize;
+    norm_autocorr(frame, lag2) - norm_autocorr(frame, lag1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -879,6 +945,65 @@ mod tests {
         let late = f0_near(&track, 900.0, 100.0).expect("late frames");
         assert!((early - 100.0).abs() < 5.0, "early {early:.1}");
         assert!((late - 140.0).abs() < 5.0, "late {late:.1}");
+    }
+
+    /// Like [`pulse_vowel`] but every OTHER glottal period is scaled by `alt`
+    /// (alt < 1 injects an F0/2 subharmonic — diplophonia / vocal fry).
+    fn diplophonic_vowel(sr: u32, f0: f32, f: [f32; 3], len: usize, alt: f32) -> Vec<f32> {
+        let period = (sr as f32 / f0) as usize;
+        let mut bps: Vec<Biquad> = f
+            .iter()
+            .map(|fc| Biquad::bandpass(sr as f32, *fc, 0.12 * fc))
+            .collect();
+        let amps = [1.0, 0.6, 0.3];
+        let mut cycle = 0usize;
+        (0..len)
+            .map(|n| {
+                let pulse = if n % period == 0 {
+                    cycle += 1;
+                    if cycle % 2 == 0 { alt } else { 1.0 }
+                } else {
+                    0.0
+                };
+                bps.iter_mut()
+                    .zip(amps)
+                    .map(|(bp, a)| a * bp.process(pulse))
+                    .sum::<f32>()
+                    * 4.0
+            })
+            .collect()
+    }
+
+    #[test]
+    fn spectral_tilt_is_brighter_for_high_band_energy() {
+        let dark = tones(&[(300.0, 1.0), (600.0, 0.7)], 16384);
+        let bright = tones(&[(300.0, 0.3), (2500.0, 1.0), (3500.0, 0.8)], 16384);
+        assert!(
+            measure_spectral_tilt(&bright, SR) > measure_spectral_tilt(&dark, SR) + 6.0,
+            "a high-band-heavy signal must read a higher spectral tilt"
+        );
+    }
+
+    #[test]
+    fn f0_variance_is_small_for_a_steady_tone() {
+        let steady = pulse_vowel(SR, 120.0, [500.0, 1500.0, 2500.0], 24_000);
+        assert!(
+            measure_f0_variance(&steady, SR) < 3.0,
+            "a steady 120 Hz pulse train must have near-zero F0 variance"
+        );
+    }
+
+    #[test]
+    fn diplophonia_measure_flags_alternate_cycle_modulation() {
+        let clean = diplophonic_vowel(SR, 120.0, [500.0, 1500.0, 2500.0], 24_000, 1.0);
+        let creaky = diplophonic_vowel(SR, 120.0, [500.0, 1500.0, 2500.0], 24_000, 0.4);
+        let clean_d = measure_diplophonia(&clean, SR, 120.0);
+        let creaky_d = measure_diplophonia(&creaky, SR, 120.0);
+        assert!(
+            creaky_d > clean_d + 0.1,
+            "diplophonia measure must rise with alternate-cycle modulation: \
+             clean={clean_d:.3}, creaky={creaky_d:.3}"
+        );
     }
 
     #[test]
