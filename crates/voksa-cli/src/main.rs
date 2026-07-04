@@ -2,7 +2,7 @@
 
 use std::process::ExitCode;
 
-use voksa_cli::{args, playback, wav};
+use voksa_cli::{args, config, playback, wav};
 use voksa_core::compiler::{CompileError, CompileOptions};
 use voksa_core::prosody::ProsodyOptions;
 use voksa_engine_klattsch::{SAMPLE_RATE, render_utterance, render_utterance_prosodic};
@@ -27,19 +27,39 @@ fn main() -> ExitCode {
         }
     };
 
-    let copts = CompileOptions {
-        dotside: parsed.dotside,
-        buffer: parsed.buffer,
-    };
-    let popts = ProsodyOptions {
-        xu_rise: parsed.xu,
-        ..Default::default()
+    // A --config file supplies text + flags + tuning params (replay a demo
+    // submission); otherwise everything comes from the args.
+    let (text, copts, flat, popts) = match &parsed.config {
+        Some(cfg_path) => match config::Config::load(cfg_path) {
+            Ok(c) => (
+                c.text.clone(),
+                c.compile_options(),
+                c.flat,
+                c.prosody_options(),
+            ),
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => (
+            parsed.text.clone(),
+            CompileOptions {
+                dotside: parsed.dotside,
+                buffer: parsed.buffer,
+            },
+            parsed.flat,
+            ProsodyOptions {
+                xu_rise: parsed.xu,
+                ..Default::default()
+            },
+        ),
     };
     let render_at = |sr: u32| -> Result<Vec<f32>, CompileError> {
-        if parsed.flat {
-            render_utterance(&parsed.text, &copts, sr)
+        if flat {
+            render_utterance(&text, &copts, sr)
         } else {
-            render_utterance_prosodic(&parsed.text, &copts, &popts, sr)
+            render_utterance_prosodic(&text, &copts, &popts, sr)
         }
     };
 
@@ -88,6 +108,7 @@ fn print_usage() {
     eprintln!();
     eprintln!("FLAGS:");
     eprintln!("    --out <FILE>   render 48 kHz mono WAV to FILE (no audio device needed)");
+    eprintln!("    --config <FILE> replay a JSON tuning config (from the web demo)");
     eprintln!("    --flat         disable prosody (Phase-5 baseline)");
     eprintln!("    --xu           terminal question rise (not with --flat)");
     eprintln!("    --dotside      leading pause before every cmevla");

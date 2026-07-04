@@ -68,10 +68,15 @@ impl Config {
 
     /// Map the tunable fields onto [`ProsodyOptions`].
     pub fn prosody_options(&self) -> ProsodyOptions {
-        // STUB (D1 CLI red): the real mapping lands after the failing test.
         ProsodyOptions {
             xu_rise: self.xu,
-            ..Default::default()
+            declination_start_hz: self.declination_start_hz,
+            declination_end_hz: self.declination_end_hz,
+            stress_duration_factor: self.stress_duration_factor,
+            stress_f0_excursion_hz: self.stress_f0_excursion_hz,
+            stress_amp_factor: self.stress_amp_factor,
+            xu_rise_hz: self.xu_rise_hz,
+            rate: self.rate,
         }
     }
 }
@@ -108,6 +113,9 @@ mod tests {
 
     #[test]
     fn default_config_maps_to_default_prosody() {
-        assert_eq!(Config::default().prosody_options(), ProsodyOptions::default());
+        assert_eq!(
+            Config::default().prosody_options(),
+            ProsodyOptions::default()
+        );
     }
 }

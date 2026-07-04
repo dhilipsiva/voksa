@@ -19,6 +19,8 @@ pub struct CliArgs {
     pub xu: bool,
     /// `--flat`: render without prosody (the Phase-5 baseline).
     pub flat: bool,
+    /// `--config PATH`: replay a JSON tuning config (text + flags + params).
+    pub config: Option<PathBuf>,
 }
 
 /// Why argument parsing failed.
@@ -26,6 +28,7 @@ pub struct CliArgs {
 pub enum ArgError {
     UnknownFlag(String),
     MissingOutPath,
+    MissingConfigPath,
     NoText,
     /// `--xu` is a prosody feature; it cannot combine with `--flat`.
     XuWithFlat,
@@ -36,6 +39,7 @@ impl fmt::Display for ArgError {
         match self {
             ArgError::UnknownFlag(s) => write!(f, "unknown flag: {s}"),
             ArgError::MissingOutPath => write!(f, "--out requires a file path"),
+            ArgError::MissingConfigPath => write!(f, "--config requires a file path"),
             ArgError::NoText => write!(f, "no text to speak"),
             ArgError::XuWithFlat => write!(f, "--xu cannot be combined with --flat"),
         }
@@ -57,6 +61,10 @@ pub fn parse(mut args: impl Iterator<Item = String>) -> Result<CliArgs, ArgError
                 let path = args.next().ok_or(ArgError::MissingOutPath)?;
                 parsed.out = Some(PathBuf::from(path));
             }
+            "--config" => {
+                let path = args.next().ok_or(ArgError::MissingConfigPath)?;
+                parsed.config = Some(PathBuf::from(path));
+            }
             other if other.starts_with("--") => {
                 return Err(ArgError::UnknownFlag(other.to_string()));
             }
@@ -66,7 +74,8 @@ pub fn parse(mut args: impl Iterator<Item = String>) -> Result<CliArgs, ArgError
     if parsed.xu && parsed.flat {
         return Err(ArgError::XuWithFlat);
     }
-    if words.is_empty() {
+    // --config supplies the text; otherwise a positional is required.
+    if parsed.config.is_none() && words.is_empty() {
         return Err(ArgError::NoText);
     }
     parsed.text = words.join(" ");
