@@ -9,6 +9,7 @@
 
 use crate::alloc::string::String;
 use crate::alloc::vec::Vec;
+use crate::attitudinal::{AttitudinalScope, attitudinal_kind, intensity_mult};
 use crate::letters::WordError;
 use crate::normalize::{NumberError, number_words};
 use crate::pause::{Segment, Token, insert_pauses};
@@ -138,6 +139,11 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
         return Err(CompileError::Empty);
     }
 
+    // Phase 10: detect attitudinal (UI-cmavo) colorings before `words` is
+    // consumed. word_index i here maps 1:1 to the schedule's word_index (pause
+    // insertion preserves word order).
+    let attitudinals = detect_attitudinals(&words);
+
     // Mandatory pauses (Phase 4), then union in the writer-marked ones.
     let segments = insert_pauses(words.into_iter().map(Token::Word).collect(), opts.dotside);
     let mut items: Vec<Item> = Vec::new();
@@ -186,9 +192,43 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
         events,
         spans,
         total_ms: t_ms,
-        // RED stub: attitudinal detection is not wired yet (Phase 10 P10-2 green).
-        attitudinals: Vec::new(),
+        attitudinals,
     })
+}
+
+/// True for words that are attitudinal markers or bare intensity cmavo — the
+/// scope resolver skips these when finding the content word an emotion colors.
+fn is_marker(lowered: &str) -> bool {
+    attitudinal_kind(lowered).is_some() || intensity_mult(lowered).is_some()
+}
+
+/// Detect attitudinal colorings over the analyzed word list (Phase 10). Each
+/// attitudinal cmavo colors the nearest preceding non-marker word (or, when it
+/// is utterance-initial, the first non-marker word); a following intensity
+/// cmavo (`cai`/`sai`/`ru'e`/`nai`) scales/flips the deviation.
+fn detect_attitudinals(words: &[WordAnalysis]) -> Vec<AttitudinalScope> {
+    let mut out: Vec<AttitudinalScope> = Vec::new();
+    for (i, w) in words.iter().enumerate() {
+        let Some(kind) = attitudinal_kind(&w.lowered) else {
+            continue;
+        };
+        let intensity = words
+            .get(i + 1)
+            .and_then(|n| intensity_mult(&n.lowered))
+            .unwrap_or(1.0);
+        let target = (0..i)
+            .rev()
+            .find(|&j| !is_marker(&words[j].lowered))
+            .or_else(|| (0..words.len()).find(|&j| !is_marker(&words[j].lowered)));
+        if let Some(word_index) = target {
+            out.push(AttitudinalScope {
+                word_index,
+                kind,
+                intensity,
+            });
+        }
+    }
+    out
 }
 
 #[derive(Clone, Copy)]

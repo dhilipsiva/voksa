@@ -179,3 +179,30 @@ fn modal_utterance_overlay_is_identity() {
     let after = apply_attitudinal(prosodic.clone());
     assert_eq!(prosodic, after);
 }
+
+// ---- per-attitudinal schedule snapshots (compile → prosody → attitudinal) ----
+
+#[test]
+fn snapshot_joy_coi_munje_ui() {
+    insta::assert_debug_snapshot!(colored("coi munje .ui"));
+}
+
+#[test]
+fn snapshot_sadness_mi_klama_uu() {
+    insta::assert_debug_snapshot!(colored("mi klama .uu"));
+}
+
+#[test]
+fn snapshot_complaint_coi_munje_oi() {
+    insta::assert_debug_snapshot!(colored("coi munje .oi"));
+}
+
+#[test]
+fn snapshot_fear_coi_munje_ii() {
+    insta::assert_debug_snapshot!(colored("coi munje .ii"));
+}
+
+#[test]
+fn snapshot_anger_mi_fengu_oonai() {
+    insta::assert_debug_snapshot!(colored("mi fengu .o'onai"));
+}
