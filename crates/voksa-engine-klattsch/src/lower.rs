@@ -10,7 +10,13 @@ use klattsch_core::params::ParamUpdate;
 use klattsch_core::schedule::{MsEvent, Schedule};
 use voksa_core::compiler::{CompileError, CompileOptions, compile};
 use voksa_core::phonemes::{Phoneme, Targets};
-use voksa_core::schedule::{Event, schedule_phonemes};
+use voksa_core::schedule::{
+    Event, NEUTRAL_DI, NEUTRAL_OQ, NEUTRAL_TILT, NEUTRAL_VIBRATO_HZ, schedule_phonemes,
+};
+
+/// Vibrato rate (Hz) paired with any nonzero depth — a natural ~5.5 Hz flutter
+/// (the engine ignores rate when depth is 0, so modal frames never send it).
+const DEFAULT_VIBRATO_RATE_HZ: f32 = 5.5;
 
 /// Flat robotic baseline F0 (defined in core; re-exported for compatibility).
 pub use voksa_core::schedule::BASE_F0_HZ;
@@ -55,15 +61,40 @@ fn targets_update(t: &Targets, f0: f32) -> ParamUpdate {
 }
 
 /// 1:1 translation of core IR events into klattsch millisecond events.
+///
+/// The Phase-10 voice-quality lanes (oq/tilt/di/vibrato) are Option-gated
+/// against the LAST-EMITTED value (seeded with the engine's modal defaults):
+/// a lane is only overridden when it CHANGES. So a fully-modal utterance emits
+/// them all-None (byte-identical to the pre-Phase-10 lowering, engine snapshots
+/// unchanged), and a colored word resets to modal on exit — the reset event
+/// carries the change back to neutral instead of the creak/vibrato bleeding on.
 pub fn lower_events(events: &[Event]) -> Vec<MsEvent> {
+    let mut prev_oq = NEUTRAL_OQ;
+    let mut prev_tilt = NEUTRAL_TILT;
+    let mut prev_di = NEUTRAL_DI;
+    let mut prev_vib = NEUTRAL_VIBRATO_HZ;
     events
         .iter()
         .map(|e| {
-            MsEvent::new(
-                e.at_ms,
-                targets_update(&e.frame.targets, e.frame.f0_hz),
-                e.transition_ms,
-            )
+            let mut u = targets_update(&e.frame.targets, e.frame.f0_hz);
+            if e.frame.oq != prev_oq {
+                u.open_quotient = Some(e.frame.oq);
+                prev_oq = e.frame.oq;
+            }
+            if e.frame.tilt != prev_tilt {
+                u.tilt = Some(e.frame.tilt);
+                prev_tilt = e.frame.tilt;
+            }
+            if e.frame.di != prev_di {
+                u.diplophonia = Some(e.frame.di);
+                prev_di = e.frame.di;
+            }
+            if e.frame.vibrato_hz != prev_vib {
+                u.vibrato_depth = Some(e.frame.vibrato_hz);
+                u.vibrato_rate = Some(DEFAULT_VIBRATO_RATE_HZ);
+                prev_vib = e.frame.vibrato_hz;
+            }
+            MsEvent::new(e.at_ms, u, e.transition_ms)
         })
         .collect()
 }
@@ -100,15 +131,21 @@ pub fn render_utterance(
     ))
 }
 
-/// Compile Lojban text, apply sentence prosody (declination + stress + xu),
-/// and render offline.
+/// Compile Lojban text, apply sentence prosody (declination + stress + xu) and
+/// the Phase-10 attitudinal voice-quality overlay, then render offline. Any UI
+/// cmavo in the text (`.ui`/`.oi`/`.ii`/…) colors its target word automatically
+/// — on native, CLI, and the browser (no C-ABI change). The flat path
+/// ([`render_utterance`]) skips both transforms.
 pub fn render_utterance_prosodic(
     text: &str,
     opts: &CompileOptions,
     prosody: &voksa_core::prosody::ProsodyOptions,
     sample_rate: u32,
 ) -> Result<Vec<f32>, CompileError> {
-    let utterance = voksa_core::prosody::apply_prosody(compile(text, opts)?, prosody);
+    let utterance = voksa_core::attitudinal::apply_attitudinal(voksa_core::prosody::apply_prosody(
+        compile(text, opts)?,
+        prosody,
+    ));
     let schedule = Schedule::from_ms_events(sample_rate, lower_events(&utterance.events));
     Ok(crate::render_schedule(
         schedule,
