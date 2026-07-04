@@ -9,6 +9,7 @@ use std::path::Path;
 use serde::Deserialize;
 use voksa_core::attitudinal::{AttitudinalKind, AttitudinalTable};
 use voksa_core::compiler::CompileOptions;
+use voksa_core::phonemes::VoiceTable;
 use voksa_core::prosody::ProsodyOptions;
 
 /// One attitudinal's deviation-vector overrides (D2a advanced tab). Only the
@@ -26,6 +27,41 @@ pub struct AttitudinalOverride {
     pub di: Option<f32>,
     pub vibrato_hz: Option<f32>,
     pub aspiration: Option<f32>,
+}
+
+/// One Targets' worth of overrides (D2b): field names mirror
+/// `voksa_core::phonemes::Targets::to_array` order.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct TargetsOverride {
+    pub f1_hz: Option<f32>,
+    pub bw1_hz: Option<f32>,
+    pub amp1: Option<f32>,
+    pub f2_hz: Option<f32>,
+    pub bw2_hz: Option<f32>,
+    pub amp2: Option<f32>,
+    pub f3_hz: Option<f32>,
+    pub bw3_hz: Option<f32>,
+    pub amp3: Option<f32>,
+    pub voicing: Option<f32>,
+    pub aspiration: Option<f32>,
+}
+
+/// One phoneme's deviation from the pinned voice table (D2b advanced tab).
+/// Steady phonemes (vowels, fricatives, nasals, liquids, `"buffer"`) use the
+/// flattened targets fields + `dur_ms`; stops use the nested `closure`/`burst`
+/// objects + `closure_ms`/`burst_ms`; diphthongs (`"ai"`…) and `"'"` ([h]) use
+/// `dur_ms` only. Class-irrelevant fields simply never apply.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct PhonemeOverride {
+    #[serde(flatten)]
+    pub steady: TargetsOverride,
+    pub dur_ms: Option<f32>,
+    pub closure: TargetsOverride,
+    pub burst: TargetsOverride,
+    pub closure_ms: Option<f32>,
+    pub burst_ms: Option<f32>,
 }
 
 /// A deserialized tuning config. Missing fields fall back to the defaults.
@@ -47,6 +83,10 @@ pub struct Config {
     /// Attitudinal deviation overrides keyed by cmavo (`"ui"`, `"uu"`, `"oi"`,
     /// `"ii"`, `"o'o"`, `"au"`, `"o'onai"`). Absent = pinned defaults.
     pub attitudinals: BTreeMap<String, AttitudinalOverride>,
+    /// Per-phoneme voice overrides keyed by phoneme letter (`"a"`…`"y"`,
+    /// `"p"`…`"z"`), diphthong (`"ai"`…`"uy"`, durations only), `"'"` ([h],
+    /// duration only), or `"buffer"`. Absent = pinned defaults.
+    pub phonemes: BTreeMap<String, PhonemeOverride>,
 }
 
 impl Default for Config {
@@ -66,6 +106,7 @@ impl Default for Config {
             xu_rise_hz: p.xu_rise_hz,
             rate: p.rate,
             attitudinals: BTreeMap::new(),
+            phonemes: BTreeMap::new(),
         }
     }
 }
@@ -129,6 +170,14 @@ impl Config {
             set!(aspiration, d_aspiration);
         }
         table
+    }
+
+    /// Build the runtime [`VoiceTable`]: pinned defaults with this config's
+    /// per-phoneme overrides applied (only the named fields change).
+    pub fn voice_table(&self) -> VoiceTable {
+        // RED stub (D2b): overrides are ignored until the failing test.
+        let _ = &self.phonemes;
+        VoiceTable::default()
     }
 }
 
@@ -202,6 +251,48 @@ mod tests {
             t.get(AttitudinalKind::Sadness),
             AttitudinalKind::Sadness.deviation(),
             "unnamed kinds stay pinned"
+        );
+    }
+
+    #[test]
+    fn config_without_phonemes_is_default_table() {
+        assert_eq!(
+            Config::from_json("{}").unwrap().voice_table(),
+            VoiceTable::default()
+        );
+    }
+
+    #[test]
+    fn phonemes_block_overrides_pinned_table() {
+        // Community JSON overrides only what it names; the rest stays pinned.
+        use voksa_core::phonemes::{Consonant, STOP_ORDER, Vowel};
+        let json = r#"{
+            "text": "mi klama",
+            "phonemes": {
+                "a":  { "f1_hz": 900.0, "dur_ms": 200.0 },
+                "t":  { "burst": { "f3_hz": 3200.0 }, "closure_ms": 45.0 },
+                "ai": { "dur_ms": 260.0 },
+                "'":  { "dur_ms": 90.0 }
+            }
+        }"#;
+        let t = Config::from_json(json).unwrap().voice_table();
+        let a = t.vowels[Vowel::A.index()];
+        assert_eq!(a.targets.formants[0].freq_hz, 900.0);
+        assert_eq!(a.dur_ms, 200.0);
+        assert_eq!(
+            a.targets.formants[1].freq_hz, 1090.0,
+            "unnamed fields stay pinned"
+        );
+        let ti = STOP_ORDER.iter().position(|&c| c == Consonant::T).unwrap();
+        assert_eq!(t.stops[ti].burst.formants[2].freq_hz, 3200.0);
+        assert_eq!(t.stops[ti].closure_ms, 45.0);
+        assert_eq!(t.stops[ti].burst_ms, 25.0, "unnamed timing stays pinned");
+        assert_eq!(t.diphthong_dur_ms[0], 260.0, "ai is DIPHTHONGS[0]");
+        assert_eq!(t.h_dur_ms, 90.0);
+        assert_eq!(
+            t.vowels[Vowel::E.index()],
+            VoiceTable::default().vowels[Vowel::E.index()],
+            "unnamed phonemes stay pinned"
         );
     }
 }

@@ -112,6 +112,19 @@ enum Item {
     Pause,
 }
 
+/// Like [`compile`] but with a RUNTIME per-phoneme table (demo tuning console
+/// D2b). `compile_with(text, opts, &VoiceTable::default())` is byte-identical
+/// to `compile(text, opts)`.
+pub fn compile_with(
+    text: &str,
+    opts: &CompileOptions,
+    voice: &crate::phonemes::VoiceTable,
+) -> Result<UtteranceSchedule, CompileError> {
+    // RED stub (D2b): the runtime table is ignored until the failing test.
+    let _ = voice;
+    compile(text, opts)
+}
+
 /// Compile an utterance to its deterministic parameter schedule.
 pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, CompileError> {
     // Tokenize, remembering which boundaries the writer marked with periods.

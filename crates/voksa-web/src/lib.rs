@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use voksa_core::attitudinal::{AttitudinalTable, Deviation};
 use voksa_core::compiler::{CompileError, CompileOptions};
+use voksa_core::phonemes::VoiceTable;
 use voksa_core::prosody::ProsodyOptions;
 use voksa_engine_klattsch::{render_utterance, render_utterance_expressive};
 
@@ -28,9 +29,18 @@ pub const PARAM_COUNT: usize = 7;
 /// fields ([`voksa_core::attitudinal::Deviation::to_array`] order).
 pub const ATTITUDINAL_PARAM_COUNT: usize = 56;
 
-/// Full f32 block: prosody then attitudinals. Shorter blocks default the rest,
-/// so 7-float (demo-basic) and empty blocks stay valid forever.
-pub const FULL_PARAM_COUNT: usize = PARAM_COUNT + ATTITUDINAL_PARAM_COUNT;
+/// Offset of the per-phoneme voice section in the f32 block (D2b).
+pub const VOICE_PARAM_OFF: usize = PARAM_COUNT + ATTITUDINAL_PARAM_COUNT;
+
+/// Count of f32 per-phoneme voice knobs appended after the attitudinal block
+/// (D2b): the [`voksa_core::phonemes::VoiceTable`] flat layout (its
+/// `to_array` doc comment is the normative ordering).
+pub const VOICE_PARAM_COUNT: usize = VoiceTable::FIELDS;
+
+/// Full f32 block: prosody, then attitudinals, then the per-phoneme voice
+/// table. Shorter blocks default the rest, so 7-float (demo-basic), 63-float
+/// (demo-attitudinal), and empty blocks stay valid forever.
+pub const FULL_PARAM_COUNT: usize = VOICE_PARAM_OFF + VOICE_PARAM_COUNT;
 
 /// Build [`ProsodyOptions`] from the flag bits + the f32 param block (fixed
 /// order). Missing or non-finite entries fall back to the defaults, so an empty
@@ -75,6 +85,16 @@ fn attitudinal_from(params: &[f32]) -> AttitudinalTable {
     table
 }
 
+/// Build the runtime [`VoiceTable`] from the f32 block's per-phoneme section
+/// (`params[VOICE_PARAM_OFF..FULL_PARAM_COUNT]`). Missing or non-finite
+/// entries fall back to the pinned defaults, so 7-/63-float and empty blocks
+/// reproduce `VoiceTable::default()` exactly.
+fn voice_table_from(params: &[f32]) -> VoiceTable {
+    // RED stub (D2b): the voice section is ignored until the failing test.
+    let _ = params;
+    VoiceTable::default()
+}
+
 /// Render Lojban `text` to mono f32 PCM at `sample_rate`. `params` is the f32
 /// block: prosody ([`PARAM_COUNT`]) then attitudinals
 /// ([`ATTITUDINAL_PARAM_COUNT`]); shorter blocks (or empty) default the rest.
@@ -97,6 +117,7 @@ pub fn synth(
             &opts,
             &prosody_from(flags, params),
             &attitudinal_from(params),
+            &voice_table_from(params),
             sample_rate,
         )
     }
@@ -287,13 +308,14 @@ mod tests {
         );
     }
 
-    /// The full 63-float block at its default values (prosody + pinned
-    /// attitudinal vectors, in the canonical layout).
+    /// The full 440-float block at its default values (prosody + pinned
+    /// attitudinal vectors + pinned voice table, in the canonical layout).
     fn default_full_block() -> Vec<f32> {
         let mut full = vec![120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
         for k in voksa_core::attitudinal::AttitudinalKind::ALL {
             full.extend(k.deviation().to_array());
         }
+        full.extend(VoiceTable::default().to_array());
         assert_eq!(full.len(), FULL_PARAM_COUNT);
         full
     }
@@ -340,6 +362,34 @@ mod tests {
         assert_eq!(
             synth("coi munje .ui", 0, SR, &[]).unwrap(),
             synth("coi munje .ui", 0, SR, &basic).unwrap(),
+        );
+    }
+
+    #[test]
+    fn attitudinal_63_block_stays_valid() {
+        // demo-attitudinal clients send exactly 63 floats; the voice section
+        // must default for them.
+        let mut block = vec![120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
+        for k in voksa_core::attitudinal::AttitudinalKind::ALL {
+            block.extend(k.deviation().to_array());
+        }
+        assert_eq!(block.len(), VOICE_PARAM_OFF);
+        assert_eq!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &block).unwrap(),
+        );
+    }
+
+    #[test]
+    fn voice_params_change_output() {
+        // Bumping vowel-a F1 (the first voice slot, index VOICE_PARAM_OFF) must
+        // change an a-bearing render — the phoneme knobs reach the engine.
+        let mut tuned = default_full_block();
+        tuned[VOICE_PARAM_OFF] = 900.0;
+        assert_ne!(
+            synth("mi klama", 0, SR, &[]).unwrap(),
+            synth("mi klama", 0, SR, &tuned).unwrap(),
+            "a tuned /a/ F1 must change the render"
         );
     }
 }

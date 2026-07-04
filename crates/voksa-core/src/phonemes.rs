@@ -21,6 +21,18 @@ pub enum Vowel {
 
 impl Vowel {
     pub const ALL: [Vowel; 6] = [Vowel::A, Vowel::E, Vowel::I, Vowel::O, Vowel::U, Vowel::Y];
+
+    /// This vowel's slot in [`Self::ALL`] / [`VoiceTable::vowels`].
+    pub const fn index(self) -> usize {
+        match self {
+            Vowel::A => 0,
+            Vowel::E => 1,
+            Vowel::I => 2,
+            Vowel::O => 3,
+            Vowel::U => 4,
+            Vowel::Y => 5,
+        }
+    }
 }
 
 /// The seventeen Lojban consonants (CLL: b c d f g j k l m n p r s t v x z).
@@ -129,6 +141,55 @@ pub struct Targets {
     pub aspiration: f32,
 }
 
+impl Targets {
+    /// Number of f32 fields — the flat-crossing stride of one Targets.
+    pub const FIELDS: usize = 11;
+
+    /// The CANONICAL flat order (== the `data::t()` argument order; the demo's
+    /// JS descriptors and the CLI config field names mirror it):
+    /// `[f1,b1,a1, f2,b2,a2, f3,b3,a3, voicing, aspiration]`. Do not reorder.
+    pub const fn to_array(self) -> [f32; Self::FIELDS] {
+        [
+            self.formants[0].freq_hz,
+            self.formants[0].bw_hz,
+            self.formants[0].amp,
+            self.formants[1].freq_hz,
+            self.formants[1].bw_hz,
+            self.formants[1].amp,
+            self.formants[2].freq_hz,
+            self.formants[2].bw_hz,
+            self.formants[2].amp,
+            self.voicing,
+            self.aspiration,
+        ]
+    }
+
+    /// Inverse of [`Self::to_array`].
+    pub const fn from_array(a: [f32; Self::FIELDS]) -> Self {
+        Self {
+            formants: [
+                Formant {
+                    freq_hz: a[0],
+                    bw_hz: a[1],
+                    amp: a[2],
+                },
+                Formant {
+                    freq_hz: a[3],
+                    bw_hz: a[4],
+                    amp: a[5],
+                },
+                Formant {
+                    freq_hz: a[6],
+                    bw_hz: a[7],
+                    amp: a[8],
+                },
+            ],
+            voicing: a[9],
+            aspiration: a[10],
+        }
+    }
+}
+
 /// How a segment evolves over its duration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SegmentKind {
@@ -224,6 +285,264 @@ pub fn buffer_spec() -> SegmentSpec {
         }),
         dur_ms: 35.0,
     }
+}
+
+/// One steady phoneme's runtime voice: targets + duration. Stride 12.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SteadyVoice {
+    pub targets: Targets,
+    pub dur_ms: f32,
+}
+
+/// One stop's runtime voice: closure + burst targets and their timing.
+/// Stride 24.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StopVoice {
+    pub closure: Targets,
+    pub burst: Targets,
+    pub closure_ms: f32,
+    pub burst_ms: f32,
+}
+
+/// CANONICAL consonant orderings for [`VoiceTable`] sections and the flat-f32
+/// crossing. Do not reorder: the demo's JS descriptors and the CLI config
+/// mirror these.
+pub const STOP_ORDER: [Consonant; 6] = [
+    Consonant::P,
+    Consonant::T,
+    Consonant::K,
+    Consonant::B,
+    Consonant::D,
+    Consonant::G,
+];
+pub const FRICATIVE_ORDER: [Consonant; 7] = [
+    Consonant::F,
+    Consonant::V,
+    Consonant::S,
+    Consonant::Z,
+    Consonant::C,
+    Consonant::J,
+    Consonant::X,
+];
+pub const NASAL_ORDER: [Consonant; 2] = [Consonant::M, Consonant::N];
+pub const LIQUID_ORDER: [Consonant; 2] = [Consonant::L, Consonant::R];
+
+/// A diphthong's slot in [`DIPHTHONGS`] / [`VoiceTable::diphthong_dur_ms`].
+pub fn diphthong_index(a: Vowel, b: Vowel) -> Option<usize> {
+    DIPHTHONGS.iter().position(|&d| d == (a, b))
+}
+
+/// The RUNTIME per-phoneme acoustic table (demo tuning console D2b): every
+/// independent parameter of the segmental layer. Diphthong ENDPOINTS derive
+/// from the (tuned) vowel targets and [h] takes its shape from the following
+/// vowel (docs/formants.md) — only their durations are free here. `Default`
+/// equals the pinned docs/formants.md seeds, so
+/// `spec_with(p, &VoiceTable::default())` is byte-identical to `spec(p)`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VoiceTable {
+    /// [`Vowel::ALL`] order: a e i o u y.
+    pub vowels: [SteadyVoice; 6],
+    /// [`DIPHTHONGS`] order.
+    pub diphthong_dur_ms: [f32; 16],
+    /// [`STOP_ORDER`]: p t k b d g.
+    pub stops: [StopVoice; 6],
+    /// [`FRICATIVE_ORDER`]: f v s z c j x.
+    pub fricatives: [SteadyVoice; 7],
+    /// [`NASAL_ORDER`]: m n.
+    pub nasals: [SteadyVoice; 2],
+    /// [`LIQUID_ORDER`]: l r.
+    pub liquids: [SteadyVoice; 2],
+    /// [h] duration (shape always follows the next vowel).
+    pub h_dur_ms: f32,
+    /// The epenthetic buffer vowel (--buffer flag).
+    pub buffer: SteadyVoice,
+}
+
+/// Decompose a steady consonant's pinned spec into a [`SteadyVoice`].
+fn steady_voice_of(c: Consonant) -> SteadyVoice {
+    let s = spec(Phoneme::Consonant(c));
+    match s.kind {
+        SegmentKind::Steady(targets) => SteadyVoice {
+            targets,
+            dur_ms: s.dur_ms,
+        },
+        _ => unreachable!("{c:?} is not a steady consonant"),
+    }
+}
+
+/// Decompose a stop consonant's pinned spec into a [`StopVoice`].
+fn stop_voice_of(c: Consonant) -> StopVoice {
+    match spec(Phoneme::Consonant(c)).kind {
+        SegmentKind::Stop {
+            closure,
+            burst,
+            closure_ms,
+            burst_ms,
+        } => StopVoice {
+            closure,
+            burst,
+            closure_ms,
+            burst_ms,
+        },
+        _ => unreachable!("{c:?} is not a stop"),
+    }
+}
+
+impl Default for VoiceTable {
+    fn default() -> Self {
+        let buffer = buffer_spec();
+        let SegmentKind::Steady(buffer_targets) = buffer.kind else {
+            unreachable!("the buffer vowel is steady");
+        };
+        Self {
+            vowels: Vowel::ALL.map(|v| SteadyVoice {
+                targets: data::vowel_targets(v),
+                dur_ms: data::vowel_duration_ms(v),
+            }),
+            diphthong_dur_ms: [data::DIPHTHONG_MS; 16],
+            stops: STOP_ORDER.map(stop_voice_of),
+            fricatives: FRICATIVE_ORDER.map(steady_voice_of),
+            nasals: NASAL_ORDER.map(steady_voice_of),
+            liquids: LIQUID_ORDER.map(steady_voice_of),
+            h_dur_ms: data::H_MS,
+            buffer: SteadyVoice {
+                targets: buffer_targets,
+                dur_ms: buffer.dur_ms,
+            },
+        }
+    }
+}
+
+impl SteadyVoice {
+    pub const FIELDS: usize = Targets::FIELDS + 1;
+
+    /// `[targets(11), dur_ms]`.
+    fn write(&self, dst: &mut [f32], at: &mut usize) {
+        dst[*at..*at + Targets::FIELDS].copy_from_slice(&self.targets.to_array());
+        dst[*at + Targets::FIELDS] = self.dur_ms;
+        *at += Self::FIELDS;
+    }
+
+    fn read(src: &[f32], at: &mut usize) -> Self {
+        let mut t = [0.0f32; Targets::FIELDS];
+        t.copy_from_slice(&src[*at..*at + Targets::FIELDS]);
+        let out = Self {
+            targets: Targets::from_array(t),
+            dur_ms: src[*at + Targets::FIELDS],
+        };
+        *at += Self::FIELDS;
+        out
+    }
+}
+
+impl StopVoice {
+    pub const FIELDS: usize = 2 * Targets::FIELDS + 2;
+
+    /// `[closure(11), burst(11), closure_ms, burst_ms]`.
+    fn write(&self, dst: &mut [f32], at: &mut usize) {
+        dst[*at..*at + Targets::FIELDS].copy_from_slice(&self.closure.to_array());
+        dst[*at + Targets::FIELDS..*at + 2 * Targets::FIELDS]
+            .copy_from_slice(&self.burst.to_array());
+        dst[*at + 2 * Targets::FIELDS] = self.closure_ms;
+        dst[*at + 2 * Targets::FIELDS + 1] = self.burst_ms;
+        *at += Self::FIELDS;
+    }
+
+    fn read(src: &[f32], at: &mut usize) -> Self {
+        let mut c = [0.0f32; Targets::FIELDS];
+        let mut b = [0.0f32; Targets::FIELDS];
+        c.copy_from_slice(&src[*at..*at + Targets::FIELDS]);
+        b.copy_from_slice(&src[*at + Targets::FIELDS..*at + 2 * Targets::FIELDS]);
+        let out = Self {
+            closure: Targets::from_array(c),
+            burst: Targets::from_array(b),
+            closure_ms: src[*at + 2 * Targets::FIELDS],
+            burst_ms: src[*at + 2 * Targets::FIELDS + 1],
+        };
+        *at += Self::FIELDS;
+        out
+    }
+}
+
+impl VoiceTable {
+    /// Flat-f32 field count.
+    pub const FIELDS: usize = 377;
+
+    /// LAYOUT — the ONE normative flat ordering (JS descriptors + CLI config
+    /// mirror it; do not reorder):
+    /// vowels @0 (6×12=72) → diphthong durations @72 (16×1) → stops @88
+    /// (6×24=144) → fricatives @232 (7×12=84) → nasals @316 (2×12=24) →
+    /// liquids @340 (2×12=24) → h duration @364 (1) → buffer @365 (12) = 377.
+    pub fn to_array(&self) -> [f32; Self::FIELDS] {
+        let mut out = [0.0f32; Self::FIELDS];
+        let mut at = 0usize;
+        for v in &self.vowels {
+            v.write(&mut out, &mut at);
+        }
+        out[at..at + 16].copy_from_slice(&self.diphthong_dur_ms);
+        at += 16;
+        for s in &self.stops {
+            s.write(&mut out, &mut at);
+        }
+        for f in &self.fricatives {
+            f.write(&mut out, &mut at);
+        }
+        for n in &self.nasals {
+            n.write(&mut out, &mut at);
+        }
+        for l in &self.liquids {
+            l.write(&mut out, &mut at);
+        }
+        out[at] = self.h_dur_ms;
+        at += 1;
+        self.buffer.write(&mut out, &mut at);
+        debug_assert_eq!(at, Self::FIELDS);
+        out
+    }
+
+    /// Inverse of [`Self::to_array`].
+    pub fn from_array(a: [f32; Self::FIELDS]) -> Self {
+        let mut at = 0usize;
+        let vowels = core::array::from_fn(|_| SteadyVoice::read(&a, &mut at));
+        let mut diphthong_dur_ms = [0.0f32; 16];
+        diphthong_dur_ms.copy_from_slice(&a[at..at + 16]);
+        at += 16;
+        let stops = core::array::from_fn(|_| StopVoice::read(&a, &mut at));
+        let fricatives = core::array::from_fn(|_| SteadyVoice::read(&a, &mut at));
+        let nasals = core::array::from_fn(|_| SteadyVoice::read(&a, &mut at));
+        let liquids = core::array::from_fn(|_| SteadyVoice::read(&a, &mut at));
+        let h_dur_ms = a[at];
+        at += 1;
+        let buffer = SteadyVoice::read(&a, &mut at);
+        debug_assert_eq!(at, Self::FIELDS);
+        Self {
+            vowels,
+            diphthong_dur_ms,
+            stops,
+            fricatives,
+            nasals,
+            liquids,
+            h_dur_ms,
+            buffer,
+        }
+    }
+}
+
+/// Like [`spec`] but reading the acoustic numbers from a RUNTIME table (demo
+/// tuning console D2b). `spec_with(p, &VoiceTable::default())` is
+/// byte-identical to `spec(p)`.
+pub fn spec_with(p: Phoneme, voice: &VoiceTable) -> SegmentSpec {
+    // RED stub (D2b): the runtime table is ignored until the failing test.
+    let _ = voice;
+    spec(p)
+}
+
+/// Like [`buffer_spec`] but reading from a RUNTIME table (demo tuning console
+/// D2b). `buffer_spec_with(&VoiceTable::default())` == `buffer_spec()`.
+pub fn buffer_spec_with(voice: &VoiceTable) -> SegmentSpec {
+    // RED stub (D2b): the runtime table is ignored until the failing test.
+    let _ = voice;
+    buffer_spec()
 }
 
 mod data {

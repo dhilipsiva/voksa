@@ -147,22 +147,27 @@ pub fn render_utterance_prosodic(
         opts,
         prosody,
         &voksa_core::attitudinal::AttitudinalTable::default(),
+        &voksa_core::phonemes::VoiceTable::default(),
         sample_rate,
     )
 }
 
-/// Like [`render_utterance_prosodic`] but with a RUNTIME attitudinal deviation
-/// table (demo tuning console D2a). The default table renders byte-identically
-/// to [`render_utterance_prosodic`].
+/// Like [`render_utterance_prosodic`] but with RUNTIME attitudinal deviation
+/// (demo tuning console D2a) and per-phoneme voice (D2b) tables. The default
+/// tables render byte-identically to [`render_utterance_prosodic`].
 pub fn render_utterance_expressive(
     text: &str,
     opts: &CompileOptions,
     prosody: &voksa_core::prosody::ProsodyOptions,
     attitudinals: &voksa_core::attitudinal::AttitudinalTable,
+    voice: &voksa_core::phonemes::VoiceTable,
     sample_rate: u32,
 ) -> Result<Vec<f32>, CompileError> {
     let utterance = voksa_core::attitudinal::apply_attitudinal_with(
-        voksa_core::prosody::apply_prosody(compile(text, opts)?, prosody),
+        voksa_core::prosody::apply_prosody(
+            voksa_core::compiler::compile_with(text, opts, voice)?,
+            prosody,
+        ),
         attitudinals,
     );
     let schedule = Schedule::from_ms_events(sample_rate, lower_events(&utterance.events));
