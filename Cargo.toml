@@ -19,7 +19,9 @@ rust-version = "1.85"
 voksa-core = { path = "crates/voksa-core" }
 voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
 voksa-testkit = { path = "crates/voksa-testkit" }
-wasm-bindgen = "0.2.126"
+# wasm-bindgen-test drives the headless browser tests (voksa-web dev-dep only);
+# voksa-web itself has NO wasm-bindgen runtime dep (raw C-ABI, zero imports).
+wasm-bindgen-test = "0.3"
 # Native CLI audio (Phase 8): cpal Apache-2.0, rtrb MIT/Apache — realtime-safe
 # SPSC ring feeding the cpal output callback (docs/research/02-architecture-v2.md).
 cpal = "0.18"

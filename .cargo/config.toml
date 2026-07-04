@@ -1,2 +1,10 @@
 [alias]
 xtask = "run --package xtask --"
+
+# Browser build: stable wasm SIMD (voksa-web, Phase 9). Target-scoped, so the
+# native cpal/CLI builds are unaffected. NOTE: keep `--enable-simd` in
+# voksa-web's [package.metadata.wasm-pack.profile.release] wasm-opt flags in
+# lockstep, or wasm-opt rejects the SIMD ops and wasm-pack silently ships the
+# unoptimized binary.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

@@ -4,19 +4,28 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "voksa TTS wasm-bindgen bindings for the browser"
+description = "voksa TTS browser adapter: raw-C-ABI WASM synthesized inside an AudioWorklet"
 
 [lib]
 # cdylib: the .wasm artifact. rlib: lets `tests/` integration tests and native
-# dependents link the crate (unit tests in src/ run natively either way).
+# unit tests link the crate. The shipping surface is raw `extern "C"` exports
+# with NO wasm-bindgen runtime, so the module has zero imports and the worklet
+# instantiates it with `new WebAssembly.Instance(module, {})`.
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 voksa-core.workspace = true
-wasm-bindgen.workspace = true
+voksa-engine-klattsch.workspace = true
+
+[dev-dependencies]
+# The only wasm-bindgen-family dependency, and it is dev-only: it supplies the
+# `#[wasm_bindgen_test]` harness for `wasm-pack test --headless --chrome`. The
+# functions under test are plain Rust, so no wasm-bindgen runtime dep is needed.
+wasm-bindgen-test.workspace = true
 
 # rustc emits bulk-memory / nontrapping-fptoint / sign-ext by default for wasm32
-# these days; wasm-opt validates with them off unless told otherwise (and
+# these days, and `-C target-feature=+simd128` (see .cargo/config.toml) adds
+# SIMD ops; wasm-opt validates with these OFF unless told otherwise (and
 # wasm-pack 0.15 swallows the wasm-opt failure, silently skipping optimization).
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = [
@@ -24,4 +33,5 @@ wasm-opt = [
     "--enable-bulk-memory",
     "--enable-nontrapping-float-to-int",
     "--enable-sign-ext",
+    "--enable-simd",
 ]
