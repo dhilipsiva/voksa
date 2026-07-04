@@ -5,6 +5,7 @@ members = [
     "crates/voksa-cli",
     "crates/voksa-web",
     "crates/voksa-engine-klattsch",
+    "crates/klattsch-core-fork",
     "crates/voksa-testkit",
     "xtask",
 ]
@@ -29,9 +30,10 @@ serde_json = "1"
 # SPSC ring feeding the cpal output callback (docs/research/02-architecture-v2.md).
 cpal = "0.18"
 rtrb = "0.3"
-# 0.1.0 was yanked; the crate is 3 commits young — pin exactly, revisit at the
-# Phase-2 engine decision gate.
-klattsch-core = "=0.1.1"
+# Phase 10 VENDORED FORK of klattsch-core 0.1.1 (MIT, Tony Gies) — adds open
+# quotient + diplophonia to the glottal source for the attitudinal layer (creak/
+# breathy). Default params reproduce upstream 0.1.1 byte-for-byte. See ADR 0001.
+klattsch-core = { path = "crates/klattsch-core-fork" }
 # dev-only stack (must never enter the shipping dependency tree)
 spectrum-analyzer = "1.7"
 hound = "3.5"

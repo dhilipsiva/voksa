@@ -394,8 +394,10 @@ dependencies = [
 [[package]]
 name = "klattsch-core"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b29aed232e9f29f22cb4c3f91670c342a662905ed7047f702ac8d1f7820454ca"
+dependencies = [
+ "rtrb",
+ "serde",
+]
 
 [[package]]
 name = "libc"
