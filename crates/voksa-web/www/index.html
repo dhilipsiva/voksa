@@ -48,10 +48,14 @@
 
       // Compile the module once on the main thread; it is structured-cloneable
       // into the worklet via processorOptions.
+      // `?v=` cache-busts: AudioWorklet.addModule caches modules aggressively
+      // (even across hard reloads), so a fixed build tag guarantees a fresh
+      // worklet whenever this page changes.
+      const V = '2';
       let wasmModule;
       let ctx;
       try {
-        wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm'));
+        wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
         status.textContent = 'ready';
         speak.disabled = false;
       } catch (e) {
@@ -61,10 +65,12 @@
       speak.addEventListener('click', async () => {
         if (!ctx) {
           ctx = new AudioContext();
-          await ctx.audioWorklet.addModule('voksa-processor.js');
+          await ctx.audioWorklet.addModule('voksa-processor.js?v=' + V);
         }
         await ctx.resume();
-        const text = document.getElementById('text').value;
+        // Encode here on the main thread — the AudioWorkletGlobalScope has no
+        // TextEncoder in some browsers (Firefox). Pass the raw UTF-8 bytes.
+        const textBytes = new TextEncoder().encode(document.getElementById('text').value);
         let flags = 0;
         if (flat.checked) flags |= FLAG_FLAT;
         if (xu.checked) flags |= FLAG_XU;
@@ -75,7 +81,7 @@
           numberOfInputs: 0,
           numberOfOutputs: 1,
           outputChannelCount: [1],
-          processorOptions: { module: wasmModule, text, flags, sampleRate: ctx.sampleRate },
+          processorOptions: { module: wasmModule, textBytes, flags, sampleRate: ctx.sampleRate },
         });
         node.port.onmessage = (e) => {
           if (e.data === 'done') { node.disconnect(); status.textContent = 'ready'; }

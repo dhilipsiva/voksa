@@ -13,18 +13,20 @@
 class VoksaProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
-    const { module, text, flags, sampleRate } = options.processorOptions;
+    // `textBytes` is a UTF-8 Uint8Array encoded on the MAIN thread: the
+    // AudioWorkletGlobalScope has no TextEncoder in some browsers (Firefox), so
+    // we never encode here.
+    const { module, textBytes, flags, sampleRate } = options.processorOptions;
     const wasm = new WebAssembly.Instance(module, {}).exports;
 
     this._samples = new Float32Array(0);
     this._cursor = 0;
 
-    const utf8 = new TextEncoder().encode(text);
-    const inPtr = wasm.voksa_alloc(utf8.length);
-    // Fresh view on the live buffer, then write the UTF-8 text.
-    new Uint8Array(wasm.memory.buffer, inPtr, utf8.length).set(utf8);
-    const outPtr = wasm.voksa_render(inPtr, utf8.length, flags >>> 0, sampleRate >>> 0);
-    wasm.voksa_dealloc(inPtr, utf8.length);
+    const inPtr = wasm.voksa_alloc(textBytes.length);
+    // Fresh view on the live buffer, then write the UTF-8 bytes.
+    new Uint8Array(wasm.memory.buffer, inPtr, textBytes.length).set(textBytes);
+    const outPtr = wasm.voksa_render(inPtr, textBytes.length, flags >>> 0, sampleRate >>> 0);
+    wasm.voksa_dealloc(inPtr, textBytes.length);
 
     if (outPtr === 0) {
       this.port.postMessage('error');
