@@ -334,18 +334,18 @@ fn scale_time(mut s: UtteranceSchedule, mult: f32) -> UtteranceSchedule {
     s
 }
 
-/// Like [`apply_attitudinal`] but with a RUNTIME deviation table (demo tuning
-/// console D2a). `apply_attitudinal_with(s, &AttitudinalTable::default())` is
-/// byte-identical to [`apply_attitudinal`].
-pub fn apply_attitudinal_with(s: UtteranceSchedule, table: &AttitudinalTable) -> UtteranceSchedule {
-    // RED stub (D2a): the runtime table is ignored until the failing test.
-    let _ = table;
-    apply_attitudinal(s)
+/// Apply the attitudinal overlay stored on `s` (by the compiler) with the
+/// PINNED deviation vectors. Equivalent to
+/// `apply_attitudinal_with(s, &AttitudinalTable::PINNED)`.
+pub fn apply_attitudinal(s: UtteranceSchedule) -> UtteranceSchedule {
+    apply_attitudinal_with(s, &AttitudinalTable::PINNED)
 }
 
 /// Apply the attitudinal overlay stored on `s` (by the compiler) to its event
-/// schedule. Deterministic: identical input always yields the identical
-/// schedule. No-op when there are no attitudinals.
+/// schedule, reading the deviation vectors from the RUNTIME `table` (demo
+/// tuning console D2a; the default table = the pinned constants, byte-identical
+/// to [`apply_attitudinal`]). Deterministic: identical input and table always
+/// yield the identical schedule. No-op when there are no attitudinals.
 ///
 /// Per scope, over the target word's event window: re-center the F0 excursion
 /// about the word mean by `f0_range_mult`, add the mean Hz shift, and set the
@@ -353,14 +353,17 @@ pub fn apply_attitudinal_with(s: UtteranceSchedule, table: &AttitudinalTable) ->
 /// scaled by intensity. A single global tempo scale (the first, dominant
 /// scope's `rate_mult`) is applied last; per-word rate is a documented MVP
 /// limitation.
-pub fn apply_attitudinal(mut s: UtteranceSchedule) -> UtteranceSchedule {
+pub fn apply_attitudinal_with(
+    mut s: UtteranceSchedule,
+    table: &AttitudinalTable,
+) -> UtteranceSchedule {
     if s.attitudinals.is_empty() {
         return s;
     }
     let scopes: Vec<AttitudinalScope> = s.attitudinals.clone();
 
     for scope in &scopes {
-        let dev = scope.kind.deviation();
+        let dev = table.get(scope.kind);
         let it = scope.intensity;
         let Some((w_start, w_end)) = word_window(&s.spans, scope.word_index) else {
             continue;
@@ -402,6 +405,6 @@ pub fn apply_attitudinal(mut s: UtteranceSchedule) -> UtteranceSchedule {
 
     // Global tempo from the dominant (first) attitudinal.
     let dom = &scopes[0];
-    let rate_mult = 1.0 + (dom.kind.deviation().rate_mult - 1.0) * dom.intensity;
+    let rate_mult = 1.0 + (table.get(dom.kind).rate_mult - 1.0) * dom.intensity;
     scale_time(s, rate_mult)
 }

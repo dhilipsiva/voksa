@@ -104,11 +104,31 @@ impl Config {
     }
 
     /// Build the runtime [`AttitudinalTable`]: pinned defaults with this
-    /// config's per-cmavo overrides applied.
+    /// config's per-cmavo overrides applied (only the named fields change).
     pub fn attitudinal_table(&self) -> AttitudinalTable {
-        // RED stub (D2a): overrides are ignored until the failing test.
-        let _ = (&self.attitudinals, AttitudinalKind::ALL);
-        AttitudinalTable::default()
+        let mut table = AttitudinalTable::default();
+        for kind in AttitudinalKind::ALL {
+            let Some(o) = self.attitudinals.get(kind.cmavo()) else {
+                continue;
+            };
+            let d = &mut table.deviations[kind.index()];
+            macro_rules! set {
+                ($json:ident, $field:ident) => {
+                    if let Some(v) = o.$json {
+                        d.$field = v;
+                    }
+                };
+            }
+            set!(f0_mean_hz, f0_mean_hz);
+            set!(f0_range_mult, f0_range_mult);
+            set!(rate_mult, rate_mult);
+            set!(oq, d_oq);
+            set!(tilt, d_tilt);
+            set!(di, d_di);
+            set!(vibrato_hz, d_vibrato_hz);
+            set!(aspiration, d_aspiration);
+        }
+        table
     }
 }
 

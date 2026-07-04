@@ -7,7 +7,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use voksa_core::attitudinal::AttitudinalTable;
+use voksa_core::attitudinal::{AttitudinalTable, Deviation};
 use voksa_core::compiler::{CompileError, CompileOptions};
 use voksa_core::prosody::ProsodyOptions;
 use voksa_engine_klattsch::{render_utterance, render_utterance_expressive};
@@ -61,9 +61,18 @@ fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
 /// entries fall back to the pinned defaults, so a 7-float (demo-basic) or
 /// empty block reproduces `AttitudinalTable::default()` exactly.
 fn attitudinal_from(params: &[f32]) -> AttitudinalTable {
-    // RED stub (D2a): the attitudinal section is ignored until the failing test.
-    let _ = params;
-    AttitudinalTable::default()
+    let mut table = AttitudinalTable::default();
+    for (k, dev) in table.deviations.iter_mut().enumerate() {
+        let base = PARAM_COUNT + k * Deviation::FIELDS;
+        let mut fields = dev.to_array();
+        for (f, slot) in fields.iter_mut().enumerate() {
+            if let Some(v) = params.get(base + f).copied().filter(|v| v.is_finite()) {
+                *slot = v;
+            }
+        }
+        *dev = Deviation::from_array(fields);
+    }
+    table
 }
 
 /// Render Lojban `text` to mono f32 PCM at `sample_rate`. `params` is the f32

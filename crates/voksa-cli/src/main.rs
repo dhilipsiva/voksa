@@ -3,9 +3,10 @@
 use std::process::ExitCode;
 
 use voksa_cli::{args, config, playback, wav};
+use voksa_core::attitudinal::AttitudinalTable;
 use voksa_core::compiler::{CompileError, CompileOptions};
 use voksa_core::prosody::ProsodyOptions;
-use voksa_engine_klattsch::{SAMPLE_RATE, render_utterance, render_utterance_prosodic};
+use voksa_engine_klattsch::{SAMPLE_RATE, render_utterance, render_utterance_expressive};
 
 fn main() -> ExitCode {
     let argv: Vec<String> = std::env::args().skip(1).collect();
@@ -28,14 +29,16 @@ fn main() -> ExitCode {
     };
 
     // A --config file supplies text + flags + tuning params (replay a demo
-    // submission); otherwise everything comes from the args.
-    let (text, copts, flat, popts) = match &parsed.config {
+    // submission — prosody AND attitudinal overrides); otherwise everything
+    // comes from the args (pinned attitudinal vectors).
+    let (text, copts, flat, popts, atts) = match &parsed.config {
         Some(cfg_path) => match config::Config::load(cfg_path) {
             Ok(c) => (
                 c.text.clone(),
                 c.compile_options(),
                 c.flat,
                 c.prosody_options(),
+                c.attitudinal_table(),
             ),
             Err(e) => {
                 eprintln!("error: {e}");
@@ -53,13 +56,14 @@ fn main() -> ExitCode {
                 xu_rise: parsed.xu,
                 ..Default::default()
             },
+            AttitudinalTable::default(),
         ),
     };
     let render_at = |sr: u32| -> Result<Vec<f32>, CompileError> {
         if flat {
             render_utterance(&text, &copts, sr)
         } else {
-            render_utterance_prosodic(&text, &copts, &popts, sr)
+            render_utterance_expressive(&text, &copts, &popts, &atts, sr)
         }
     };
 
