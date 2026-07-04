@@ -34,6 +34,17 @@ const MEASUREMENT_F0_HZ: f32 = 105.0;
 /// intermodulation peaks. Keep the adapter's renders linear.
 const LINEAR_GAIN: f32 = 1.0;
 
+/// Offline-render ceiling (~10 minutes). A hostile-but-finite tuning config
+/// (huge durations, tiny rate) otherwise saturates the length and aborts on
+/// the sample allocation; capping degrades it to a truncated render instead.
+const RENDER_MS_CEILING: f32 = 600_000.0;
+
+/// The offline render length for a schedule: total + a short decay tail,
+/// bounded to [`RENDER_MS_CEILING`].
+fn render_ms(total_ms: f32) -> u32 {
+    (total_ms + 20.0).clamp(0.0, RENDER_MS_CEILING) as u32
+}
+
 fn targets_update(t: &Targets, f0: f32) -> ParamUpdate {
     ParamUpdate {
         f0: Some(f0),
@@ -113,7 +124,7 @@ pub fn lower_sequence(phonemes: &[Phoneme], sample_rate: u32) -> (Schedule, f32)
 /// decay inside the buffer).
 pub fn render_phonemes(phonemes: &[Phoneme], sample_rate: u32) -> Vec<f32> {
     let (schedule, total_ms) = lower_sequence(phonemes, sample_rate);
-    crate::render_schedule(schedule, sample_rate, (total_ms + 20.0) as u32)
+    crate::render_schedule(schedule, sample_rate, render_ms(total_ms))
 }
 
 /// Compile Lojban text (voksa-core pipeline) and render it offline.
@@ -127,7 +138,7 @@ pub fn render_utterance(
     Ok(crate::render_schedule(
         schedule,
         sample_rate,
-        (utterance.total_ms + 20.0) as u32,
+        render_ms(utterance.total_ms),
     ))
 }
 
@@ -174,7 +185,7 @@ pub fn render_utterance_expressive(
     Ok(crate::render_schedule(
         schedule,
         sample_rate,
-        (utterance.total_ms + 20.0) as u32,
+        render_ms(utterance.total_ms),
     ))
 }
 

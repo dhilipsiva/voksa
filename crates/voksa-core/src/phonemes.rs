@@ -559,14 +559,23 @@ const fn liquid_slot(c: Consonant) -> Option<usize> {
     }
 }
 
-/// A steady [`SegmentSpec`] from a runtime voice entry. Durations clamp to
-/// ≥ 0 (a hand-edited config's negative duration would walk the schedule
-/// backwards; NaN would panic the span sort — `.max(0.0)` neutralizes both
-/// and is exact identity for every pinned value).
+/// Per-segment duration ceiling (ms). Identity for every pinned value (max is
+/// the 200 ms diphthong); only guards hostile configs — an unbounded duration
+/// saturates the render length and aborts on the sample allocation.
+const SEGMENT_MS_CEILING: f32 = 10_000.0;
+
+/// Clamp a runtime duration: ≥ 0 (a negative would walk the schedule
+/// backwards; NaN would panic the span sort — `clamp` neutralizes both) and
+/// ≤ [`SEGMENT_MS_CEILING`]. Exact identity for every pinned value.
+fn clamp_dur(ms: f32) -> f32 {
+    ms.clamp(0.0, SEGMENT_MS_CEILING)
+}
+
+/// A steady [`SegmentSpec`] from a runtime voice entry.
 fn steady_from(sv: SteadyVoice) -> SegmentSpec {
     SegmentSpec {
         kind: SegmentKind::Steady(sv.targets),
-        dur_ms: sv.dur_ms.max(0.0),
+        dur_ms: clamp_dur(sv.dur_ms),
     }
 }
 
@@ -583,14 +592,14 @@ pub fn spec_with(p: Phoneme, voice: &VoiceTable) -> SegmentSpec {
                 from: voice.vowels[a.index()].targets,
                 to: voice.vowels[b.index()].targets,
             },
-            dur_ms: diphthong_index(a, b)
-                .map_or(data::DIPHTHONG_MS, |i| voice.diphthong_dur_ms[i])
-                .max(0.0),
+            dur_ms: clamp_dur(
+                diphthong_index(a, b).map_or(data::DIPHTHONG_MS, |i| voice.diphthong_dur_ms[i]),
+            ),
         },
         Phoneme::Consonant(c) => {
             if let Some(i) = stop_slot(c) {
                 let s = voice.stops[i];
-                let (closure_ms, burst_ms) = (s.closure_ms.max(0.0), s.burst_ms.max(0.0));
+                let (closure_ms, burst_ms) = (clamp_dur(s.closure_ms), clamp_dur(s.burst_ms));
                 SegmentSpec {
                     kind: SegmentKind::Stop {
                         closure: s.closure,
@@ -612,7 +621,7 @@ pub fn spec_with(p: Phoneme, voice: &VoiceTable) -> SegmentSpec {
         }
         Phoneme::H => SegmentSpec {
             kind: SegmentKind::Aspirate,
-            dur_ms: voice.h_dur_ms.max(0.0),
+            dur_ms: clamp_dur(voice.h_dur_ms),
         },
     }
 }
