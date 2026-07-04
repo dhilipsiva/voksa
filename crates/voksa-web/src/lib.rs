@@ -136,8 +136,24 @@ pub fn synth(
 /// reads this FROM the wasm (via [`voksa_default_params`]) to seed its
 /// sliders, so the UI's defaults can never drift from the engine's tables.
 pub fn default_params() -> Vec<f32> {
-    // RED stub (D2b defaults-from-wasm): zeros until the failing test.
-    vec![0.0; FULL_PARAM_COUNT]
+    let mut out = Vec::with_capacity(FULL_PARAM_COUNT);
+    let p = ProsodyOptions::default();
+    out.extend_from_slice(&[
+        p.declination_start_hz,
+        p.declination_end_hz,
+        p.stress_duration_factor,
+        p.stress_f0_excursion_hz,
+        p.stress_amp_factor,
+        p.xu_rise_hz,
+        p.rate,
+    ]);
+    let atts = AttitudinalTable::default();
+    for k in voksa_core::attitudinal::AttitudinalKind::ALL {
+        out.extend_from_slice(&atts.get(k).to_array());
+    }
+    out.extend_from_slice(&VoiceTable::default().to_array());
+    debug_assert_eq!(out.len(), FULL_PARAM_COUNT);
+    out
 }
 
 /// Sample count of the buffer from the most recent [`voksa_render`]. A single

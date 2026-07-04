@@ -89,6 +89,21 @@
       // ?v= cache-busts the worklet (addModule caches aggressively).
       const V = '6';
 
+      // Compile the wasm FIRST and read the canonical default param block from
+      // it (a second, main-thread instance — zero imports make this a
+      // one-liner), so every slider default below is the ENGINE's pinned
+      // value, never a hand-copied literal. The literals below remain only as
+      // a no-wasm fallback (in which case nothing can play anyway).
+      let wasmModule = null, wasmLoadError = null, DEFAULTS = null;
+      try {
+        wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
+        const probe = new WebAssembly.Instance(wasmModule, {}).exports;
+        const dptr = probe.voksa_default_params();
+        const dlen = probe.voksa_out_len();
+        DEFAULTS = Array.from(new Float32Array(probe.memory.buffer, dptr, dlen));
+        probe.voksa_free_f32(dptr, dlen);
+      } catch (e) { wasmLoadError = e; }
+
       // The 7 prosody knobs, IN THE ORDER of the wasm f32 layout + CLI keys.
       const PARAMS = [
         { key: 'declination_start_hz',   label: 'Pitch start (Hz)',       min: 60,  max: 220, step: 1,    def: 120 },
@@ -144,6 +159,15 @@
         { key: "o'onai", label: ".o'onai", sub: 'anger',              example: "mi fengu .o'onai",
           def: { f0_mean_hz: 10,  f0_range_mult: 1.3, rate_mult: 0.90, oq: -0.20, tilt: 0.25,  di: 0.15, vibrato_hz: 0, aspiration: 0 } },
       ];
+
+      // Re-seed the prosody + attitudinal descriptor defaults from the wasm's
+      // canonical block (UI == engine by construction).
+      if (DEFAULTS) {
+        PARAMS.forEach((p, i) => { p.def = DEFAULTS[i]; });
+        ATTITUDINALS.forEach((a, k) => {
+          ATT_FIELDS.forEach((f, i) => { a.def[f.key] = DEFAULTS[7 + k * 8 + i]; });
+        });
+      }
 
       // ---- build the UI from the descriptors ----
       const flagsBox = document.getElementById('flags');
@@ -310,6 +334,20 @@
         ];
       }
       const vtId = (itemKey, path) => `vt-${itemKey}-${path.join('-')}`;
+
+      // Re-seed the voice defs from the wasm block: slice per item in EXACT
+      // layout order (the literal defs above are only a no-wasm fallback).
+      if (DEFAULTS) {
+        let cur = 63;
+        for (const sec of VOICE_SECTIONS) {
+          for (const it of sec.items) {
+            const n = vtItemFields(it).length;
+            it.def = DEFAULTS.slice(cur, cur + n);
+            cur += n;
+          }
+        }
+        if (cur !== DEFAULTS.length) console.error('voice defaults mismatch:', cur, DEFAULTS.length);
+      }
 
       // Build the panels + the FLAT slider registry (exact wasm layout order).
       const voiceBox = document.getElementById('voicetable');
@@ -544,13 +582,12 @@
       const speakBtn = document.getElementById('speak');
       const dlWav = document.getElementById('dl-wav');
       let lastSamples = null, lastRate = 48000;
-      let wasmModule, ctx;
+      let ctx;
 
-      try {
-        wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
+      if (wasmModule) {
         status.textContent = 'ready'; speakBtn.disabled = false;
-      } catch (e) {
-        status.textContent = 'failed to load WASM: ' + e + ' (serve over http, not file://)';
+      } else {
+        status.textContent = 'failed to load WASM: ' + wasmLoadError + ' (serve over http, not file://)';
       }
 
       // The one utterance currently playing: replaced (not stacked) on re-speak,
