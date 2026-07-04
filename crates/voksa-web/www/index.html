@@ -180,8 +180,26 @@
       }
       const attEl = (k, f) => document.getElementById(`a-${k}-${f}`);
       const attOut = (k, f) => document.getElementById(`ao-${k}-${f}`);
-      function setAtt(k, f, v) { attEl(k, f).value = v; attOut(k, f).textContent = v; }
-      function resetAtt(a) { for (const f of ATT_FIELDS) setAtt(a.key, f.key, a.def[f.key]); }
+      // Assign v to a slider with FULL fidelity: a range input silently clamps
+      // assigned values to [min,max] (and may snap to the step grid), which
+      // would make a hand-edited / CLI-side config replay differently here than
+      // via `voksa --config` and re-export silently rewritten. Widen the bounds
+      // (and relax the grid) instead, and always show what the slider holds.
+      function setSliderExact(el, out, v) {
+        if (v < parseFloat(el.min)) el.min = v;
+        if (v > parseFloat(el.max)) el.max = v;
+        el.value = v;
+        if (parseFloat(el.value) !== v) { el.step = 'any'; el.value = v; }
+        out.textContent = el.value;
+      }
+      function setAtt(k, f, v) { setSliderExact(attEl(k, f), attOut(k, f), v); }
+      function resetAtt(a) {
+        for (const f of ATT_FIELDS) {
+          const el = attEl(a.key, f.key);
+          el.min = f.min; el.max = f.max; el.step = f.step; // undo any widening
+          setAtt(a.key, f.key, a.def[f.key]);
+        }
+      }
       for (const a of ATTITUDINALS) {
         for (const f of ATT_FIELDS) {
           attEl(a.key, f.key).addEventListener('input', () => { attOut(a.key, f.key).textContent = attEl(a.key, f.key).value; });
@@ -244,7 +262,7 @@
         if (typeof c.text === 'string') document.getElementById('text').value = c.text;
         for (const f of FLAGS) if (typeof c[f.key] === 'boolean') flagEl(f.key).checked = c[f.key];
         for (const p of PARAMS) {
-          if (typeof c[p.key] === 'number') { slideEl(p.key).value = c[p.key]; outEl(p.key).textContent = c[p.key]; }
+          if (typeof c[p.key] === 'number') setSliderExact(slideEl(p.key), outEl(p.key), c[p.key]);
         }
         // Delta semantics: reset to pinned, then apply the config's overrides.
         for (const a of ATTITUDINALS) resetAtt(a);
@@ -260,7 +278,11 @@
       }
       function resetDefaults() {
         for (const f of FLAGS) flagEl(f.key).checked = false;
-        for (const p of PARAMS) { slideEl(p.key).value = p.def; outEl(p.key).textContent = p.def; }
+        for (const p of PARAMS) {
+          const el = slideEl(p.key);
+          el.min = p.min; el.max = p.max; el.step = p.step; // undo any widening
+          el.value = p.def; outEl(p.key).textContent = p.def;
+        }
         for (const a of ATTITUDINALS) resetAtt(a);
         syncFlatState();
       }
