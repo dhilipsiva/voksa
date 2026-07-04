@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 fn main() -> ExitCode {
@@ -10,7 +10,7 @@ fn main() -> ExitCode {
     let rest: Vec<String> = args.filter(|a| a.as_str() != "--").collect();
     match cmd.as_deref() {
         Some("oracle") => oracle(&rest),
-        Some("wasm-size") => todo_stub("wasm-size", "Phase 9"),
+        Some("wasm-size") => wasm_size(),
         Some("listening-battery") => listening_battery(),
         _ => {
             eprintln!("usage: cargo xtask <oracle|wasm-size|listening-battery> [args]");
@@ -216,9 +216,96 @@ function collect() {{
     ExitCode::SUCCESS
 }
 
-fn todo_stub(name: &str, phase: &str) -> ExitCode {
-    eprintln!("error: `cargo xtask {name}` is not implemented until {phase}");
-    ExitCode::FAILURE
+/// Build the web crate for the browser (wasm-pack runs wasm-opt -Oz per
+/// crates/voksa-web/Cargo.toml), then assert the gzipped `.wasm` is under
+/// budget and declares ZERO imports — the AudioWorklet instantiates it with an
+/// empty import object (`new WebAssembly.Instance(module, {})`), so any import
+/// (e.g. a stray wasm-bindgen `String` on the surface) would break it.
+fn wasm_size() -> ExitCode {
+    // Measured 2026-07-03 (engine + prosody + simd128): 33_073 B gzip.
+    // Budget = ~1.3× that, leaving headroom for engine/prosody growth.
+    const WASM_GZIP_BUDGET: u64 = 43_000;
+    let root = workspace_root();
+
+    let built = Command::new("wasm-pack")
+        .args(["build", "--release", "--target", "web"])
+        .arg(root.join("crates/voksa-web"))
+        .status();
+    match built {
+        Ok(s) if s.success() => {}
+        other => {
+            eprintln!("error: `wasm-pack build` failed: {other:?}");
+            return ExitCode::FAILURE;
+        }
+    }
+
+    let wasm = root.join("crates/voksa-web/pkg/voksa_web_bg.wasm");
+    if !wasm.exists() {
+        eprintln!("error: {} not found", wasm.display());
+        return ExitCode::FAILURE;
+    }
+
+    match wasm_import_count(&wasm) {
+        Ok(0) => {}
+        Ok(n) => {
+            eprintln!(
+                "error: wasm declares {n} import(s); the AudioWorklet needs zero \
+                 (did a wasm-bindgen String/js_sys type reach the public surface?)"
+            );
+            return ExitCode::FAILURE;
+        }
+        // Best-effort: if wasm-dis is unavailable (e.g. binaryen not installed
+        // in a minimal CI), warn but still enforce the size gate below.
+        Err(e) => {
+            eprintln!(
+                "warning: could not inspect wasm imports ({e}); skipping the zero-imports check"
+            );
+        }
+    }
+
+    let gzip = match gzip_size(&wasm) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("error: gzipping {}: {e}", wasm.display());
+            return ExitCode::FAILURE;
+        }
+    };
+    println!("wasm size (gzip): {gzip} bytes (budget: {WASM_GZIP_BUDGET} bytes)");
+    if gzip > WASM_GZIP_BUDGET {
+        eprintln!("error: over budget by {} bytes", gzip - WASM_GZIP_BUDGET);
+        return ExitCode::FAILURE;
+    }
+    ExitCode::SUCCESS
+}
+
+/// Gzipped size in bytes, via the `gzip` in the dev shell (keeps xtask dep-free;
+/// `gzip -9 -c` writes the compressed stream to stdout, which we just measure).
+fn gzip_size(path: &Path) -> Result<u64, String> {
+    let out = Command::new("gzip")
+        .args(["-9", "-c"])
+        .arg(path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).into_owned());
+    }
+    Ok(out.stdout.len() as u64)
+}
+
+/// Number of `(import ...)` entries the module declares, via `wasm-dis`
+/// (binaryen, in the dev shell).
+fn wasm_import_count(path: &Path) -> Result<usize, String> {
+    let out = Command::new("wasm-dis")
+        .arg(path)
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(String::from_utf8_lossy(&out.stderr).into_owned());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|l| l.trim_start().starts_with("(import "))
+        .count())
 }
 
 /// Render `text` with the eSpeak NG Lojban voice into fixtures/oracle/<slug>.wav

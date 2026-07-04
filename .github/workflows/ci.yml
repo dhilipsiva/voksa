@@ -54,13 +54,30 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack
-      - run: wasm-pack build --release --target web crates/voksa-web
-      - name: wasm size budget (warn-only until Phase 9)
-        run: |
-          wasm_file=$(ls crates/voksa-web/pkg/*_bg.wasm)
-          size=$(stat -c%s "$wasm_file")
-          budget=204800 # 200 KiB placeholder; enforced by `cargo xtask wasm-size` from Phase 9
-          echo "wasm size: ${size} bytes (budget: ${budget} bytes)"
-          if [ "$size" -gt "$budget" ]; then
-            echo "::warning title=wasm size::${wasm_file} is ${size} bytes, over the ${budget}-byte budget (warn-only until Phase 9)"
-          fi
+      # binaryen provides wasm-dis for the xtask zero-imports assertion.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends binaryen
+      # Builds the web crate (wasm-opt -Oz), then hard-fails if the gzipped
+      # wasm is over budget or declares any imports.
+      - run: cargo xtask wasm-size
+
+  # Advisory (CLAUDE.md decision gate: "browser CI flaky? → browser test
+  # becomes advisory, native tests remain required"). The synth logic these
+  # exercise is identical to the required native voksa-web unit tests, and the
+  # wasm build is gated import-free + under budget by `wasm-build`. The
+  # wasm-bindgen-test-runner ↔ chromedriver handshake is flaky across
+  # environments (e.g. WSL); this job runs it in GitHub's reference Chrome but
+  # does not block the merge.
+  wasm-test:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - uses: nanasess/setup-chromedriver@v2
+      - run: wasm-pack test --headless --chrome crates/voksa-web

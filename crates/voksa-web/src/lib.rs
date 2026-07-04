@@ -9,7 +9,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use voksa_core::compiler::{CompileError, CompileOptions};
 use voksa_core::prosody::ProsodyOptions;
-#[allow(unused_imports)]
 use voksa_engine_klattsch::{render_utterance, render_utterance_prosodic};
 
 /// `flags` bit layout, mirroring the native CLI (default 0 = prosodic).
@@ -21,9 +20,18 @@ pub const FLAG_BUFFER: u32 = 0x8;
 /// Render Lojban `text` to mono f32 PCM at `sample_rate`. Shared by the C-ABI
 /// exports and the tests. `xu` is ignored on the flat branch.
 pub fn synth(text: &str, flags: u32, sample_rate: u32) -> Result<Vec<f32>, CompileError> {
-    // STUB (Phase 9 red): the real render lands after the failing tests commit.
-    let _ = (text, flags, sample_rate);
-    unimplemented!("Phase 9 red checkpoint")
+    let opts = CompileOptions {
+        dotside: flags & FLAG_DOTSIDE != 0,
+        buffer: flags & FLAG_BUFFER != 0,
+    };
+    if flags & FLAG_FLAT != 0 {
+        render_utterance(text, &opts, sample_rate)
+    } else {
+        let prosody = ProsodyOptions {
+            xu_rise: flags & FLAG_XU != 0,
+        };
+        render_utterance_prosodic(text, &opts, &prosody, sample_rate)
+    }
 }
 
 /// Sample count of the buffer from the most recent [`voksa_render`]. A single

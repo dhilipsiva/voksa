@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>voksa — Lojban speech in the browser</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+      h1 { font-size: 1.4rem; }
+      input[type="text"] { width: 100%; font-size: 1.1rem; padding: 0.5rem; box-sizing: border-box; }
+      fieldset { margin: 1rem 0; border: 1px solid #ccc; }
+      label { margin-right: 1rem; }
+      button { font-size: 1.1rem; padding: 0.5rem 1.5rem; }
+      #status { margin-top: 1rem; color: #555; min-height: 1.2em; }
+      code { background: #f2f2f2; padding: 0 0.2em; }
+    </style>
+  </head>
+  <body>
+    <h1>voksa — rule-based Lojban speech synthesizer</h1>
+    <p>Type Lojban and press Speak. Synthesis runs entirely in your browser
+      (WASM in an AudioWorklet); nothing is sent anywhere.</p>
+
+    <input id="text" type="text" value="coi munje" aria-label="Lojban text" />
+
+    <fieldset>
+      <legend>options</legend>
+      <label><input type="checkbox" id="flat" /> flat (no prosody)</label>
+      <label><input type="checkbox" id="xu" /> xu rise</label>
+      <label><input type="checkbox" id="dotside" /> dotside</label>
+      <label><input type="checkbox" id="buffer" /> buffer</label>
+    </fieldset>
+
+    <button id="speak" disabled>Speak</button>
+    <div id="status">loading…</div>
+
+    <script type="module">
+      const FLAG_FLAT = 0x1, FLAG_XU = 0x2, FLAG_DOTSIDE = 0x4, FLAG_BUFFER = 0x8;
+      const status = document.getElementById('status');
+      const speak = document.getElementById('speak');
+      const flat = document.getElementById('flat');
+      const xu = document.getElementById('xu');
+
+      // --xu is meaningless on the flat path; mirror the CLI's mutual exclusion.
+      flat.addEventListener('change', () => {
+        xu.disabled = flat.checked;
+        if (flat.checked) xu.checked = false;
+      });
+
+      // Compile the module once on the main thread; it is structured-cloneable
+      // into the worklet via processorOptions.
+      let wasmModule;
+      let ctx;
+      try {
+        wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm'));
+        status.textContent = 'ready';
+        speak.disabled = false;
+      } catch (e) {
+        status.textContent = 'failed to load WASM: ' + e + ' (serve over http, not file://)';
+      }
+
+      speak.addEventListener('click', async () => {
+        if (!ctx) {
+          ctx = new AudioContext();
+          await ctx.audioWorklet.addModule('voksa-processor.js');
+        }
+        await ctx.resume();
+        const text = document.getElementById('text').value;
+        let flags = 0;
+        if (flat.checked) flags |= FLAG_FLAT;
+        if (xu.checked) flags |= FLAG_XU;
+        if (document.getElementById('dotside').checked) flags |= FLAG_DOTSIDE;
+        if (document.getElementById('buffer').checked) flags |= FLAG_BUFFER;
+
+        const node = new AudioWorkletNode(ctx, 'voksa-processor', {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [1],
+          processorOptions: { module: wasmModule, text, flags, sampleRate: ctx.sampleRate },
+        });
+        node.port.onmessage = (e) => {
+          if (e.data === 'done') { node.disconnect(); status.textContent = 'ready'; }
+          else if (e.data === 'error') { node.disconnect(); status.textContent = 'cannot synthesize that text'; }
+        };
+        node.connect(ctx.destination);
+        status.textContent = 'speaking…';
+      });
+    </script>
+  </body>
+</html>
