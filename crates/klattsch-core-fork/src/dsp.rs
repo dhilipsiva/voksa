@@ -89,9 +89,13 @@ impl Default for BandpassBiquad {
 
 /// Derivative of the Rosenberg glottal pulse. Phase is normalized to `[0, 1)`.
 /// `effort` (0..1) shapes the pulse: 0 is lax/breathy, 1 is tense.
+/// `open_quotient` (voksa fork) multiplies the open-phase duration; 1.0 is
+/// neutral (upstream), <1 tightens (creaky), >1 lengthens (breathy).
 #[inline]
-pub fn glottal_pulse(phase: f64, effort: f32) -> f32 {
+pub fn glottal_pulse(phase: f64, effort: f32, open_quotient: f32) -> f32 {
     let e = effort.clamp(0.0, 1.0) as f64;
+    // STUB (voksa fork red): open_quotient is ignored until the failing test.
+    let _ = open_quotient;
     let tp = 0.5 - e * 0.2; // 0.5 (lax) -> 0.3 (tense)
     let tn = 0.25 - e * 0.17; // 0.25 (lax) -> 0.08 (tense)
     const NORM: f64 = 0.1;
@@ -205,14 +209,29 @@ mod tests {
     fn glottal_pulse_zero_after_close() {
         // For phase past Tp + Tn, output is exactly zero (closed phase).
         // With effort=0.5, Tp=0.4, Tn=0.165 → closed phase starts at 0.565.
-        assert_eq!(glottal_pulse(0.7, 0.5), 0.0);
-        assert_eq!(glottal_pulse(0.99, 0.5), 0.0);
+        assert_eq!(glottal_pulse(0.7, 0.5, 1.0), 0.0);
+        assert_eq!(glottal_pulse(0.99, 0.5, 1.0), 0.0);
     }
 
     #[test]
     fn glottal_pulse_clamps_effort() {
-        assert_eq!(glottal_pulse(0.1, -1.0), glottal_pulse(0.1, 0.0));
-        assert_eq!(glottal_pulse(0.1, 2.0), glottal_pulse(0.1, 1.0));
+        assert_eq!(glottal_pulse(0.1, -1.0, 1.0), glottal_pulse(0.1, 0.0, 1.0));
+        assert_eq!(glottal_pulse(0.1, 2.0, 1.0), glottal_pulse(0.1, 1.0, 1.0));
+    }
+
+    #[test]
+    fn open_quotient_shrinks_open_phase() {
+        // voksa fork (RED until the OQ pulse math lands): a lower open quotient
+        // shortens Tp, so a phase inside the OPEN phase at OQ=1.0 but past the
+        // closed boundary at OQ=0.5 must produce a different value. effort=0.5 →
+        // baseline Tp=0.4, Tn=0.165. At OQ=0.5, Tp≈0.2, Tp+Tn≈0.365, so phase 0.45
+        // is closed (0.0) while at OQ=1.0 it is still in the return phase.
+        let neutral = glottal_pulse(0.45, 0.5, 1.0);
+        let creaky = glottal_pulse(0.45, 0.5, 0.5);
+        assert!(
+            (neutral - creaky).abs() > 1e-4,
+            "open_quotient must reshape the pulse: neutral={neutral}, creaky={creaky}"
+        );
     }
 
     #[test]

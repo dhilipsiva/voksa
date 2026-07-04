@@ -40,6 +40,13 @@ pub struct Params {
     pub aspiration: f32,
     pub tilt: f32,
     pub effort: f32,
+
+    /// Voksa fork: open-quotient multiplier on the glottal open phase.
+    /// 1.0 = neutral (upstream behavior); <1 = tighter/creakier; >1 = breathier.
+    pub open_quotient: f32,
+    /// Voksa fork: diplophonia 0..1 — alternate-cycle amplitude dip that
+    /// injects an F0/2 subharmonic (creak / vocal fry). 0 = off (upstream).
+    pub diplophonia: f32,
 }
 
 impl Params {
@@ -63,6 +70,8 @@ impl Params {
         aspiration: 0.0,
         tilt: 0.0,
         effort: 0.5,
+        open_quotient: 1.0,
+        diplophonia: 0.0,
     };
 }
 
@@ -96,6 +105,8 @@ pub struct ParamUpdate {
     pub aspiration: Option<f32>,
     pub tilt: Option<f32>,
     pub effort: Option<f32>,
+    pub open_quotient: Option<f32>,
+    pub diplophonia: Option<f32>,
 }
 
 impl ParamUpdate {
@@ -127,6 +138,8 @@ impl ParamUpdate {
         set!(aspiration);
         set!(tilt);
         set!(effort);
+        set!(open_quotient);
+        set!(diplophonia);
     }
 
     /// Build the per-sample increment that ramps `current` toward `target` over
@@ -159,6 +172,8 @@ impl ParamUpdate {
             aspiration: delta!(aspiration),
             tilt: delta!(tilt),
             effort: delta!(effort),
+            open_quotient: delta!(open_quotient),
+            diplophonia: delta!(diplophonia),
         }
     }
 }
@@ -191,6 +206,8 @@ mod tests {
                 aspiration: 0.0,
                 tilt: 0.0,
                 effort: 0.5,
+                open_quotient: 1.0,
+                diplophonia: 0.0,
             }
         );
     }

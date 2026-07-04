@@ -24,6 +24,8 @@ const ZERO_INCREMENTS: Params = Params {
     aspiration: 0.0,
     tilt: 0.0,
     effort: 0.0,
+    open_quotient: 0.0,
+    diplophonia: 0.0,
 };
 
 macro_rules! for_each_param {
@@ -47,6 +49,8 @@ macro_rules! for_each_param {
         $action!(aspiration);
         $action!(tilt);
         $action!(effort);
+        $action!(open_quotient);
+        $action!(diplophonia);
     };
 }
 
@@ -221,7 +225,11 @@ impl FormantSynth {
 
             let v = self.current.voicing.clamp(0.0, 1.0);
             let noise_sample = self.noise.next_sample();
-            let pulse_val = glottal_pulse(self.glottal_phase, self.current.effort);
+            let pulse_val = glottal_pulse(
+                self.glottal_phase,
+                self.current.effort,
+                self.current.open_quotient,
+            );
             let voiced_gain = 1.0 - self.current.aspiration * 0.85;
             let exc = v * pulse_val * voiced_gain
                 + (1.0 - v) * noise_sample * 0.35
@@ -284,6 +292,36 @@ mod tests {
         s.process(&mut buf);
         let peak = buf.iter().fold(0.0f32, |p, v| p.max(v.abs()));
         assert!(peak > 0.05, "expected audible output, peak {peak}");
+    }
+
+    #[test]
+    fn diplophonia_alters_voiced_output() {
+        // voksa fork (RED until DI modulation lands): diplophonia introduces an
+        // alternate-cycle amplitude dip (F0/2 subharmonic), so a voiced vowel
+        // rendered with di=0.6 must differ from the same vowel with di=0.0.
+        let mut base = vowel_target();
+        let mut modu = vowel_target();
+        base.diplophonia = Some(0.0);
+        modu.diplophonia = Some(0.6);
+
+        let mut s0 = FormantSynth::new(48_000);
+        s0.set_target(base, 1);
+        let mut buf0 = [0.0f32; 4800];
+        s0.process(&mut buf0);
+
+        let mut s1 = FormantSynth::new(48_000);
+        s1.set_target(modu, 1);
+        let mut buf1 = [0.0f32; 4800];
+        s1.process(&mut buf1);
+
+        let max_diff = buf0
+            .iter()
+            .zip(buf1.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff > 1e-4,
+            "diplophonia must change voiced output, max sample diff {max_diff}"
+        );
     }
 
     #[test]
