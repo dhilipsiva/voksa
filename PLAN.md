@@ -88,6 +88,20 @@ MOS intelligibility avg 2.6, naturalness avg 2.3; ABX: flat preferred 8/10.
    comparable; never treat eSpeak as ground truth (fixture policy already
    says regression-oracle-only).
 
+## Distribution / packaging backlog (post-v0.1, owner-requested 2026-07-04)
+
+- **Port the demo UI to Dioxus.** Replace the hand-written `www/index.html` +
+  vanilla-JS tuning console with a Dioxus (Rust) app targeting wasm — a single
+  Rust UI over the same `voksa-web` synth surface. Keep the AudioWorklet audio
+  path (Dioxus for the controls/state; the worklet still owns the wasm synth).
+  Revisit the raw-C-ABI vs wasm-bindgen tradeoff (Dioxus pulls in wasm-bindgen;
+  watch the size gate).
+- **Refactor to a `cargo add`-able crate.** Make the synth a published library
+  (`cargo add voksa` / `voksa-core`): stabilize the public API, set
+  `publish = true` + real versioning/semver, add crate-level docs + examples,
+  and audit the dependency/licence surface for crates.io. Currently the crates
+  are workspace-internal (0.0.1, unpublished).
+
 ## Session log
 (append: date, phase, sessions used, notes)
 
