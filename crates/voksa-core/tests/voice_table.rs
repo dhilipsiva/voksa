@@ -121,3 +121,20 @@ fn tuned_duration_changes_timing_and_negative_is_clamped() {
     sorted.sort_by(|a, b| a.start_ms.partial_cmp(&b.start_ms).unwrap());
     assert_eq!(clamped.spans, sorted, "spans stay monotone");
 }
+
+#[test]
+fn absurd_durations_are_capped() {
+    // Review finding: durations were clamped below but unbounded above — a
+    // loadable config with dur_ms 1e30 aborted the CLI (u32 saturation → a
+    // 824 GB sample alloc). Per-segment durations must cap (identity for every
+    // pinned value; the ceiling only guards hostile configs).
+    let opts = CompileOptions::default();
+    let mut huge = VoiceTable::default();
+    huge.vowels[Vowel::A.index()].dur_ms = 1e30;
+    let s = compile_with("mi klama", &opts, &huge).unwrap();
+    assert!(
+        s.total_ms.is_finite() && s.total_ms <= 25_000.0,
+        "per-segment durations must be capped: total_ms = {}",
+        s.total_ms
+    );
+}
