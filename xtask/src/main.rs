@@ -12,8 +12,11 @@ fn main() -> ExitCode {
         Some("oracle") => oracle(&rest),
         Some("wasm-size") => wasm_size(),
         Some("listening-battery") => listening_battery(),
+        Some("attitudinal-battery") => attitudinal_battery(),
         _ => {
-            eprintln!("usage: cargo xtask <oracle|wasm-size|listening-battery> [args]");
+            eprintln!(
+                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery> [args]"
+            );
             ExitCode::FAILURE
         }
     }
@@ -100,6 +103,170 @@ const BATTERY: &[BatteryEntry] = &[
         xu: false,
     },
 ];
+
+/// One CP2 attitudinal item: the utterance WITH a UI cmavo, the SAME words
+/// without it (the neutral A/B baseline that isolates the voice-quality
+/// coloring), and the human-readable emotion for the scoring sheet.
+struct AttitudinalEntry {
+    slug: &'static str,
+    text: &'static str,
+    base: &'static str,
+    emotion: &'static str,
+}
+
+/// The Phase-10 attitudinal battery — each exercises a distinct new engine
+/// capability (F0 mean/range, OQ, spectral tilt, diplophonia, vibrato).
+const ATTITUDINAL_BATTERY: &[AttitudinalEntry] = &[
+    AttitudinalEntry {
+        slug: "joy-ui",
+        text: "coi munje .ui",
+        base: "coi munje",
+        emotion: "joy (.ui)",
+    },
+    AttitudinalEntry {
+        slug: "complaint-oi",
+        text: "coi munje .oi",
+        base: "coi munje",
+        emotion: "complaint / pain (.oi)",
+    },
+    AttitudinalEntry {
+        slug: "fear-ii",
+        text: "coi munje .ii",
+        base: "coi munje",
+        emotion: "fear (.ii)",
+    },
+    AttitudinalEntry {
+        slug: "sadness-uu",
+        text: "mi klama .uu",
+        base: "mi klama",
+        emotion: "sadness / pity (.uu)",
+    },
+    AttitudinalEntry {
+        slug: "patience-oo",
+        text: "mi klama .o'o",
+        base: "mi klama",
+        emotion: "patience / calm (.o'o)",
+    },
+    AttitudinalEntry {
+        slug: "desire-au",
+        text: "mi djica .au",
+        base: "mi djica",
+        emotion: "desire (.au)",
+    },
+    AttitudinalEntry {
+        slug: "anger-oonai",
+        text: "mi fengu .o'onai",
+        base: "mi fengu",
+        emotion: "anger (.o'onai)",
+    },
+];
+
+/// Render the CP2 attitudinal battery to artifacts/listening/phase10/: per item
+/// the affect-colored render (prosody + attitudinal overlay), the neutral base
+/// render (same words minus the UI cmavo — isolates the coloring), and the
+/// eSpeak-NG jbo oracle, plus an index.html scoring page (recognizability +
+/// naturalness). Then STOP — the human scores and tags phase10-complete.
+fn attitudinal_battery() -> ExitCode {
+    use voksa_core::compiler::CompileOptions;
+    use voksa_core::prosody::ProsodyOptions;
+    use voksa_engine_klattsch::{SAMPLE_RATE, render_utterance_prosodic};
+
+    let dir = workspace_root().join("artifacts/listening/phase10");
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("error: cannot create {}: {e}", dir.display());
+        return ExitCode::FAILURE;
+    }
+    let sr = SAMPLE_RATE;
+    let copts = CompileOptions::default();
+    let popts = ProsodyOptions::default();
+    let mut rows = String::new();
+    for (i, e) in ATTITUDINAL_BATTERY.iter().enumerate() {
+        let affect = match render_utterance_prosodic(e.text, &copts, &popts, sr) {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("error: {}: {err:?}", e.slug);
+                return ExitCode::FAILURE;
+            }
+        };
+        let neutral = match render_utterance_prosodic(e.base, &copts, &popts, sr) {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("error: {} (base): {err:?}", e.slug);
+                return ExitCode::FAILURE;
+            }
+        };
+        for (kind, samples) in [("voksa", &affect), ("neutral", &neutral)] {
+            let peak = samples.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+            if peak >= 1.0 {
+                eprintln!("error: {}_{} clips (peak {peak:.3})", kind, e.slug);
+                return ExitCode::FAILURE;
+            }
+            voksa_testkit::write_wav(dir.join(format!("{kind}_{}.wav", e.slug)), samples, sr);
+        }
+        let oracle_path = dir.join(format!("oracle_{}.wav", e.slug));
+        let status = Command::new("espeak-ng")
+            .args(["-v", "jbo", "-w"])
+            .arg(&oracle_path)
+            .arg(e.text.to_ascii_lowercase())
+            .status();
+        match status {
+            Ok(s) if s.success() => {}
+            other => {
+                eprintln!("error: espeak-ng oracle for {}: {other:?}", e.slug);
+                return ExitCode::FAILURE;
+            }
+        }
+        rows.push_str(&format!(
+            r#"<tr><td>{n}</td><td>{emotion}</td><td><code>{text}</code></td>
+<td><audio controls src="voksa_{slug}.wav"></audio></td>
+<td><audio controls src="neutral_{slug}.wav"></audio></td>
+<td><audio controls src="oracle_{slug}.wav"></audio></td>
+<td><input type="text" class="heard" data-slug="{slug}" size="12" placeholder="emotion?"></td>
+<td><input type="number" min="1" max="5" class="mos-n" data-slug="{slug}"></td>
+<td><input type="text" class="notes" data-slug="{slug}" size="20"></td></tr>
+"#,
+            n = i + 1,
+            emotion = e.emotion,
+            text = e.text,
+            slug = e.slug,
+        ));
+    }
+    let html = format!(
+        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>voksa CP2 attitudinal battery (phase 10)</title>
+<style>body{{font-family:sans-serif;margin:2em}}table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:6px}}textarea{{width:100%;height:12em}}</style></head><body>
+<h1>voksa — Listening Checkpoint 2 (Phase 10, attitudinals)</h1>
+<p>For each row: play <b>voksa (affect)</b> and its <b>neutral</b> baseline (same words, no emotion marker).
+In <b>heard</b>, write the emotion you actually perceive (blind if you can — is it recognizable?); rate <b>MOS nat</b> 1–5.
+The eSpeak oracle is a plain reference (it does not voice attitude). The overlay is INVENTED / non-normative.
+When done, press the button and paste the markdown into <code>docs/listening/phase10.md</code>.</p>
+<table><tr><th>#</th><th>intended emotion</th><th>text</th><th>voksa (affect)</th><th>neutral (base)</th><th>eSpeak oracle</th><th>heard emotion</th><th>MOS nat.</th><th>notes</th></tr>
+{rows}</table>
+<p><button onclick="collect()">Build markdown results</button></p>
+<textarea id="out" readonly placeholder="results appear here — copy into docs/listening/phase10.md"></textarea>
+<script>
+function collect() {{
+  const slugs = [...new Set([...document.querySelectorAll('.mos-n')].map(e => e.dataset.slug))];
+  let md = '| slug | heard emotion | MOS naturalness | notes |\n|---|---|---|---|\n';
+  for (const s of slugs) {{
+    const v = c => (document.querySelector(`.${{c}}[data-slug="${{s}}"]`) || {{}}).value || '';
+    md += `| ${{s}} | ${{v('heard')}} | ${{v('mos-n')}} | ${{v('notes')}} |\n`;
+  }}
+  document.getElementById('out').value = md;
+}}
+</script></body></html>
+"#
+    );
+    if let Err(e) = fs::write(dir.join("index.html"), html) {
+        eprintln!("error: writing index.html: {e}");
+        return ExitCode::FAILURE;
+    }
+    println!(
+        "attitudinal-battery: wrote {} items x3 WAVs + index.html to {}",
+        ATTITUDINAL_BATTERY.len(),
+        dir.display()
+    );
+    ExitCode::SUCCESS
+}
 
 /// Render the listening battery: per utterance a prosodic render, a flat
 /// (Phase-5) baseline for within-phase ABX, and the eSpeak-NG jbo oracle,
