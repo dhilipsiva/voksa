@@ -95,12 +95,22 @@
       // value, never a hand-copied literal. The literals below remain only as
       // a no-wasm fallback (in which case nothing can play anyway).
       let wasmModule = null, wasmLoadError = null, DEFAULTS = null;
+      // Shortest decimal that round-trips to the same f32: the raw f64 image of
+      // an f32 (0.30000001192...) would make readouts ugly and step-snapped
+      // sliders diverge from their defs (spurious delta exports).
+      function f32nice(x) {
+        for (let p = 1; p <= 9; p++) {
+          const s = Number(x.toPrecision(p));
+          if (Math.fround(s) === Math.fround(x)) return s;
+        }
+        return x;
+      }
       try {
         wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
         const probe = new WebAssembly.Instance(wasmModule, {}).exports;
         const dptr = probe.voksa_default_params();
         const dlen = probe.voksa_out_len();
-        DEFAULTS = Array.from(new Float32Array(probe.memory.buffer, dptr, dlen));
+        DEFAULTS = Array.from(new Float32Array(probe.memory.buffer, dptr, dlen), f32nice);
         probe.voksa_free_f32(dptr, dlen);
       } catch (e) { wasmLoadError = e; }
 
@@ -375,6 +385,14 @@
             VOICE_SLIDERS.push({ id, def, min: f.min, max: f.max, step: f.step });
           });
           voiceBox.appendChild(det);
+          // Exact-set pass (review finding): innerHTML value assignment lets
+          // the range input snap to its step grid; setSliderExact widens /
+          // relaxes so the slider HOLDS the engine default precisely and the
+          // readout shows what it holds.
+          fields.forEach((f, i) => {
+            const id = vtId(it.key, f.path);
+            setSliderExact(document.getElementById(id), document.getElementById('o-' + id), it.def[i]);
+          });
         }
       }
       if (VOICE_SLIDERS.length !== 377) console.error('voice layout mismatch:', VOICE_SLIDERS.length);
@@ -387,8 +405,7 @@
           if (!s.id.startsWith(`vt-${itemKey}-`)) continue;
           const el = document.getElementById(s.id);
           el.min = s.min; el.max = s.max; el.step = s.step; // undo any widening
-          el.value = s.def;
-          document.getElementById('o-' + s.id).textContent = s.def;
+          setSliderExact(el, document.getElementById('o-' + s.id), s.def);
         }
       }
       function resetVoiceAll() {
@@ -433,12 +450,15 @@
         for (const p of PARAMS) c[p.key] = parseFloat(slideEl(p.key).value);
         // Attitudinals export ONLY the deltas from the pinned vectors — the CLI
         // treats missing keys as pinned, so shared JSON stays small + readable.
+        // Delta comparisons run in f32 space (the engine consumes f32), so
+        // f64-vs-decimal representation noise can never fake an override.
+        const differs = (v, def) => Math.fround(v) !== Math.fround(def);
         const atts = {};
         for (const a of ATTITUDINALS) {
           const o = {};
           for (const f of ATT_FIELDS) {
             const v = parseFloat(attEl(a.key, f.key).value);
-            if (Math.abs(v - a.def[f.key]) > 1e-9) o[f.key] = v;
+            if (differs(v, a.def[f.key])) o[f.key] = v;
           }
           if (Object.keys(o).length) atts[a.key] = o;
         }
@@ -451,7 +471,7 @@
             let o = null;
             vtItemFields(it).forEach((f, i) => {
               const v = parseFloat(document.getElementById(vtId(it.key, f.path)).value);
-              if (Math.abs(v - it.def[i]) > 1e-9) {
+              if (differs(v, it.def[i])) {
                 o = o || {};
                 if (f.path.length === 2) { o[f.path[0]] = o[f.path[0]] || {}; o[f.path[0]][f.path[1]] = v; }
                 else o[f.path[0]] = v;
@@ -607,6 +627,12 @@
           if (d.type === 'samples') { lastSamples = d.pcm; lastRate = d.sampleRate; drawWave(lastSamples); dlWav.disabled = false; }
           else if (d.type === 'done') { node.disconnect(); if (liveNode === node) { liveNode = null; status.textContent = 'ready'; } }
           else if (d.type === 'error') { node.disconnect(); if (liveNode === node) { liveNode = null; status.textContent = 'cannot synthesize that text'; } }
+        };
+        // A trapped worklet (e.g. a hostile config exhausting wasm memory)
+        // never posts back — without this the status wedges at 'speaking…'.
+        node.onprocessorerror = () => {
+          node.disconnect();
+          if (liveNode === node) { liveNode = null; status.textContent = 'cannot synthesize that text'; }
         };
         node.connect(ctx.destination);
         liveNode = node;
