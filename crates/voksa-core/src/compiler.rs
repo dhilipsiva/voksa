@@ -13,7 +13,7 @@ use crate::attitudinal::{AttitudinalScope, attitudinal_kind, intensity_mult};
 use crate::letters::WordError;
 use crate::normalize::{NumberError, number_words};
 use crate::pause::{Segment, Token, insert_pauses};
-use crate::phonemes::{Phoneme, SegmentSpec, buffer_spec, spec};
+use crate::phonemes::{Phoneme, SegmentSpec, buffer_spec_with, spec_with};
 use crate::schedule::{
     BASE_F0_HZ, Event, Frame, PAUSE_MS, SyllableSpan, UtteranceSchedule, schedule_segment,
     silence_targets,
@@ -112,6 +112,13 @@ enum Item {
     Pause,
 }
 
+/// Compile an utterance to its deterministic parameter schedule, from the
+/// PINNED per-phoneme seeds. Equivalent to
+/// `compile_with(text, opts, &VoiceTable::PINNED)`.
+pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, CompileError> {
+    compile_with(text, opts, &crate::phonemes::VoiceTable::PINNED)
+}
+
 /// Like [`compile`] but with a RUNTIME per-phoneme table (demo tuning console
 /// D2b). `compile_with(text, opts, &VoiceTable::default())` is byte-identical
 /// to `compile(text, opts)`.
@@ -120,13 +127,6 @@ pub fn compile_with(
     opts: &CompileOptions,
     voice: &crate::phonemes::VoiceTable,
 ) -> Result<UtteranceSchedule, CompileError> {
-    // RED stub (D2b): the runtime table is ignored until the failing test.
-    let _ = voice;
-    compile(text, opts)
-}
-
-/// Compile an utterance to its deterministic parameter schedule.
-pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, CompileError> {
     // Tokenize, remembering which boundaries the writer marked with periods.
     let mut words: Vec<WordAnalysis> = Vec::new();
     let mut explicit: Vec<bool> = Vec::new();
@@ -196,7 +196,15 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
                 t_ms += PAUSE_MS;
             }
             Item::Word(w) => {
-                t_ms = schedule_word(&w, word_index, opts.buffer, t_ms, &mut events, &mut spans);
+                t_ms = schedule_word(
+                    &w,
+                    word_index,
+                    opts.buffer,
+                    voice,
+                    t_ms,
+                    &mut events,
+                    &mut spans,
+                );
                 word_index += 1;
             }
         }
@@ -259,10 +267,12 @@ struct Entry {
 }
 
 /// Expand one analyzed word into timed events and syllable spans.
+#[allow(clippy::too_many_arguments)]
 fn schedule_word(
     w: &WordAnalysis,
     word_index: usize,
     buffer: bool,
+    voice: &crate::phonemes::VoiceTable,
     start_ms: f32,
     events: &mut Vec<Event>,
     spans_out: &mut Vec<SyllableSpan>,
@@ -283,22 +293,45 @@ fn schedule_word(
                 });
             };
         if syl.aspirated {
-            push(&mut entries, spec(Phoneme::H), false, false);
+            push(&mut entries, spec_with(Phoneme::H, voice), false, false);
         }
         for c in &syl.onset {
-            push(&mut entries, spec(Phoneme::Consonant(*c)), true, false);
+            push(
+                &mut entries,
+                spec_with(Phoneme::Consonant(*c), voice),
+                true,
+                false,
+            );
         }
         match syl.nucleus {
-            Nucleus::Vowel(v) => push(&mut entries, spec(Phoneme::Vowel(v)), false, true),
-            Nucleus::Diphthong(a, b) => {
-                push(&mut entries, spec(Phoneme::Diphthong(a, b)), false, true)
-            }
+            Nucleus::Vowel(v) => push(
+                &mut entries,
+                spec_with(Phoneme::Vowel(v), voice),
+                false,
+                true,
+            ),
+            Nucleus::Diphthong(a, b) => push(
+                &mut entries,
+                spec_with(Phoneme::Diphthong(a, b), voice),
+                false,
+                true,
+            ),
             // Syllabic sonorant: the consonant's steady targets serve as the
             // nucleus (vocalic envelope refinement deferred to CP1 listening).
-            Nucleus::Syllabic(c) => push(&mut entries, spec(Phoneme::Consonant(c)), false, true),
+            Nucleus::Syllabic(c) => push(
+                &mut entries,
+                spec_with(Phoneme::Consonant(c), voice),
+                false,
+                true,
+            ),
         }
         for c in &syl.coda {
-            push(&mut entries, spec(Phoneme::Consonant(*c)), true, false);
+            push(
+                &mut entries,
+                spec_with(Phoneme::Consonant(*c), voice),
+                true,
+                false,
+            );
         }
     }
 
@@ -309,7 +342,7 @@ fn schedule_word(
                 let span = metas.len();
                 metas.push((false, false));
                 buffered.push(Entry {
-                    seg: buffer_spec(),
+                    seg: buffer_spec_with(voice),
                     span,
                     is_consonant: false,
                     // A buffer syllable is its own nucleus (offset 0).

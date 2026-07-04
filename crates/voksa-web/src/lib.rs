@@ -90,9 +90,17 @@ fn attitudinal_from(params: &[f32]) -> AttitudinalTable {
 /// entries fall back to the pinned defaults, so 7-/63-float and empty blocks
 /// reproduce `VoiceTable::default()` exactly.
 fn voice_table_from(params: &[f32]) -> VoiceTable {
-    // RED stub (D2b): the voice section is ignored until the failing test.
-    let _ = params;
-    VoiceTable::default()
+    let mut a = VoiceTable::default().to_array();
+    for (i, slot) in a.iter_mut().enumerate() {
+        if let Some(v) = params
+            .get(VOICE_PARAM_OFF + i)
+            .copied()
+            .filter(|v| v.is_finite())
+        {
+            *slot = v;
+        }
+    }
+    VoiceTable::from_array(a)
 }
 
 /// Render Lojban `text` to mono f32 PCM at `sample_rate`. `params` is the f32

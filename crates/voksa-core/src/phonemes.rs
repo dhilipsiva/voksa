@@ -229,26 +229,10 @@ impl SegmentSpec {
     }
 }
 
-/// Full acoustic spec for a phoneme. Seeds from docs/formants.md.
+/// Full acoustic spec for a phoneme, from the PINNED docs/formants.md seeds.
+/// Equivalent to `spec_with(p, &VoiceTable::PINNED)`.
 pub fn spec(p: Phoneme) -> SegmentSpec {
-    match p {
-        Phoneme::Vowel(v) => SegmentSpec {
-            kind: SegmentKind::Steady(data::vowel_targets(v)),
-            dur_ms: data::vowel_duration_ms(v),
-        },
-        Phoneme::Diphthong(a, b) => SegmentSpec {
-            kind: SegmentKind::Glide {
-                from: data::vowel_targets(a),
-                to: data::vowel_targets(b),
-            },
-            dur_ms: data::DIPHTHONG_MS,
-        },
-        Phoneme::Consonant(c) => data::consonant_spec(c),
-        Phoneme::H => SegmentSpec {
-            kind: SegmentKind::Aspirate,
-            dur_ms: data::H_MS,
-        },
-    }
+    spec_with(p, &VoiceTable::PINNED)
 }
 
 /// Convenience: specs for a phoneme sequence.
@@ -258,33 +242,11 @@ pub fn specs(phonemes: &[Phoneme]) -> Vec<SegmentSpec> {
 
 /// The epenthetic buffer vowel (--buffer flag): [ɪ]-like, acoustically
 /// distinct from all six Lojban vowels, as short and weak as possible
-/// (CLL §3.8; seeds from docs/formants.md). Never written, never stressed,
-/// never counted.
+/// (CLL §3.8; seeds from docs/formants.md — see `data::BUFFER`). Never
+/// written, never stressed, never counted. Equivalent to
+/// `buffer_spec_with(&VoiceTable::PINNED)`.
 pub fn buffer_spec() -> SegmentSpec {
-    SegmentSpec {
-        kind: SegmentKind::Steady(Targets {
-            formants: [
-                Formant {
-                    freq_hz: 400.0,
-                    bw_hz: 90.0,
-                    amp: 0.5,
-                },
-                Formant {
-                    freq_hz: 1900.0,
-                    bw_hz: 110.0,
-                    amp: 0.3,
-                },
-                Formant {
-                    freq_hz: 2600.0,
-                    bw_hz: 150.0,
-                    amp: 0.15,
-                },
-            ],
-            voicing: 1.0,
-            aspiration: 0.0,
-        }),
-        dur_ms: 35.0,
-    }
+    buffer_spec_with(&VoiceTable::PINNED)
 }
 
 /// One steady phoneme's runtime voice: targets + duration. Stride 12.
@@ -358,21 +320,22 @@ pub struct VoiceTable {
     pub buffer: SteadyVoice,
 }
 
-/// Decompose a steady consonant's pinned spec into a [`SteadyVoice`].
-fn steady_voice_of(c: Consonant) -> SteadyVoice {
-    let s = spec(Phoneme::Consonant(c));
+/// Decompose a steady consonant's PINNED `data::` spec (const — feeds
+/// [`VoiceTable::PINNED`]; must not go through `spec()`, which reads PINNED).
+const fn pinned_steady(c: Consonant) -> SteadyVoice {
+    let s = data::consonant_spec(c);
     match s.kind {
         SegmentKind::Steady(targets) => SteadyVoice {
             targets,
             dur_ms: s.dur_ms,
         },
-        _ => unreachable!("{c:?} is not a steady consonant"),
+        _ => panic!("not a steady consonant"),
     }
 }
 
-/// Decompose a stop consonant's pinned spec into a [`StopVoice`].
-fn stop_voice_of(c: Consonant) -> StopVoice {
-    match spec(Phoneme::Consonant(c)).kind {
+/// Decompose a stop consonant's PINNED `data::` spec (const).
+const fn pinned_stop(c: Consonant) -> StopVoice {
+    match data::consonant_spec(c).kind {
         SegmentKind::Stop {
             closure,
             burst,
@@ -384,32 +347,58 @@ fn stop_voice_of(c: Consonant) -> StopVoice {
             closure_ms,
             burst_ms,
         },
-        _ => unreachable!("{c:?} is not a stop"),
+        _ => panic!("not a stop"),
     }
+}
+
+const fn pinned_vowel(v: Vowel) -> SteadyVoice {
+    SteadyVoice {
+        targets: data::vowel_targets(v),
+        dur_ms: data::vowel_duration_ms(v),
+    }
+}
+
+impl VoiceTable {
+    /// The pinned docs/formants.md seeds, built FROM the `data::` helpers —
+    /// there is exactly one copy of the numbers, so `Default`/`PINNED`
+    /// byte-identity with `spec()` holds by construction.
+    pub const PINNED: Self = Self {
+        vowels: [
+            pinned_vowel(Vowel::A),
+            pinned_vowel(Vowel::E),
+            pinned_vowel(Vowel::I),
+            pinned_vowel(Vowel::O),
+            pinned_vowel(Vowel::U),
+            pinned_vowel(Vowel::Y),
+        ],
+        diphthong_dur_ms: [data::DIPHTHONG_MS; 16],
+        stops: [
+            pinned_stop(Consonant::P),
+            pinned_stop(Consonant::T),
+            pinned_stop(Consonant::K),
+            pinned_stop(Consonant::B),
+            pinned_stop(Consonant::D),
+            pinned_stop(Consonant::G),
+        ],
+        fricatives: [
+            pinned_steady(Consonant::F),
+            pinned_steady(Consonant::V),
+            pinned_steady(Consonant::S),
+            pinned_steady(Consonant::Z),
+            pinned_steady(Consonant::C),
+            pinned_steady(Consonant::J),
+            pinned_steady(Consonant::X),
+        ],
+        nasals: [pinned_steady(Consonant::M), pinned_steady(Consonant::N)],
+        liquids: [pinned_steady(Consonant::L), pinned_steady(Consonant::R)],
+        h_dur_ms: data::H_MS,
+        buffer: data::BUFFER,
+    };
 }
 
 impl Default for VoiceTable {
     fn default() -> Self {
-        let buffer = buffer_spec();
-        let SegmentKind::Steady(buffer_targets) = buffer.kind else {
-            unreachable!("the buffer vowel is steady");
-        };
-        Self {
-            vowels: Vowel::ALL.map(|v| SteadyVoice {
-                targets: data::vowel_targets(v),
-                dur_ms: data::vowel_duration_ms(v),
-            }),
-            diphthong_dur_ms: [data::DIPHTHONG_MS; 16],
-            stops: STOP_ORDER.map(stop_voice_of),
-            fricatives: FRICATIVE_ORDER.map(steady_voice_of),
-            nasals: NASAL_ORDER.map(steady_voice_of),
-            liquids: LIQUID_ORDER.map(steady_voice_of),
-            h_dur_ms: data::H_MS,
-            buffer: SteadyVoice {
-                targets: buffer_targets,
-                dur_ms: buffer.dur_ms,
-            },
-        }
+        Self::PINNED
     }
 }
 
@@ -528,21 +517,110 @@ impl VoiceTable {
     }
 }
 
+/// This consonant's slot in the [`VoiceTable`] section for its manner class.
+const fn stop_slot(c: Consonant) -> Option<usize> {
+    match c {
+        Consonant::P => Some(0),
+        Consonant::T => Some(1),
+        Consonant::K => Some(2),
+        Consonant::B => Some(3),
+        Consonant::D => Some(4),
+        Consonant::G => Some(5),
+        _ => None,
+    }
+}
+
+const fn fricative_slot(c: Consonant) -> Option<usize> {
+    match c {
+        Consonant::F => Some(0),
+        Consonant::V => Some(1),
+        Consonant::S => Some(2),
+        Consonant::Z => Some(3),
+        Consonant::C => Some(4),
+        Consonant::J => Some(5),
+        Consonant::X => Some(6),
+        _ => None,
+    }
+}
+
+const fn nasal_slot(c: Consonant) -> Option<usize> {
+    match c {
+        Consonant::M => Some(0),
+        Consonant::N => Some(1),
+        _ => None,
+    }
+}
+
+const fn liquid_slot(c: Consonant) -> Option<usize> {
+    match c {
+        Consonant::L => Some(0),
+        Consonant::R => Some(1),
+        _ => None,
+    }
+}
+
+/// A steady [`SegmentSpec`] from a runtime voice entry. Durations clamp to
+/// ≥ 0 (a hand-edited config's negative duration would walk the schedule
+/// backwards; NaN would panic the span sort — `.max(0.0)` neutralizes both
+/// and is exact identity for every pinned value).
+fn steady_from(sv: SteadyVoice) -> SegmentSpec {
+    SegmentSpec {
+        kind: SegmentKind::Steady(sv.targets),
+        dur_ms: sv.dur_ms.max(0.0),
+    }
+}
+
 /// Like [`spec`] but reading the acoustic numbers from a RUNTIME table (demo
-/// tuning console D2b). `spec_with(p, &VoiceTable::default())` is
-/// byte-identical to `spec(p)`.
+/// tuning console D2b). Diphthong glide ENDPOINTS come from the (tuned) vowel
+/// entries; [h] keeps taking its shape from the following vowel at lowering
+/// time. `spec_with(p, &VoiceTable::default())` is byte-identical to
+/// `spec(p)`.
 pub fn spec_with(p: Phoneme, voice: &VoiceTable) -> SegmentSpec {
-    // RED stub (D2b): the runtime table is ignored until the failing test.
-    let _ = voice;
-    spec(p)
+    match p {
+        Phoneme::Vowel(v) => steady_from(voice.vowels[v.index()]),
+        Phoneme::Diphthong(a, b) => SegmentSpec {
+            kind: SegmentKind::Glide {
+                from: voice.vowels[a.index()].targets,
+                to: voice.vowels[b.index()].targets,
+            },
+            dur_ms: diphthong_index(a, b)
+                .map_or(data::DIPHTHONG_MS, |i| voice.diphthong_dur_ms[i])
+                .max(0.0),
+        },
+        Phoneme::Consonant(c) => {
+            if let Some(i) = stop_slot(c) {
+                let s = voice.stops[i];
+                let (closure_ms, burst_ms) = (s.closure_ms.max(0.0), s.burst_ms.max(0.0));
+                SegmentSpec {
+                    kind: SegmentKind::Stop {
+                        closure: s.closure,
+                        burst: s.burst,
+                        closure_ms,
+                        burst_ms,
+                    },
+                    dur_ms: closure_ms + burst_ms,
+                }
+            } else if let Some(i) = fricative_slot(c) {
+                steady_from(voice.fricatives[i])
+            } else if let Some(i) = nasal_slot(c) {
+                steady_from(voice.nasals[i])
+            } else if let Some(i) = liquid_slot(c) {
+                steady_from(voice.liquids[i])
+            } else {
+                unreachable!("every consonant has a manner class")
+            }
+        }
+        Phoneme::H => SegmentSpec {
+            kind: SegmentKind::Aspirate,
+            dur_ms: voice.h_dur_ms.max(0.0),
+        },
+    }
 }
 
 /// Like [`buffer_spec`] but reading from a RUNTIME table (demo tuning console
 /// D2b). `buffer_spec_with(&VoiceTable::default())` == `buffer_spec()`.
 pub fn buffer_spec_with(voice: &VoiceTable) -> SegmentSpec {
-    // RED stub (D2b): the runtime table is ignored until the failing test.
-    let _ = voice;
-    buffer_spec()
+    steady_from(voice.buffer)
 }
 
 mod data {
@@ -553,7 +631,7 @@ mod data {
     //! voiced fricatives/closures carry a low murmur resonator as the
     //! voice bar.
 
-    use super::{Consonant, Formant, SegmentKind, SegmentSpec, Targets, Vowel};
+    use super::{Consonant, Formant, SegmentKind, SegmentSpec, SteadyVoice, Targets, Vowel};
 
     pub(super) const DIPHTHONG_MS: f32 = 200.0;
     pub(super) const H_MS: f32 = 70.0;
@@ -562,8 +640,16 @@ mod data {
     const STOP_CLOSURE_MS: f32 = 60.0;
     const STOP_BURST_MS: f32 = 25.0;
 
+    /// The epenthetic buffer vowel seed ([ɪ]-like; docs/formants.md).
+    pub(super) const BUFFER: SteadyVoice = SteadyVoice {
+        targets: t(
+            400.0, 90.0, 0.5, 1900.0, 110.0, 0.3, 2600.0, 150.0, 0.15, 1.0, 0.0,
+        ),
+        dur_ms: 35.0,
+    };
+
     #[allow(clippy::too_many_arguments)]
-    fn t(
+    const fn t(
         f1: f32,
         b1: f32,
         a1: f32,
@@ -600,13 +686,13 @@ mod data {
     }
 
     /// Total silence (voiceless stop closures).
-    fn silence() -> Targets {
+    const fn silence() -> Targets {
         t(
             500.0, 90.0, 0.0, 1500.0, 110.0, 0.0, 2500.0, 150.0, 0.0, 0.0, 0.0,
         )
     }
 
-    pub(super) fn vowel_targets(v: Vowel) -> Targets {
+    pub(super) const fn vowel_targets(v: Vowel) -> Targets {
         match v {
             Vowel::A => t(
                 730.0, 90.0, 1.0, 1090.0, 110.0, 0.8, 2440.0, 150.0, 0.3, 1.0, 0.0,
@@ -629,7 +715,7 @@ mod data {
         }
     }
 
-    pub(super) fn vowel_duration_ms(v: Vowel) -> f32 {
+    pub(super) const fn vowel_duration_ms(v: Vowel) -> f32 {
         match v {
             Vowel::A => 160.0,
             Vowel::Y => 100.0,
@@ -637,7 +723,7 @@ mod data {
         }
     }
 
-    pub(super) fn consonant_spec(c: Consonant) -> SegmentSpec {
+    pub(super) const fn consonant_spec(c: Consonant) -> SegmentSpec {
         match c {
             // Stops: closure (silence / voice bar) + release burst.
             Consonant::P
@@ -751,7 +837,7 @@ mod data {
         }
     }
 
-    fn steady(targets: Targets, dur_ms: f32) -> SegmentSpec {
+    const fn steady(targets: Targets, dur_ms: f32) -> SegmentSpec {
         SegmentSpec {
             kind: SegmentKind::Steady(targets),
             dur_ms,

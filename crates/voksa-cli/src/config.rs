@@ -175,9 +175,127 @@ impl Config {
     /// Build the runtime [`VoiceTable`]: pinned defaults with this config's
     /// per-phoneme overrides applied (only the named fields change).
     pub fn voice_table(&self) -> VoiceTable {
-        // RED stub (D2b): overrides are ignored until the failing test.
-        let _ = &self.phonemes;
-        VoiceTable::default()
+        use voksa_core::phonemes::{
+            DIPHTHONGS, FRICATIVE_ORDER, LIQUID_ORDER, NASAL_ORDER, STOP_ORDER, Vowel,
+        };
+        let mut t = VoiceTable::default();
+        for v in Vowel::ALL {
+            if let Some(o) = self.phonemes.get(vowel_letter(v)) {
+                o.apply_steady(&mut t.vowels[v.index()]);
+            }
+        }
+        for (i, &(a, b)) in DIPHTHONGS.iter().enumerate() {
+            let key = format!("{}{}", vowel_letter(a), vowel_letter(b));
+            if let Some(d) = self.phonemes.get(&key).and_then(|o| o.dur_ms) {
+                t.diphthong_dur_ms[i] = d;
+            }
+        }
+        for (i, c) in STOP_ORDER.iter().enumerate() {
+            if let Some(o) = self.phonemes.get(consonant_letter(*c)) {
+                o.apply_stop(&mut t.stops[i]);
+            }
+        }
+        for (i, c) in FRICATIVE_ORDER.iter().enumerate() {
+            if let Some(o) = self.phonemes.get(consonant_letter(*c)) {
+                o.apply_steady(&mut t.fricatives[i]);
+            }
+        }
+        for (i, c) in NASAL_ORDER.iter().enumerate() {
+            if let Some(o) = self.phonemes.get(consonant_letter(*c)) {
+                o.apply_steady(&mut t.nasals[i]);
+            }
+        }
+        for (i, c) in LIQUID_ORDER.iter().enumerate() {
+            if let Some(o) = self.phonemes.get(consonant_letter(*c)) {
+                o.apply_steady(&mut t.liquids[i]);
+            }
+        }
+        if let Some(d) = self.phonemes.get("'").and_then(|o| o.dur_ms) {
+            t.h_dur_ms = d;
+        }
+        if let Some(o) = self.phonemes.get("buffer") {
+            o.apply_steady(&mut t.buffer);
+        }
+        t
+    }
+}
+
+fn vowel_letter(v: voksa_core::phonemes::Vowel) -> &'static str {
+    use voksa_core::phonemes::Vowel;
+    match v {
+        Vowel::A => "a",
+        Vowel::E => "e",
+        Vowel::I => "i",
+        Vowel::O => "o",
+        Vowel::U => "u",
+        Vowel::Y => "y",
+    }
+}
+
+fn consonant_letter(c: voksa_core::phonemes::Consonant) -> &'static str {
+    use voksa_core::phonemes::Consonant;
+    match c {
+        Consonant::B => "b",
+        Consonant::C => "c",
+        Consonant::D => "d",
+        Consonant::F => "f",
+        Consonant::G => "g",
+        Consonant::J => "j",
+        Consonant::K => "k",
+        Consonant::L => "l",
+        Consonant::M => "m",
+        Consonant::N => "n",
+        Consonant::P => "p",
+        Consonant::R => "r",
+        Consonant::S => "s",
+        Consonant::T => "t",
+        Consonant::V => "v",
+        Consonant::X => "x",
+        Consonant::Z => "z",
+    }
+}
+
+impl TargetsOverride {
+    /// Apply the named fields onto `t` (unnamed fields stay).
+    fn apply(&self, t: &mut voksa_core::phonemes::Targets) {
+        macro_rules! set {
+            ($json:ident, $slot:expr) => {
+                if let Some(v) = self.$json {
+                    $slot = v;
+                }
+            };
+        }
+        set!(f1_hz, t.formants[0].freq_hz);
+        set!(bw1_hz, t.formants[0].bw_hz);
+        set!(amp1, t.formants[0].amp);
+        set!(f2_hz, t.formants[1].freq_hz);
+        set!(bw2_hz, t.formants[1].bw_hz);
+        set!(amp2, t.formants[1].amp);
+        set!(f3_hz, t.formants[2].freq_hz);
+        set!(bw3_hz, t.formants[2].bw_hz);
+        set!(amp3, t.formants[2].amp);
+        set!(voicing, t.voicing);
+        set!(aspiration, t.aspiration);
+    }
+}
+
+impl PhonemeOverride {
+    fn apply_steady(&self, sv: &mut voksa_core::phonemes::SteadyVoice) {
+        self.steady.apply(&mut sv.targets);
+        if let Some(d) = self.dur_ms {
+            sv.dur_ms = d;
+        }
+    }
+
+    fn apply_stop(&self, st: &mut voksa_core::phonemes::StopVoice) {
+        self.closure.apply(&mut st.closure);
+        self.burst.apply(&mut st.burst);
+        if let Some(v) = self.closure_ms {
+            st.closure_ms = v;
+        }
+        if let Some(v) = self.burst_ms {
+            st.burst_ms = v;
+        }
     }
 }
 
