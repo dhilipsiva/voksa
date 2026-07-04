@@ -3,93 +3,264 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>voksa — Lojban speech in the browser</title>
+    <title>voksa — Lojban speech tuning console</title>
     <style>
-      body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
-      h1 { font-size: 1.4rem; }
+      body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
+      h1 { font-size: 1.35rem; }
       input[type="text"] { width: 100%; font-size: 1.1rem; padding: 0.5rem; box-sizing: border-box; }
-      fieldset { margin: 1rem 0; border: 1px solid #ccc; }
-      label { margin-right: 1rem; }
-      button { font-size: 1.1rem; padding: 0.5rem 1.5rem; }
-      #status { margin-top: 1rem; color: #555; min-height: 1.2em; }
+      .tabs { display: flex; gap: 0.5rem; margin: 1rem 0 0; }
+      .tabs button { border: 1px solid #ccc; border-bottom: none; background: #f2f2f2; padding: 0.4rem 1rem; cursor: pointer; }
+      .tabs button.active { background: #fff; font-weight: 600; }
+      .panel { border: 1px solid #ccc; padding: 1rem; }
+      .row { display: grid; grid-template-columns: 12rem 1fr 4rem; align-items: center; gap: 0.6rem; margin: 0.35rem 0; }
+      .row label { font-size: 0.9rem; }
+      .row output { font-variant-numeric: tabular-nums; text-align: right; color: #555; }
+      .flags label { margin-right: 1rem; display: inline-block; }
+      .disabled { opacity: 0.4; }
+      .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; align-items: center; }
+      button { font-size: 1rem; padding: 0.45rem 1rem; }
+      #speak { font-weight: 600; }
+      #status { color: #555; min-height: 1.2em; }
+      canvas { width: 100%; height: 96px; border: 1px solid #ddd; display: block; background: #fafafa; }
+      textarea { width: 100%; height: 4rem; box-sizing: border-box; }
       code { background: #f2f2f2; padding: 0 0.2em; }
+      .muted { color: #777; font-size: 0.85rem; }
     </style>
   </head>
   <body>
-    <h1>voksa — rule-based Lojban speech synthesizer</h1>
-    <p>Type Lojban and press Speak. Synthesis runs entirely in your browser
-      (WASM in an AudioWorklet); nothing is sent anywhere.</p>
+    <h1>voksa — Lojban speech tuning console</h1>
+    <p class="muted">Everything runs in your browser. Fiddle the knobs, listen, then
+      <b>Download config</b> and share the JSON — it replays exactly via
+      <code>voksa --config file.json</code>.</p>
 
     <input id="text" type="text" value="coi munje" aria-label="Lojban text" />
 
-    <fieldset>
-      <legend>options</legend>
-      <label><input type="checkbox" id="flat" /> flat (no prosody)</label>
-      <label><input type="checkbox" id="xu" /> xu rise</label>
-      <label><input type="checkbox" id="dotside" /> dotside</label>
-      <label><input type="checkbox" id="buffer" /> buffer</label>
-    </fieldset>
+    <div class="tabs">
+      <button id="tab-basic" class="active">Basic</button>
+      <button id="tab-advanced">Advanced</button>
+    </div>
 
-    <button id="speak" disabled>Speak</button>
+    <div id="panel-basic" class="panel">
+      <div class="flags" id="flags"></div>
+      <div id="sliders"></div>
+    </div>
+    <div id="panel-advanced" class="panel" hidden>
+      <p class="muted">Per-phoneme acoustics (vowel formants, consonant loci,
+        durations) land in the Advanced pass.</p>
+    </div>
+
+    <div class="actions">
+      <button id="speak" disabled>▶ Speak</button>
+      <label>preset <select id="preset"></select></label>
+      <button id="reset">Reset</button>
+      <button id="dl-json">Download config</button>
+      <label class="muted">Load config <input id="ld-json" type="file" accept="application/json" /></label>
+      <button id="dl-wav" disabled>Download WAV</button>
+    </div>
+
+    <canvas id="wave" width="920" height="96" aria-label="waveform"></canvas>
     <div id="status">loading…</div>
 
-    <script type="module">
-      const FLAG_FLAT = 0x1, FLAG_XU = 0x2, FLAG_DOTSIDE = 0x4, FLAG_BUFFER = 0x8;
-      const status = document.getElementById('status');
-      const speak = document.getElementById('speak');
-      const flat = document.getElementById('flat');
-      const xu = document.getElementById('xu');
+    <p class="muted">Notes / rating (saved into the JSON):</p>
+    <textarea id="notes" placeholder="e.g. 4/5 — stress feels natural, pitch a touch high"></textarea>
 
-      // --xu is meaningless on the flat path; mirror the CLI's mutual exclusion.
-      flat.addEventListener('change', () => {
-        xu.disabled = flat.checked;
-        if (flat.checked) xu.checked = false;
+    <script type="module">
+      // ?v= cache-busts the worklet (addModule caches aggressively).
+      const V = '3';
+
+      // The 7 prosody knobs, IN THE ORDER of the wasm f32 layout + CLI keys.
+      const PARAMS = [
+        { key: 'declination_start_hz',   label: 'Pitch start (Hz)',       min: 60,  max: 220, step: 1,    def: 120 },
+        { key: 'declination_end_hz',     label: 'Pitch end (Hz)',         min: 50,  max: 200, step: 1,    def: 95  },
+        { key: 'stress_duration_factor', label: 'Stress stretch ×',       min: 1,   max: 3,   step: 0.05, def: 1.5 },
+        { key: 'stress_f0_excursion_hz', label: 'Stress pitch boost (Hz)',min: 0,   max: 60,  step: 1,    def: 20  },
+        { key: 'stress_amp_factor',      label: 'Stress loudness ×',      min: 1,   max: 2,   step: 0.05, def: 1.2 },
+        { key: 'xu_rise_hz',             label: 'xu rise (Hz)',           min: 0,   max: 80,  step: 1,    def: 25  },
+        { key: 'rate',                   label: 'Speaking rate ×',        min: 0.5, max: 2.5, step: 0.05, def: 1   },
+      ];
+      const FLAGS = [
+        { key: 'flat',    label: 'flat (no prosody)', bit: 0x1 },
+        { key: 'xu',      label: 'xu question rise',  bit: 0x2 },
+        { key: 'dotside', label: 'dotside',           bit: 0x4 },
+        { key: 'buffer',  label: 'buffer vowels',     bit: 0x8 },
+      ];
+      const PRESETS = {
+        Default:     {},
+        'Sing-song': { declination_start_hz: 150, declination_end_hz: 80, stress_f0_excursion_hz: 35, stress_duration_factor: 1.8 },
+        Monotone:    { declination_start_hz: 110, declination_end_hz: 110, stress_f0_excursion_hz: 3, stress_amp_factor: 1.05, stress_duration_factor: 1.1 },
+        Fast:        { rate: 1.7 },
+        'Slow & calm': { rate: 0.8, stress_f0_excursion_hz: 12, declination_start_hz: 110, declination_end_hz: 90 },
+      };
+
+      // ---- build the UI from the descriptors ----
+      const flagsBox = document.getElementById('flags');
+      for (const f of FLAGS) {
+        const l = document.createElement('label');
+        l.innerHTML = `<input type="checkbox" id="flag-${f.key}"> ${f.label}`;
+        flagsBox.appendChild(l);
+      }
+      const slidersBox = document.getElementById('sliders');
+      for (const p of PARAMS) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML =
+          `<label for="p-${p.key}">${p.label}</label>` +
+          `<input type="range" id="p-${p.key}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.def}">` +
+          `<output id="o-${p.key}">${p.def}</output>`;
+        slidersBox.appendChild(row);
+      }
+      const flagEl = (k) => document.getElementById(`flag-${k}`);
+      const slideEl = (k) => document.getElementById(`p-${k}`);
+      const outEl = (k) => document.getElementById(`o-${k}`);
+      for (const p of PARAMS) {
+        slideEl(p.key).addEventListener('input', () => { outEl(p.key).textContent = slideEl(p.key).value; });
+      }
+
+      // flat greys out the prosody knobs; xu is meaningless with flat.
+      function syncFlatState() {
+        const flat = flagEl('flat').checked;
+        flagEl('xu').disabled = flat;
+        if (flat) flagEl('xu').checked = false;
+        document.getElementById('sliders').classList.toggle('disabled', flat);
+        for (const p of PARAMS) slideEl(p.key).disabled = flat;
+      }
+      flagEl('flat').addEventListener('change', syncFlatState);
+
+      // ---- config <-> UI ----
+      function readParamsArray() { return Float32Array.from(PARAMS.map((p) => parseFloat(slideEl(p.key).value))); }
+      function readFlagsBits() { return FLAGS.reduce((b, f) => b | (flagEl(f.key).checked ? f.bit : 0), 0); }
+      function currentConfig() {
+        const c = { text: document.getElementById('text').value };
+        for (const f of FLAGS) c[f.key] = flagEl(f.key).checked;
+        for (const p of PARAMS) c[p.key] = parseFloat(slideEl(p.key).value);
+        c.notes = document.getElementById('notes').value;
+        c.sampleRate = ctx ? ctx.sampleRate : 48000;
+        c.voksaVersion = '0.0.1';
+        return c;
+      }
+      function applyConfig(c) {
+        if (typeof c.text === 'string') document.getElementById('text').value = c.text;
+        for (const f of FLAGS) if (typeof c[f.key] === 'boolean') flagEl(f.key).checked = c[f.key];
+        for (const p of PARAMS) {
+          if (typeof c[p.key] === 'number') { slideEl(p.key).value = c[p.key]; outEl(p.key).textContent = c[p.key]; }
+        }
+        if (typeof c.notes === 'string') document.getElementById('notes').value = c.notes;
+        syncFlatState();
+      }
+      function resetDefaults() {
+        for (const f of FLAGS) flagEl(f.key).checked = false;
+        for (const p of PARAMS) { slideEl(p.key).value = p.def; outEl(p.key).textContent = p.def; }
+        syncFlatState();
+      }
+
+      // presets
+      const presetSel = document.getElementById('preset');
+      for (const name of Object.keys(PRESETS)) {
+        const o = document.createElement('option'); o.textContent = name; presetSel.appendChild(o);
+      }
+      presetSel.addEventListener('change', () => {
+        resetDefaults();
+        const over = PRESETS[presetSel.value] || {};
+        for (const [k, v] of Object.entries(over)) { slideEl(k).value = v; outEl(k).textContent = v; }
       });
 
-      // Compile the module once on the main thread; it is structured-cloneable
-      // into the worklet via processorOptions.
-      // `?v=` cache-busts: AudioWorklet.addModule caches modules aggressively
-      // (even across hard reloads), so a fixed build tag guarantees a fresh
-      // worklet whenever this page changes.
-      const V = '2';
-      let wasmModule;
-      let ctx;
+      // tabs
+      function showTab(which) {
+        document.getElementById('tab-basic').classList.toggle('active', which === 'basic');
+        document.getElementById('tab-advanced').classList.toggle('active', which === 'advanced');
+        document.getElementById('panel-basic').hidden = which !== 'basic';
+        document.getElementById('panel-advanced').hidden = which !== 'advanced';
+      }
+      document.getElementById('tab-basic').addEventListener('click', () => showTab('basic'));
+      document.getElementById('tab-advanced').addEventListener('click', () => showTab('advanced'));
+
+      // ---- WAV encode (mirrors crates/voksa-cli/src/wav.rs) ----
+      function wavBytes(samples, sampleRate) {
+        const dataLen = samples.length * 2;
+        const buf = new ArrayBuffer(44 + dataLen);
+        const v = new DataView(buf);
+        const wstr = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+        wstr(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); wstr(8, 'WAVE');
+        wstr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+        v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        wstr(36, 'data'); v.setUint32(40, dataLen, true);
+        for (let i = 0; i < samples.length; i++) {
+          let x = Math.max(-1, Math.min(1, samples[i]));
+          v.setInt16(44 + i * 2, (x * 32767) | 0, true);
+        }
+        return new Uint8Array(buf);
+      }
+      function download(name, bytes, mime) {
+        const blob = new Blob([bytes], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // waveform
+      function drawWave(samples) {
+        const c = document.getElementById('wave');
+        const g = c.getContext('2d');
+        g.clearRect(0, 0, c.width, c.height);
+        g.strokeStyle = '#888'; g.beginPath(); g.moveTo(0, c.height / 2); g.lineTo(c.width, c.height / 2); g.stroke();
+        if (!samples || !samples.length) return;
+        g.strokeStyle = '#2a6'; g.beginPath();
+        const step = Math.max(1, Math.floor(samples.length / c.width));
+        for (let x = 0; x < c.width; x++) {
+          let peak = 0;
+          for (let i = x * step; i < (x + 1) * step && i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]));
+          const y = (c.height / 2) * (1 - peak);
+          g.moveTo(x, c.height / 2 - (c.height / 2 - y));
+          g.lineTo(x, c.height / 2 + (c.height / 2 - y));
+        }
+        g.stroke();
+      }
+
+      // ---- audio ----
+      const status = document.getElementById('status');
+      const speakBtn = document.getElementById('speak');
+      const dlWav = document.getElementById('dl-wav');
+      let lastSamples = null, lastRate = 48000;
+      let wasmModule, ctx;
+
       try {
         wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
-        status.textContent = 'ready';
-        speak.disabled = false;
+        status.textContent = 'ready'; speakBtn.disabled = false;
       } catch (e) {
         status.textContent = 'failed to load WASM: ' + e + ' (serve over http, not file://)';
       }
 
-      speak.addEventListener('click', async () => {
-        if (!ctx) {
-          ctx = new AudioContext();
-          await ctx.audioWorklet.addModule('voksa-processor.js?v=' + V);
-        }
+      speakBtn.addEventListener('click', async () => {
+        if (!ctx) { ctx = new AudioContext(); await ctx.audioWorklet.addModule('voksa-processor.js?v=' + V); }
         await ctx.resume();
-        // Encode here on the main thread — the AudioWorkletGlobalScope has no
-        // TextEncoder in some browsers (Firefox). Pass the raw UTF-8 bytes.
         const textBytes = new TextEncoder().encode(document.getElementById('text').value);
-        let flags = 0;
-        if (flat.checked) flags |= FLAG_FLAT;
-        if (xu.checked) flags |= FLAG_XU;
-        if (document.getElementById('dotside').checked) flags |= FLAG_DOTSIDE;
-        if (document.getElementById('buffer').checked) flags |= FLAG_BUFFER;
-
         const node = new AudioWorkletNode(ctx, 'voksa-processor', {
-          numberOfInputs: 0,
-          numberOfOutputs: 1,
-          outputChannelCount: [1],
-          processorOptions: { module: wasmModule, textBytes, flags, sampleRate: ctx.sampleRate },
+          numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+          processorOptions: { module: wasmModule, textBytes, params: readParamsArray(), flags: readFlagsBits(), sampleRate: ctx.sampleRate },
         });
         node.port.onmessage = (e) => {
-          if (e.data === 'done') { node.disconnect(); status.textContent = 'ready'; }
-          else if (e.data === 'error') { node.disconnect(); status.textContent = 'cannot synthesize that text'; }
+          const d = e.data;
+          if (d.type === 'samples') { lastSamples = d.pcm; lastRate = d.sampleRate; drawWave(lastSamples); dlWav.disabled = false; }
+          else if (d.type === 'done') { node.disconnect(); status.textContent = 'ready'; }
+          else if (d.type === 'error') { node.disconnect(); status.textContent = 'cannot synthesize that text'; }
         };
         node.connect(ctx.destination);
         status.textContent = 'speaking…';
       });
+
+      document.getElementById('reset').addEventListener('click', resetDefaults);
+      document.getElementById('dl-json').addEventListener('click', () => {
+        download('voksa-config.json', new TextEncoder().encode(JSON.stringify(currentConfig(), null, 2)), 'application/json');
+      });
+      document.getElementById('ld-json').addEventListener('change', async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        try { applyConfig(JSON.parse(await file.text())); status.textContent = 'config loaded'; }
+        catch (err) { status.textContent = 'bad config JSON: ' + err; }
+      });
+      dlWav.addEventListener('click', () => { if (lastSamples) download('voksa.wav', wavBytes(lastSamples, lastRate), 'audio/wav'); });
+
+      resetDefaults();
     </script>
   </body>
 </html>
