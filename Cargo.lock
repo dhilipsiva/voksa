@@ -1050,6 +1050,8 @@ dependencies = [
  "cpal",
  "hound",
  "rtrb",
+ "serde",
+ "serde_json",
  "voksa-core",
  "voksa-engine-klattsch",
 ]

@@ -22,6 +22,9 @@ voksa-testkit = { path = "crates/voksa-testkit" }
 # wasm-bindgen-test drives the headless browser tests (voksa-web dev-dep only);
 # voksa-web itself has NO wasm-bindgen runtime dep (raw C-ABI, zero imports).
 wasm-bindgen-test = "0.3"
+# JSON tuning-config round-trip (voksa-cli only; std, never in the wasm).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 # Native CLI audio (Phase 8): cpal Apache-2.0, rtrb MIT/Apache — realtime-safe
 # SPSC ring feeding the cpal output callback (docs/research/02-architecture-v2.md).
 cpal = "0.18"

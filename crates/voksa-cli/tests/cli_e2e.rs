@@ -104,6 +104,33 @@ fn flags_accepted_and_xu_flat_rejected() {
 }
 
 #[test]
+fn config_file_renders_wav() {
+    // A JSON tuning config (as the browser demo exports) replays via --config.
+    let cfg = std::env::temp_dir().join(format!("voksa_cfg_{}.json", std::process::id()));
+    std::fs::write(
+        &cfg,
+        r#"{"text":"coi munje","rate":1.5,"declination_end_hz":80.0,"notes":"hi"}"#,
+    )
+    .unwrap();
+    let path = tmp_wav("cfg");
+    let status = voksa()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "--out",
+            path.to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(status.success(), "--config should render");
+    let bytes = std::fs::read(&path).unwrap();
+    assert_eq!(&bytes[0..4], b"RIFF");
+    assert!(bytes.len() > 44);
+    let _ = std::fs::remove_file(&cfg);
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn no_args_prints_usage() {
     let out = voksa().output().unwrap();
     assert!(!out.status.success());

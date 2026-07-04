@@ -6,5 +6,6 @@
 //! callback only pops from the ring (docs/research/02-architecture-v2.md).
 
 pub mod args;
+pub mod config;
 pub mod playback;
 pub mod wav;
