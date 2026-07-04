@@ -131,6 +131,15 @@ pub fn synth(
     }
 }
 
+/// The full default f32 param block — prosody, then the pinned attitudinal
+/// vectors, then the pinned voice table, in the canonical layout. The demo
+/// reads this FROM the wasm (via [`voksa_default_params`]) to seed its
+/// sliders, so the UI's defaults can never drift from the engine's tables.
+pub fn default_params() -> Vec<f32> {
+    // RED stub (D2b defaults-from-wasm): zeros until the failing test.
+    vec![0.0; FULL_PARAM_COUNT]
+}
+
 /// Sample count of the buffer from the most recent [`voksa_render`]. A single
 /// register is sound because the AudioWorklet is single-threaded and calls
 /// render exactly once before reading it.
@@ -239,6 +248,20 @@ unsafe fn render_into(
             std::ptr::null_mut()
         }
     }
+}
+
+/// Pointer to the full default f32 param block (length via [`voksa_out_len`],
+/// == `FULL_PARAM_COUNT`); free with [`voksa_free_f32`]. The demo instantiates
+/// the module on the MAIN thread too (zero imports make that a one-liner) and
+/// seeds its sliders from this, so UI defaults are the engine's, always.
+#[unsafe(no_mangle)]
+pub extern "C" fn voksa_default_params() -> *mut f32 {
+    let mut v = default_params();
+    v.shrink_to_fit();
+    let ptr = v.as_mut_ptr();
+    OUT_LEN.store(v.len(), Ordering::Relaxed);
+    std::mem::forget(v);
+    ptr
 }
 
 /// Sample count of the buffer returned by the most recent [`voksa_render`].
@@ -398,6 +421,24 @@ mod tests {
             synth("mi klama", 0, SR, &[]).unwrap(),
             synth("mi klama", 0, SR, &tuned).unwrap(),
             "a tuned /a/ F1 must change the render"
+        );
+    }
+
+    #[test]
+    fn default_params_block_is_full_and_pinned() {
+        // The wasm-exported defaults must BE the canonical default block: the
+        // demo seeds its sliders from this, so any drift here is UI drift.
+        let d = default_params();
+        assert_eq!(d.len(), FULL_PARAM_COUNT);
+        assert_eq!(
+            d,
+            default_full_block(),
+            "defaults must equal the composed pinned tables"
+        );
+        assert_eq!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &d).unwrap(),
+            "rendering with the exported defaults must equal the empty block"
         );
     }
 }
