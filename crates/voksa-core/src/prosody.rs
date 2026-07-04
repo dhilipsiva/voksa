@@ -70,10 +70,35 @@ pub const XU_RISE_HZ: f32 = 25.0;
 /// Apply sentence prosody to a compiled schedule. Deterministic: identical
 /// input and options always yield the identical schedule.
 pub fn apply_prosody(schedule: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSchedule {
-    let s = stretch_stressed_spans(schedule);
-    let s = apply_declination(s);
-    let s = apply_stress_excursion(s);
-    if opts.xu_rise { apply_xu_rise(s) } else { s }
+    let s = stretch_stressed_spans(schedule, opts.stress_duration_factor);
+    let s = apply_declination(s, opts.declination_start_hz, opts.declination_end_hz);
+    let s = apply_stress_excursion(s, opts.stress_f0_excursion_hz, opts.stress_amp_factor);
+    let s = if opts.xu_rise {
+        apply_xu_rise(s, opts.xu_rise_hz)
+    } else {
+        s
+    };
+    scale_rate(s, opts.rate)
+}
+
+/// Global tempo: scale every timing by `1/rate` (rate 1.0 = exact identity, so
+/// default schedules are byte-identical). rate > 1 speeds up.
+fn scale_rate(mut s: UtteranceSchedule, rate: f32) -> UtteranceSchedule {
+    if rate == 1.0 || rate <= 0.0 {
+        return s;
+    }
+    let k = 1.0 / rate;
+    for e in &mut s.events {
+        e.at_ms *= k;
+        e.transition_ms *= k;
+    }
+    for sp in &mut s.spans {
+        sp.start_ms *= k;
+        sp.dur_ms *= k;
+        sp.nucleus_off_ms *= k;
+    }
+    s.total_ms *= k;
+    s
 }
 
 /// Span-membership epsilon: span ends and following event times are
@@ -114,9 +139,8 @@ fn inside(at_ms: f32, (ws, we): (f32, f32)) -> bool {
 /// [`STRESS_DURATION_FACTOR`]×, shifting all later material (events, spans,
 /// pauses, total) by the added time. Onset consonants keep unit rate — the
 /// stretch window opens at the nucleus, not the span start (CP1 fix).
-fn stretch_stressed_spans(mut s: UtteranceSchedule) -> UtteranceSchedule {
+fn stretch_stressed_spans(mut s: UtteranceSchedule, factor: f32) -> UtteranceSchedule {
     let windows = stressed_stretch_windows(&s);
-    let factor = STRESS_DURATION_FACTOR;
     let map_time = |t: f32| -> f32 {
         let mut delta = 0.0f32;
         for (ws, we) in &windows {
@@ -148,24 +172,27 @@ fn stretch_stressed_spans(mut s: UtteranceSchedule) -> UtteranceSchedule {
 
 /// Additive linear declination: baseline falls [`DECLINATION_START_HZ`] →
 /// [`DECLINATION_END_HZ`] across the (post-stretch) utterance.
-fn apply_declination(mut s: UtteranceSchedule) -> UtteranceSchedule {
+fn apply_declination(mut s: UtteranceSchedule, start_hz: f32, end_hz: f32) -> UtteranceSchedule {
     let total = s.total_ms.max(1.0);
     for e in &mut s.events {
-        let baseline =
-            DECLINATION_START_HZ + (DECLINATION_END_HZ - DECLINATION_START_HZ) * (e.at_ms / total);
+        let baseline = start_hz + (end_hz - start_hz) * (e.at_ms / total);
         e.frame.f0_hz += baseline - BASE_F0_HZ;
     }
     s
 }
 
 /// +F0 excursion and amplitude boost inside stressed spans only.
-fn apply_stress_excursion(mut s: UtteranceSchedule) -> UtteranceSchedule {
+fn apply_stress_excursion(
+    mut s: UtteranceSchedule,
+    excursion_hz: f32,
+    amp_factor: f32,
+) -> UtteranceSchedule {
     let windows = stressed_windows(&s);
     for e in &mut s.events {
         if windows.iter().any(|w| inside(e.at_ms, *w)) {
-            e.frame.f0_hz += STRESS_F0_EXCURSION_HZ;
+            e.frame.f0_hz += excursion_hz;
             for f in &mut e.frame.targets.formants {
-                f.amp *= STRESS_AMP_FACTOR;
+                f.amp *= amp_factor;
             }
         }
     }
@@ -174,7 +201,7 @@ fn apply_stress_excursion(mut s: UtteranceSchedule) -> UtteranceSchedule {
 
 /// Insert one rise event inside the final syllable: the prevailing frame's
 /// targets, f0 raised by [`XU_RISE_HZ`], ramped across the span remainder.
-fn apply_xu_rise(mut s: UtteranceSchedule) -> UtteranceSchedule {
+fn apply_xu_rise(mut s: UtteranceSchedule, rise_hz: f32) -> UtteranceSchedule {
     let Some(last_span) = s
         .spans
         .iter()
@@ -197,11 +224,11 @@ fn apply_xu_rise(mut s: UtteranceSchedule) -> UtteranceSchedule {
     // onset) would otherwise re-set F0 back down: carry the rise on them.
     for e in &mut s.events {
         if e.at_ms > rise_at && e.at_ms < span_end - EPS_MS {
-            e.frame.f0_hz += XU_RISE_HZ;
+            e.frame.f0_hz += rise_hz;
         }
     }
     let mut frame = prevailing.frame;
-    frame.f0_hz += XU_RISE_HZ;
+    frame.f0_hz += rise_hz;
     let idx = s.events.partition_point(|e| e.at_ms <= rise_at);
     s.events.insert(
         idx,
