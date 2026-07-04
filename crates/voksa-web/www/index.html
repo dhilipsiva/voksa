@@ -38,6 +38,11 @@
       <code>voksa --config file.json</code>.</p>
 
     <input id="text" type="text" value="coi munje" aria-label="Lojban text" />
+    <div class="actions" style="margin: 0.4rem 0 0;">
+      <label>test sentences <select id="sentence"><option value="">— free text —</option></select></label>
+      <button id="sent-next" title="cycle through the phonetic coverage set">⏭ next</button>
+      <span class="muted" id="sentence-en"></span>
+    </div>
 
     <div class="tabs">
       <button id="tab-basic" class="active">Basic</button>
@@ -587,6 +592,41 @@
       slidersBox.addEventListener('input', autoSpeak);
       attBox.addEventListener('input', autoSpeak);
       voiceBox.addEventListener('input', autoSpeak);
+
+      // ---- phonetic sentence picker (www/sentences.json — every entry is
+      // gated by a native test, so it always synthesizes) ----
+      let SENTENCES = [];
+      const sentSel = document.getElementById('sentence');
+      const sentEn = document.getElementById('sentence-en');
+      try {
+        SENTENCES = await (await fetch('sentences.json?v=' + V)).json();
+        for (const s of SENTENCES) {
+          const o = document.createElement('option');
+          o.value = s.slug; o.textContent = s.text;
+          sentSel.appendChild(o);
+        }
+      } catch (e) { sentEn.textContent = 'sentence list unavailable: ' + e; }
+      function applySentence(s) {
+        document.getElementById('text').value = s.text;
+        const f = s.flags || {};
+        flagEl('xu').checked = !!f.xu;
+        flagEl('dotside').checked = !!f.dotside;
+        flagEl('buffer').checked = !!f.buffer;
+        sentEn.textContent = s.en;
+        syncFlatState();
+        autoSpeak();
+      }
+      sentSel.addEventListener('change', () => {
+        const s = SENTENCES.find((x) => x.slug === sentSel.value);
+        if (s) applySentence(s); else sentEn.textContent = '';
+      });
+      document.getElementById('sent-next').addEventListener('click', () => {
+        if (!SENTENCES.length) return;
+        const i = SENTENCES.findIndex((x) => x.slug === sentSel.value);
+        const next = SENTENCES[(i + 1) % SENTENCES.length];
+        sentSel.value = next.slug;
+        applySentence(next);
+      });
 
       document.getElementById('reset').addEventListener('click', () => { resetDefaults(); autoSpeak(); });
       document.getElementById('dl-json').addEventListener('click', () => {
