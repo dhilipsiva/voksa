@@ -172,10 +172,7 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
                 events.push(Event {
                     at_ms: t_ms,
                     transition_ms: 5.0,
-                    frame: Frame {
-                        f0_hz: BASE_F0_HZ,
-                        targets: silence_targets(),
-                    },
+                    frame: Frame::modal(BASE_F0_HZ, silence_targets()),
                 });
                 t_ms += PAUSE_MS;
             }
@@ -189,6 +186,8 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
         events,
         spans,
         total_ms: t_ms,
+        // RED stub: attitudinal detection is not wired yet (Phase 10 P10-2 green).
+        attitudinals: Vec::new(),
     })
 }
 

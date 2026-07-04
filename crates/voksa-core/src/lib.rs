@@ -10,6 +10,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod attitudinal;
 pub mod classify;
 pub mod clusters;
 pub mod compiler;

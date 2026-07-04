@@ -15,6 +15,7 @@
 //! whose transition time IS the glide.
 
 use crate::alloc::vec::Vec;
+use crate::attitudinal::AttitudinalScope;
 use crate::phonemes::{Formant, Phoneme, SegmentKind, SegmentSpec, Targets, specs};
 
 /// Flat robotic baseline F0 until the prosody layer (Phase 7) transforms it.
@@ -24,11 +25,48 @@ pub const BASE_F0_HZ: f32 = 120.0;
 /// 50–150 ms band, middle chosen).
 pub const PAUSE_MS: f32 = 100.0;
 
+/// Modal (neutral) open quotient: the value the engine reproduces upstream
+/// with (1.0 = no override). The Phase-10 attitudinal overlay nudges it.
+pub const NEUTRAL_OQ: f32 = 1.0;
+/// Modal spectral tilt (0.0 = flat, engine default).
+pub const NEUTRAL_TILT: f32 = 0.0;
+/// Modal diplophonia (0.0 = off).
+pub const NEUTRAL_DI: f32 = 0.0;
+/// Modal vibrato depth in Hz (0.0 = off).
+pub const NEUTRAL_VIBRATO_HZ: f32 = 0.0;
+
 /// One parameter frame: what the voice should be doing from an event onward.
+///
+/// `f0_hz` + `targets` are the modal (Phase 1–7) vocabulary; `oq`/`tilt`/`di`/
+/// `vibrato_hz` are the Phase-10 voice-quality lanes. They default to their
+/// NEUTRAL_* constants (modal voice) so every non-attitudinal frame lowers to
+/// the exact pre-Phase-10 ParamUpdate (the adapter Option-gates them out).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Frame {
     pub f0_hz: f32,
     pub targets: Targets,
+    /// Glottal open-quotient multiplier (NEUTRAL_OQ = modal).
+    pub oq: f32,
+    /// Spectral tilt (NEUTRAL_TILT = flat).
+    pub tilt: f32,
+    /// Diplophonia amount 0..1 (NEUTRAL_DI = off).
+    pub di: f32,
+    /// Vibrato depth in Hz (NEUTRAL_VIBRATO_HZ = off).
+    pub vibrato_hz: f32,
+}
+
+impl Frame {
+    /// A modal frame: neutral voice quality across all Phase-10 lanes.
+    pub const fn modal(f0_hz: f32, targets: Targets) -> Self {
+        Self {
+            f0_hz,
+            targets,
+            oq: NEUTRAL_OQ,
+            tilt: NEUTRAL_TILT,
+            di: NEUTRAL_DI,
+            vibrato_hz: NEUTRAL_VIBRATO_HZ,
+        }
+    }
 }
 
 /// One timed event: reach `frame` by ramping over `transition_ms` starting at
@@ -63,6 +101,9 @@ pub struct UtteranceSchedule {
     pub events: Vec<Event>,
     pub spans: Vec<SyllableSpan>,
     pub total_ms: f32,
+    /// Attitudinal (UI-cmavo) colorings detected at compile time; consumed by
+    /// [`crate::attitudinal::apply_attitudinal`]. Empty for modal utterances.
+    pub attitudinals: Vec<AttitudinalScope>,
 }
 
 /// Silence frame targets (pauses, voiceless closures).
@@ -138,7 +179,7 @@ pub fn schedule_segment(
     let ev = |at_ms: f32, targets: Targets, transition_ms: f32| Event {
         at_ms,
         transition_ms,
-        frame: Frame { f0_hz, targets },
+        frame: Frame::modal(f0_hz, targets),
     };
     match seg.kind {
         SegmentKind::Steady(t) => {
@@ -181,4 +222,25 @@ pub fn schedule_phonemes(phonemes: &[Phoneme], f0_hz: f32) -> (Vec<Event>, f32) 
         t_ms = schedule_segment(seg, next, f0_hz, t_ms, &mut events);
     }
     (events, t_ms)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn modal_frame_equals_pinned_constants() {
+        // A frame built the modal way carries neutral voice quality across every
+        // Phase-10 lane; the adapter Option-gates these out so modal frames lower
+        // to the exact pre-Phase-10 ParamUpdate.
+        let f = Frame::modal(BASE_F0_HZ, silence_targets());
+        assert_eq!(f.oq, NEUTRAL_OQ);
+        assert_eq!(f.tilt, NEUTRAL_TILT);
+        assert_eq!(f.di, NEUTRAL_DI);
+        assert_eq!(f.vibrato_hz, NEUTRAL_VIBRATO_HZ);
+        assert_eq!(
+            (NEUTRAL_OQ, NEUTRAL_TILT, NEUTRAL_DI, NEUTRAL_VIBRATO_HZ),
+            (1.0, 0.0, 0.0, 0.0)
+        );
+    }
 }
