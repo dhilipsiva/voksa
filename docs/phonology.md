@@ -249,6 +249,51 @@ rhyme only, so onsets stay crisp; excursion + amplitude stay whole-span.
 Remaining v1 caveats:
 - A voiceless final segment makes the xu rise inaudible (nothing voiced to
   carry it); Lojban questions ending in vowels — the normal case — are fine.
-- Attitudinal overlay: see docs/research/02-architecture-v2.md §11 table
-  (F0 mean/range in semitones, rate multipliers, voice quality via OQ TL FL DI AH AV).
-  This is an INVENTED, documented, non-normative convention — CLL mandates none.
+- Attitudinal overlay: see §10 below (Phase-10 implementation).
+
+## 10. Attitudinal layer (Phase 10 — INVENTED / non-normative)
+
+The CLL specifies **no** acoustic realization for the UI-class attitudinal
+cmavo: a `.ui` is defined by its *meaning* (joy), not a pitch or voice quality.
+Everything here is voksa's own convention (seeded by
+docs/research/02-architecture-v2.md §11), expressed as additive Hz offsets and
+multipliers — NOT Lojban-validated prosody. It is a deterministic schedule
+transform (`voksa_core::attitudinal::apply_attitudinal`) that composes ON TOP of
+§9 prosody (declination is additive, so the overlay layers cleanly). Detection
+runs in the compiler; the overlay runs in `render_utterance_prosodic` (the flat
+path skips it), so any UI cmavo speaks with affect on native, CLI, and browser.
+
+### 10.1 Categories → deviation vectors (voksa-core attitudinal.rs)
+Seven categories, each a fixed deviation vector applied over the TARGET word's
+event window. `f0_mean` is an additive Hz shift; `range` re-scales the F0
+excursion about the word mean (>1 wider, <1 flatter/monotone); `rate` scales
+tempo (the dominant scope's rate applies globally); the rest are engine
+voice-quality lanes (Δ from modal).
+
+| cmavo | kind | f0_mean Hz | range× | rate× | Δoq | Δtilt | Δdi | Δvibrato Hz | Δasp |
+|---|---|---|---|---|---|---|---|---|---|
+| `.ui` | Joy | +14 | 1.4 | 0.95 | +0.05 | +0.15 | 0 | 0 | 0 |
+| `.uu` | Sadness | −12 | 0.6 | 1.15 | +0.20 | −0.20 | 0 | 0 | +0.15 |
+| `.oi` | Complaint | −4 | 0.9 | 1.05 | −0.10 | −0.05 | 0.10 | 0 | 0 |
+| `.ii` | Fear | +18 | 1.2 | 0.90 | +0.05 | +0.05 | 0 | 6.0 | +0.10 |
+| `.o'o` | Patience | −6 | 0.3 | 1.0 | 0 | −0.05 | 0 | 0 | 0 |
+| `.au` | Desire | +8 | 1.1 | 1.0 | +0.10 | 0 | 0 | 0 | +0.08 |
+| `.o'onai` | Anger | +10 | 1.3 | 0.90 | −0.20 | +0.25 | 0.15 | 0 | 0 |
+
+`oq` = glottal open quotient (fork lane; a shorter open phase shifts the source
+spectrum — timbre judged at CP2, direction is not asserted). `tilt` = engine
+spectral tilt (+ brighter). `di` = diplophonia (0..1, alternate-cycle amplitude
+dip → F0/2 subharmonic / creak). `vibrato` = depth in Hz at a ~5.5 Hz flutter.
+`asp` = added breathiness on voiced frames.
+
+### 10.2 Intensity (a following cmavo scales the vector)
+`cai` = ×1.0, `sai` = ×0.7, `ru'e` = ×0.4, `nai` = ×−1.0 (polarity flip); bare
+(no following intensity word) = ×1.0. Multipliers (`range`, `rate`) interpolate
+toward 1.0 with intensity; additive nudges scale linearly. `.o'onai` is a fused
+single token (Anger); the two-word `.o'o nai` form resolves as Patience × −1.
+
+### 10.3 Scope (MVP)
+An attitudinal colors the nearest PRECEDING non-marker word (skipping other
+attitudinal/intensity cmavo); utterance-initial → the first content word. The
+coloring covers that word's whole span window. Deferred (documented MVP limits):
+multiple attitudinals per word, and per-word (vs global) rate.

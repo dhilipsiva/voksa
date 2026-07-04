@@ -63,15 +63,24 @@ monotonic 1080 → 2280 Hz. Stops, nasals, liquids, [h]: all in-band.
    anti-resonance** (approximated by attenuating A2/A3 — passed the
    attenuation tests).
 
-## Phase-10 path (OQ / diplophonia)
+## Phase-10 path (OQ / diplophonia) — DONE
 
-klattsch-core has no OQ or DI parameters. Its Rosenberg glottal pulse is
-already parameterized (`effort` maps to pulse shape), so a small vendored
-fork can add: OQ = open-quotient control of the Rosenberg open phase; DI =
-alternate-period amplitude/period perturbation. Both are localized changes in
-the source generator (~1.5K SLoC crate, MIT, 3 commits — practical to own).
-Re-evaluate at Phase 10; if the fork proves messy, the fallback remains a
-hand-rolled source feeding the same adapter surface.
+Executed as planned. klattsch-core 0.1.1 is vendored verbatim (MIT, Tony Gies)
+into `crates/klattsch-core-fork/` (the workspace `klattsch-core` dep points at
+the path; name/version retained). Two lanes were added, **default-preserving**:
+- **OQ (open quotient)** — `dsp.rs::glottal_pulse` now takes `open_quotient`,
+  scaling the Rosenberg open phase `Tp` (clamped [0.05, 0.7]). `OQ = 1.0`
+  reproduces upstream byte-for-byte (guarded by `open_quotient_neutral_matches_upstream`).
+- **DI (diplophonia)** — `synth.rs` toggles a `glottal_parity` flag on each
+  phase wrap and dips the voiced excitation on odd cycles (`di_gain`), injecting
+  an F0/2 subharmonic. `DI = 0` leaves the pulse train unchanged.
+Both ride the existing `Params`/`ParamUpdate` ramping (`for_each_param!`).
+Vibrato and spectral tilt were ALREADY exposed by upstream, so `.ii` fear reuses
+the deterministic vibrato (no new PRNG). The adapter Option-gates these lanes
+against the previous frame, so modal utterances lower byte-identically (engine
+schedule snapshots unchanged) and colored words reset on exit (no bleed). The
+fork stays wasm-safe: the size gate is still zero-imports and < 43 KB gzip
+(~35 KB). The hand-rolled-source fallback was not needed.
 
 ## Rejected alternative
 
