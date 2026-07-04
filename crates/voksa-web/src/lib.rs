@@ -17,9 +17,31 @@ pub const FLAG_XU: u32 = 0x2;
 pub const FLAG_DOTSIDE: u32 = 0x4;
 pub const FLAG_BUFFER: u32 = 0x8;
 
-/// Render Lojban `text` to mono f32 PCM at `sample_rate`. Shared by the C-ABI
-/// exports and the tests. `xu` is ignored on the flat branch.
-pub fn synth(text: &str, flags: u32, sample_rate: u32) -> Result<Vec<f32>, CompileError> {
+/// Count of f32 prosody knobs in the fixed layout the demo + CLI share:
+/// `[declination_start_hz, declination_end_hz, stress_duration_factor,
+/// stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz, rate]`.
+pub const PARAM_COUNT: usize = 7;
+
+/// Build [`ProsodyOptions`] from the flag bits + the f32 param block (fixed
+/// order). Missing or non-finite entries fall back to the defaults, so an empty
+/// slice reproduces `voksa_render` and the layout is forward-compatible.
+fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
+    // STUB (D1 web red): the real param decode lands after the failing test.
+    let _ = params;
+    ProsodyOptions {
+        xu_rise: flags & FLAG_XU != 0,
+        ..Default::default()
+    }
+}
+
+/// Render Lojban `text` to mono f32 PCM at `sample_rate`. `params` is the f32
+/// prosody block (empty = all defaults). Shared by the C-ABI exports + tests.
+pub fn synth(
+    text: &str,
+    flags: u32,
+    sample_rate: u32,
+    params: &[f32],
+) -> Result<Vec<f32>, CompileError> {
     let opts = CompileOptions {
         dotside: flags & FLAG_DOTSIDE != 0,
         buffer: flags & FLAG_BUFFER != 0,
@@ -27,11 +49,7 @@ pub fn synth(text: &str, flags: u32, sample_rate: u32) -> Result<Vec<f32>, Compi
     if flags & FLAG_FLAT != 0 {
         render_utterance(text, &opts, sample_rate)
     } else {
-        let prosody = ProsodyOptions {
-            xu_rise: flags & FLAG_XU != 0,
-            ..Default::default()
-        };
-        render_utterance_prosodic(text, &opts, &prosody, sample_rate)
+        render_utterance_prosodic(text, &opts, &prosody_from(flags, params), sample_rate)
     }
 }
 
@@ -79,12 +97,58 @@ pub unsafe extern "C" fn voksa_render(
     flags: u32,
     sample_rate: u32,
 ) -> *mut f32 {
+    unsafe { render_into(text_ptr, text_len, flags, sample_rate, std::ptr::null(), 0) }
+}
+
+/// Like [`voksa_render`], but with a prosody param block: `params_ptr` points to
+/// `params_len` f32s in the [`PARAM_COUNT`] layout (a shorter block defaults the
+/// rest). JS writes it into wasm memory via [`voksa_alloc`], like the text.
+///
+/// # Safety
+/// `text_ptr`/`text_len` and `params_ptr`/`params_len` must describe readable
+/// ranges in wasm memory (`params_ptr` may be null iff `params_len == 0`).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn voksa_render_params(
+    text_ptr: *const u8,
+    text_len: usize,
+    flags: u32,
+    sample_rate: u32,
+    params_ptr: *const f32,
+    params_len: usize,
+) -> *mut f32 {
+    unsafe {
+        render_into(
+            text_ptr,
+            text_len,
+            flags,
+            sample_rate,
+            params_ptr,
+            params_len,
+        )
+    }
+}
+
+/// # Safety
+/// The pointer ranges must be readable; `params_ptr` may be null iff len 0.
+unsafe fn render_into(
+    text_ptr: *const u8,
+    text_len: usize,
+    flags: u32,
+    sample_rate: u32,
+    params_ptr: *const f32,
+    params_len: usize,
+) -> *mut f32 {
     let bytes = unsafe { std::slice::from_raw_parts(text_ptr, text_len) };
     let Ok(text) = std::str::from_utf8(bytes) else {
         OUT_LEN.store(0, Ordering::Relaxed);
         return std::ptr::null_mut();
     };
-    match synth(text, flags, sample_rate) {
+    let params: &[f32] = if params_ptr.is_null() || params_len == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(params_ptr, params_len) }
+    };
+    match synth(text, flags, sample_rate, params) {
         Ok(mut samples) => {
             samples.shrink_to_fit(); // guarantee capacity == len for the free
             let ptr = samples.as_mut_ptr();
@@ -123,29 +187,54 @@ mod tests {
 
     #[test]
     fn coi_munje_finite_nonempty() {
-        let s = synth("coi munje", 0, SR).expect("synth ok");
+        let s = synth("coi munje", 0, SR, &[]).expect("synth ok");
         assert!(!s.is_empty());
         assert!(s.iter().all(|x| x.is_finite()));
     }
 
     #[test]
     fn flat_and_prosodic_differ() {
-        let flat = synth("coi munje", FLAG_FLAT, SR).unwrap();
-        let prosodic = synth("coi munje", 0, SR).unwrap();
+        let flat = synth("coi munje", FLAG_FLAT, SR, &[]).unwrap();
+        let prosodic = synth("coi munje", 0, SR, &[]).unwrap();
         assert_ne!(flat, prosodic, "prosody must change the samples");
     }
 
     #[test]
     fn empty_text_errors() {
-        assert!(matches!(synth("", 0, SR), Err(CompileError::Empty)));
+        assert!(matches!(synth("", 0, SR, &[]), Err(CompileError::Empty)));
     }
 
     #[test]
     fn dotside_flag_changes_output() {
         // "coi la djan": la-family exempts djan from the pre-cmevla pause;
         // --dotside drops that exemption, so the schedule (and audio) differ.
-        let plain = synth("coi la djan", 0, SR).unwrap();
-        let dotside = synth("coi la djan", FLAG_DOTSIDE, SR).unwrap();
+        let plain = synth("coi la djan", 0, SR, &[]).unwrap();
+        let dotside = synth("coi la djan", FLAG_DOTSIDE, SR, &[]).unwrap();
         assert_ne!(plain, dotside);
+    }
+
+    #[test]
+    fn empty_params_reproduce_defaults() {
+        let default_layout = [120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
+        assert_eq!(
+            synth("coi munje", 0, SR, &[]).unwrap(),
+            synth("coi munje", 0, SR, &default_layout).unwrap(),
+            "an empty block and the default layout must render identically"
+        );
+    }
+
+    #[test]
+    fn params_change_output() {
+        // A non-default rate (index 6) must change the rendered length.
+        let base = synth("mi tavla do", 0, SR, &[]).unwrap();
+        let mut faster = [120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
+        faster[6] = 2.0; // rate 2x
+        let fast = synth("mi tavla do", 0, SR, &faster).unwrap();
+        assert!(
+            fast.len() < base.len() * 3 / 4,
+            "rate 2x should roughly halve the sample count ({} vs {})",
+            fast.len(),
+            base.len()
+        );
     }
 }
