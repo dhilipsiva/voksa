@@ -181,7 +181,13 @@ fn buffered_stressed_onset_not_stretched() {
 #[test]
 fn xu_rise_with_stressed_final_span_stays_sorted() {
     // Final span stressed (djan) + xu rise: exactly one added event, sorted.
-    let risen = apply_prosody(compiled("xu la djan."), &ProsodyOptions { xu_rise: true });
+    let risen = apply_prosody(
+        compiled("xu la djan."),
+        &ProsodyOptions {
+            xu_rise: true,
+            ..Default::default()
+        },
+    );
     let flat = apply_prosody(compiled("xu la djan."), &ProsodyOptions::default());
     assert_eq!(risen.events.len(), flat.events.len() + 1);
     for w in risen.events.windows(2) {
@@ -267,7 +273,13 @@ fn two_brivla_accumulate_shifts() {
 #[test]
 fn xu_rise_adds_one_sorted_event_with_cloned_targets() {
     let flat = apply_prosody(compiled("xu do klama"), &ProsodyOptions::default());
-    let risen = apply_prosody(compiled("xu do klama"), &ProsodyOptions { xu_rise: true });
+    let risen = apply_prosody(
+        compiled("xu do klama"),
+        &ProsodyOptions {
+            xu_rise: true,
+            ..Default::default()
+        },
+    );
     assert_eq!(risen.events.len(), flat.events.len() + 1);
     // Events stay time-sorted.
     for w in risen.events.windows(2) {
@@ -340,6 +352,114 @@ fn snapshot_prosodic_declarative() {
 fn snapshot_prosodic_xu() {
     insta::assert_debug_snapshot!(apply_prosody(
         compiled("xu do klama"),
-        &ProsodyOptions { xu_rise: true }
+        &ProsodyOptions {
+            xu_rise: true,
+            ..Default::default()
+        }
     ));
+}
+
+// ---- runtime parameters (demo tuning console) ----
+
+#[test]
+fn default_options_equal_pinned_constants() {
+    // The whole default-preserving approach hinges on this: Default == consts.
+    let d = ProsodyOptions::default();
+    assert_eq!(d.declination_start_hz, DECLINATION_START_HZ);
+    assert_eq!(d.declination_end_hz, DECLINATION_END_HZ);
+    assert_eq!(d.stress_duration_factor, STRESS_DURATION_FACTOR);
+    assert_eq!(d.stress_f0_excursion_hz, STRESS_F0_EXCURSION_HZ);
+    assert_eq!(d.stress_amp_factor, STRESS_AMP_FACTOR);
+    assert_eq!(d.xu_rise_hz, XU_RISE_HZ);
+    assert_eq!(d.rate, 1.0);
+    assert!(!d.xu_rise);
+}
+
+fn last_voiced_f0(s: &UtteranceSchedule) -> f32 {
+    s.events
+        .iter()
+        .rev()
+        .find(|e| e.frame.targets.voicing > 0.0)
+        .unwrap()
+        .frame
+        .f0_hz
+}
+
+#[test]
+fn declination_end_param_lowers_ending_f0() {
+    let text = "mi tavla do bau la lojban.";
+    let base = apply_prosody(compiled(text), &ProsodyOptions::default());
+    let lowered = apply_prosody(
+        compiled(text),
+        &ProsodyOptions {
+            declination_end_hz: 70.0,
+            ..Default::default()
+        },
+    );
+    assert!(
+        last_voiced_f0(&lowered) < last_voiced_f0(&base) - 10.0,
+        "a lower declination_end must lower the ending F0"
+    );
+}
+
+#[test]
+fn stress_duration_factor_param_changes_stretch() {
+    let text = "coi munje";
+    let base = apply_prosody(compiled(text), &ProsodyOptions::default());
+    let more = apply_prosody(
+        compiled(text),
+        &ProsodyOptions {
+            stress_duration_factor: 2.5,
+            ..Default::default()
+        },
+    );
+    let dur = |s: &UtteranceSchedule| stressed_spans(s)[0].dur_ms;
+    assert!(
+        dur(&more) > dur(&base) + 10.0,
+        "a larger stress_duration_factor must stretch the rhyme more"
+    );
+}
+
+#[test]
+fn rate_param_scales_total() {
+    let text = "mi tavla do";
+    let base = apply_prosody(compiled(text), &ProsodyOptions::default());
+    let fast = apply_prosody(
+        compiled(text),
+        &ProsodyOptions {
+            rate: 2.0,
+            ..Default::default()
+        },
+    );
+    assert!(
+        (fast.total_ms - base.total_ms / 2.0).abs() < 1.0,
+        "rate 2.0 must halve total_ms (got {} vs {})",
+        fast.total_ms,
+        base.total_ms
+    );
+}
+
+#[test]
+fn xu_rise_hz_param_scales_the_rise() {
+    let text = "xu do klama";
+    let small = apply_prosody(
+        compiled(text),
+        &ProsodyOptions {
+            xu_rise: true,
+            xu_rise_hz: 10.0,
+            ..Default::default()
+        },
+    );
+    let big = apply_prosody(
+        compiled(text),
+        &ProsodyOptions {
+            xu_rise: true,
+            xu_rise_hz: 60.0,
+            ..Default::default()
+        },
+    );
+    assert!(
+        last_voiced_f0(&big) > last_voiced_f0(&small) + 20.0,
+        "a bigger xu_rise_hz must raise the ending F0 more"
+    );
 }

@@ -31,7 +31,10 @@ fn main() -> ExitCode {
         dotside: parsed.dotside,
         buffer: parsed.buffer,
     };
-    let popts = ProsodyOptions { xu_rise: parsed.xu };
+    let popts = ProsodyOptions {
+        xu_rise: parsed.xu,
+        ..Default::default()
+    };
     let render_at = |sr: u32| -> Result<Vec<f32>, CompileError> {
         if parsed.flat {
             render_utterance(&parsed.text, &copts, sr)

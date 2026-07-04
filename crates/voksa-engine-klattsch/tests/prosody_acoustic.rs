@@ -11,7 +11,10 @@ fn render(text: &str, xu: bool) -> Vec<f32> {
     render_utterance_prosodic(
         text,
         &CompileOptions::default(),
-        &ProsodyOptions { xu_rise: xu },
+        &ProsodyOptions {
+            xu_rise: xu,
+            ..Default::default()
+        },
         SAMPLE_RATE,
     )
     .unwrap_or_else(|e| panic!("{text}: {e:?}"))

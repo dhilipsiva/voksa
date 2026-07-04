@@ -120,7 +120,10 @@ fn listening_battery() -> ExitCode {
             dotside: entry.dotside,
             buffer: entry.buffer,
         };
-        let popts = ProsodyOptions { xu_rise: entry.xu };
+        let popts = ProsodyOptions {
+            xu_rise: entry.xu,
+            ..Default::default()
+        };
         let prosodic = match voksa_engine_klattsch::render_utterance_prosodic(
             entry.text, &copts, &popts, sr,
         ) {

@@ -13,10 +13,42 @@ use crate::alloc::vec::Vec;
 use crate::schedule::{BASE_F0_HZ, Event, UtteranceSchedule};
 
 /// Options for [`apply_prosody`]. Declination and stress realization are
-/// always on; the xu terminal rise is per-utterance.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// always on; the xu terminal rise is per-utterance. The float fields are the
+/// tunable knobs (demo tuning console) — they DEFAULT to the pinned constants
+/// below, so `ProsodyOptions::default()` reproduces the phonology.md §9.1
+/// convention exactly (and every snapshot stays byte-identical).
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProsodyOptions {
     pub xu_rise: bool,
+    /// Utterance-initial F0 baseline (Hz).
+    pub declination_start_hz: f32,
+    /// Utterance-final F0 baseline (Hz).
+    pub declination_end_hz: f32,
+    /// Stressed-rhyme duration multiplier.
+    pub stress_duration_factor: f32,
+    /// F0 excursion above the baseline inside stressed spans (Hz).
+    pub stress_f0_excursion_hz: f32,
+    /// Amplitude multiplier inside stressed spans.
+    pub stress_amp_factor: f32,
+    /// xu terminal-rise magnitude (Hz).
+    pub xu_rise_hz: f32,
+    /// Global tempo: all timings are scaled by 1/rate (>1 = faster). 1.0 = default.
+    pub rate: f32,
+}
+
+impl Default for ProsodyOptions {
+    fn default() -> Self {
+        Self {
+            xu_rise: false,
+            declination_start_hz: DECLINATION_START_HZ,
+            declination_end_hz: DECLINATION_END_HZ,
+            stress_duration_factor: STRESS_DURATION_FACTOR,
+            stress_f0_excursion_hz: STRESS_F0_EXCURSION_HZ,
+            stress_amp_factor: STRESS_AMP_FACTOR,
+            xu_rise_hz: XU_RISE_HZ,
+            rate: 1.0,
+        }
+    }
 }
 
 /// Utterance-initial F0 baseline (== schedule::BASE_F0_HZ).

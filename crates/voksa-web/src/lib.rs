@@ -29,6 +29,7 @@ pub fn synth(text: &str, flags: u32, sample_rate: u32) -> Result<Vec<f32>, Compi
     } else {
         let prosody = ProsodyOptions {
             xu_rise: flags & FLAG_XU != 0,
+            ..Default::default()
         };
         render_utterance_prosodic(text, &opts, &prosody, sample_rate)
     }
