@@ -56,8 +56,12 @@
         voksa's own invention (the CLL defines meaning, not sound) — tune them and
         share your config JSON.</p>
       <div id="attitudinals"></div>
-      <p class="muted">Per-phoneme acoustics (vowel formants, consonant loci,
-        durations) land in a later Advanced pass.</p>
+      <p class="muted"><b>lo voksa selci — the phoneme table.</b> Every acoustic
+        parameter of every phoneme: vowel formants (karsna), consonant loci
+        (zunsna), noise bands, voicing, durations. Diphthong glides follow the
+        tuned vowels; <code>'</code> ([h]) shapes itself from the next vowel.
+        Retune the voice itself, then share the config JSON.</p>
+      <div id="voicetable"></div>
     </div>
 
     <div class="actions">
@@ -78,7 +82,7 @@
 
     <script type="module">
       // ?v= cache-busts the worklet (addModule caches aggressively).
-      const V = '5';
+      const V = '6';
 
       // The 7 prosody knobs, IN THE ORDER of the wasm f32 layout + CLI keys.
       const PARAMS = [
@@ -217,7 +221,145 @@
         }
       });
 
-      // flat greys out the prosody + attitudinal knobs; xu is meaningless with flat.
+      // ---- advanced tab: per-phoneme voice table (D2b) ----
+      // Field descriptors in Targets::to_array order (stride 11); the wasm f32
+      // layout appends VoiceTable::to_array (377 floats) after the attitudinals.
+      const VT_FIELDS = [
+        { key: 'f1_hz',      label: 'F1 (Hz)',    min: 100,  max: 1200, step: 5    },
+        { key: 'bw1_hz',     label: 'F1 bw (Hz)', min: 20,   max: 500,  step: 5    },
+        { key: 'amp1',       label: 'F1 amp',     min: 0,    max: 1.2,  step: 0.01 },
+        { key: 'f2_hz',      label: 'F2 (Hz)',    min: 400,  max: 3000, step: 10   },
+        { key: 'bw2_hz',     label: 'F2 bw (Hz)', min: 20,   max: 1000, step: 5    },
+        { key: 'amp2',       label: 'F2 amp',     min: 0,    max: 1.2,  step: 0.01 },
+        { key: 'f3_hz',      label: 'F3 (Hz)',    min: 1000, max: 8000, step: 10   },
+        { key: 'bw3_hz',     label: 'F3 bw (Hz)', min: 20,   max: 4000, step: 10   },
+        { key: 'amp3',       label: 'F3 amp',     min: 0,    max: 1.2,  step: 0.01 },
+        { key: 'voicing',    label: 'Voicing',    min: 0,    max: 1,    step: 0.01 },
+        { key: 'aspiration', label: 'Aspiration', min: 0,    max: 1,    step: 0.01 },
+      ];
+      const VT_DUR        = { key: 'dur_ms',     label: 'Duration (ms)', min: 0, max: 400, step: 5 };
+      const VT_CLOSURE_MS = { key: 'closure_ms', label: 'Closure (ms)',  min: 0, max: 150, step: 1 };
+      const VT_BURST_MS   = { key: 'burst_ms',   label: 'Burst (ms)',    min: 0, max: 80,  step: 1 };
+
+      // Pinned seed shorthands (crates/voksa-core/src/phonemes.rs data::).
+      const SIL  = [500, 90, 0,   1500, 110, 0, 2500, 150, 0,    0, 0]; // voiceless closure
+      const VBAR = [200, 100, 0.3, 1500, 110, 0, 2500, 150, 0,   1, 0]; // voiced closure
+      const B_P  = [500, 90, 0,   700, 700, 0.6, 2500, 150, 0,   0, 1]; // bilabial burst
+      const B_T  = [500, 90, 0,   1500, 110, 0, 3500, 1000, 0.85, 0, 1]; // alveolar burst
+      const B_K  = [500, 90, 0,   1500, 110, 0, 2150, 500, 0.85, 0, 1]; // velar burst
+
+      // Sections + items IN EXACT VoiceTable::to_array order. steady def = 12
+      // values (VT_FIELDS + dur); stop def = 24 (closure 11, burst 11, 2 ms).
+      const VOICE_SECTIONS = [
+        { id: 'vowels', label: 'karsna — vowels', items: [
+          { key: 'a', kind: 'steady', def: [730, 90, 1, 1090, 110, 0.8,  2440, 150, 0.3,  1, 0, 160] },
+          { key: 'e', kind: 'steady', def: [530, 90, 1, 1840, 110, 0.6,  2480, 150, 0.3,  1, 0, 150] },
+          { key: 'i', kind: 'steady', def: [270, 90, 1, 2290, 110, 0.7,  3010, 150, 0.45, 1, 0, 150] },
+          { key: 'o', kind: 'steady', def: [570, 90, 1, 840,  110, 0.8,  2410, 150, 0.25, 1, 0, 150] },
+          { key: 'u', kind: 'steady', def: [300, 90, 1, 870,  110, 0.75, 2240, 150, 0.25, 1, 0, 150] },
+          { key: 'y', kind: 'steady', def: [500, 90, 1, 1500, 110, 0.6,  2500, 150, 0.3,  1, 0, 100] },
+        ]},
+        { id: 'diphthongs', label: 'diphthongs — durations (glide follows the tuned vowels)', items:
+          ['ai','ei','oi','au','ia','ie','ii','io','iu','ua','ue','ui','uo','uu','iy','uy']
+            .map((k) => ({ key: k, kind: 'dur', def: [200] })) },
+        { id: 'stops', label: 'zunsna — stops (closure + burst)', items: [
+          { key: 'p', kind: 'stop', def: [...SIL,  ...B_P, 60, 25] },
+          { key: 't', kind: 'stop', def: [...SIL,  ...B_T, 60, 25] },
+          { key: 'k', kind: 'stop', def: [...SIL,  ...B_K, 60, 25] },
+          { key: 'b', kind: 'stop', def: [...VBAR, ...B_P, 60, 25] },
+          { key: 'd', kind: 'stop', def: [...VBAR, ...B_T, 60, 25] },
+          { key: 'g', kind: 'stop', def: [...VBAR, ...B_K, 60, 25] },
+        ]},
+        { id: 'fricatives', label: 'zunsna — fricatives', items: [
+          { key: 'f', kind: 'steady', def: [500, 90, 0,    1500, 110, 0, 4500, 3500, 0.3,  0,   0.8, 120] },
+          { key: 'v', kind: 'steady', def: [250, 100, 0.6, 1500, 110, 0, 4500, 3500, 0.3,  0.6, 0.5, 120] },
+          { key: 's', kind: 'steady', def: [500, 90, 0,    1500, 110, 0, 6000, 1700, 0.9,  0,   1,   120] },
+          { key: 'z', kind: 'steady', def: [250, 100, 0.6, 1500, 110, 0, 6000, 1700, 0.8,  0.6, 0.6, 120] },
+          { key: 'c', kind: 'steady', def: [500, 90, 0,    1500, 110, 0, 3000, 800,  0.9,  0,   1,   120] },
+          { key: 'j', kind: 'steady', def: [250, 100, 0.6, 1500, 110, 0, 2800, 700,  0.8,  0.6, 0.6, 120] },
+          { key: 'x', kind: 'steady', def: [500, 90, 0,    1500, 110, 0, 2000, 600,  0.85, 0,   1,   120] },
+        ]},
+        { id: 'sonorants', label: 'zunsna — nasals & liquids', items: [
+          { key: 'm', kind: 'steady', def: [300, 100, 1, 1000, 150, 0.1, 2200, 200, 0.05, 1, 0, 80] },
+          { key: 'n', kind: 'steady', def: [310, 100, 1, 1700, 150, 0.1, 2600, 200, 0.05, 1, 0, 80] },
+          { key: 'l', kind: 'steady', def: [360, 90, 1,  1300, 110, 0.5, 2700, 150, 0.2,  1, 0, 80] },
+          { key: 'r', kind: 'steady', def: [490, 90, 1,  1350, 110, 0.4, 1750, 130, 0.45, 1, 0, 80] },
+        ]},
+        { id: 'other', label: "other — ' ([h]) + buffer vowel", items: [
+          { key: "'",      kind: 'dur',    def: [70] },
+          { key: 'buffer', kind: 'steady', def: [400, 90, 0.5, 1900, 110, 0.3, 2600, 150, 0.15, 1, 0, 35] },
+        ]},
+      ];
+
+      // Per-item field descriptor list (in def order) — shared by the builder,
+      // reader, exporter and importer.
+      function vtItemFields(it) {
+        if (it.kind === 'steady') return [...VT_FIELDS, VT_DUR].map((f) => ({ ...f, path: [f.key] }));
+        if (it.kind === 'dur') return [{ ...VT_DUR, path: ['dur_ms'] }];
+        // stop: closure(11) + burst(11) + closure_ms + burst_ms
+        return [
+          ...VT_FIELDS.map((f) => ({ ...f, label: `closure ${f.label}`, path: ['closure', f.key] })),
+          ...VT_FIELDS.map((f) => ({ ...f, label: `burst ${f.label}`, path: ['burst', f.key] })),
+          { ...VT_CLOSURE_MS, path: ['closure_ms'] },
+          { ...VT_BURST_MS, path: ['burst_ms'] },
+        ];
+      }
+      const vtId = (itemKey, path) => `vt-${itemKey}-${path.join('-')}`;
+
+      // Build the panels + the FLAT slider registry (exact wasm layout order).
+      const voiceBox = document.getElementById('voicetable');
+      const VOICE_SLIDERS = [];
+      for (const sec of VOICE_SECTIONS) {
+        const h = document.createElement('p');
+        h.innerHTML = `<b>${sec.label}</b>`;
+        voiceBox.appendChild(h);
+        for (const it of sec.items) {
+          const det = document.createElement('details');
+          det.innerHTML =
+            `<summary><b>${it.key}</b> ` +
+            `<button type="button" class="vt-reset" data-key="${it.key}">reset</button></summary>`;
+          const fields = vtItemFields(it);
+          fields.forEach((f, i) => {
+            const id = vtId(it.key, f.path);
+            const def = it.def[i];
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.innerHTML =
+              `<label for="${id}">${f.label}</label>` +
+              `<input type="range" id="${id}" min="${f.min}" max="${f.max}" step="${f.step}" value="${def}">` +
+              `<output id="o-${id}">${def}</output>`;
+            det.appendChild(row);
+            VOICE_SLIDERS.push({ id, def, min: f.min, max: f.max, step: f.step });
+          });
+          voiceBox.appendChild(det);
+        }
+      }
+      if (VOICE_SLIDERS.length !== 377) console.error('voice layout mismatch:', VOICE_SLIDERS.length);
+      // Output readouts + per-item reset via delegation (377 sliders).
+      voiceBox.addEventListener('input', (e) => {
+        if (e.target.type === 'range') document.getElementById('o-' + e.target.id).textContent = e.target.value;
+      });
+      function resetVoiceItem(itemKey) {
+        for (const s of VOICE_SLIDERS) {
+          if (!s.id.startsWith(`vt-${itemKey}-`)) continue;
+          const el = document.getElementById(s.id);
+          el.min = s.min; el.max = s.max; el.step = s.step; // undo any widening
+          el.value = s.def;
+          document.getElementById('o-' + s.id).textContent = s.def;
+        }
+      }
+      function resetVoiceAll() {
+        for (const sec of VOICE_SECTIONS) for (const it of sec.items) resetVoiceItem(it.key);
+      }
+      voiceBox.addEventListener('click', (e) => {
+        const b = e.target.closest('button.vt-reset'); if (!b) return;
+        e.preventDefault();
+        resetVoiceItem(b.dataset.key);
+        autoSpeak();
+      });
+
+      // flat greys out the prosody + attitudinal + voice knobs; xu is
+      // meaningless with flat.
       function syncFlatState() {
         const flat = flagEl('flat').checked;
         flagEl('xu').disabled = flat;
@@ -226,15 +368,19 @@
         for (const p of PARAMS) slideEl(p.key).disabled = flat;
         attBox.classList.toggle('disabled', flat);
         for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) attEl(a.key, f.key).disabled = flat;
+        voiceBox.classList.toggle('disabled', flat);
+        for (const s of VOICE_SLIDERS) document.getElementById(s.id).disabled = flat;
       }
       flagEl('flat').addEventListener('change', syncFlatState);
 
       // ---- config <-> UI ----
       // The wasm f32 block: 7 prosody knobs, then 7 attitudinals x 8 fields
-      // (AttitudinalKind::ALL x Deviation::to_array order) = 63 floats.
+      // (AttitudinalKind::ALL x Deviation::to_array order), then the 377-float
+      // VoiceTable::to_array section = 440 floats.
       function readParamsArray() {
         const arr = PARAMS.map((p) => parseFloat(slideEl(p.key).value));
         for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) arr.push(parseFloat(attEl(a.key, f.key).value));
+        for (const s of VOICE_SLIDERS) arr.push(parseFloat(document.getElementById(s.id).value));
         return Float32Array.from(arr);
       }
       function readFlagsBits() { return FLAGS.reduce((b, f) => b | (flagEl(f.key).checked ? f.bit : 0), 0); }
@@ -254,6 +400,24 @@
           if (Object.keys(o).length) atts[a.key] = o;
         }
         if (Object.keys(atts).length) c.attitudinals = atts;
+        // Voice table: same delta-only export under "phonemes" (stops nest
+        // closure/burst objects, matching the CLI schema).
+        const phon = {};
+        for (const sec of VOICE_SECTIONS) {
+          for (const it of sec.items) {
+            let o = null;
+            vtItemFields(it).forEach((f, i) => {
+              const v = parseFloat(document.getElementById(vtId(it.key, f.path)).value);
+              if (Math.abs(v - it.def[i]) > 1e-9) {
+                o = o || {};
+                if (f.path.length === 2) { o[f.path[0]] = o[f.path[0]] || {}; o[f.path[0]][f.path[1]] = v; }
+                else o[f.path[0]] = v;
+              }
+            });
+            if (o) phon[it.key] = o;
+          }
+        }
+        if (Object.keys(phon).length) c.phonemes = phon;
         c.notes = document.getElementById('notes').value;
         c.sampleRate = ctx ? ctx.sampleRate : 48000;
         c.voksaVersion = '0.0.1';
@@ -274,6 +438,22 @@
             for (const f of ATT_FIELDS) if (typeof o[f.key] === 'number') setAtt(a.key, f.key, o[f.key]);
           }
         }
+        resetVoiceAll();
+        if (c.phonemes && typeof c.phonemes === 'object') {
+          for (const sec of VOICE_SECTIONS) {
+            for (const it of sec.items) {
+              const o = c.phonemes[it.key];
+              if (!o) continue;
+              vtItemFields(it).forEach((f) => {
+                const v = f.path.length === 2 ? (o[f.path[0]] || {})[f.path[1]] : o[f.path[0]];
+                if (typeof v === 'number') {
+                  const id = vtId(it.key, f.path);
+                  setSliderExact(document.getElementById(id), document.getElementById('o-' + id), v);
+                }
+              });
+            }
+          }
+        }
         if (typeof c.notes === 'string') document.getElementById('notes').value = c.notes;
         syncFlatState();
       }
@@ -285,6 +465,7 @@
           el.value = p.def; outEl(p.key).textContent = p.def;
         }
         for (const a of ATTITUDINALS) resetAtt(a);
+        resetVoiceAll();
         syncFlatState();
       }
 
@@ -405,6 +586,7 @@
       flagsBox.addEventListener('change', autoSpeak);
       slidersBox.addEventListener('input', autoSpeak);
       attBox.addEventListener('input', autoSpeak);
+      voiceBox.addEventListener('input', autoSpeak);
 
       document.getElementById('reset').addEventListener('click', () => { resetDefaults(); autoSpeak(); });
       document.getElementById('dl-json').addEventListener('click', () => {
