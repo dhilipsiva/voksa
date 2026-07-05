@@ -16,15 +16,20 @@ pub struct Widen {
 /// descriptor range) while `v` is outside `[d.min, d.max]`, `None` once back
 /// inside. Values are NEVER clamped.
 pub fn widen_for(d: &Descriptor, v: f32) -> Option<Widen> {
-    let _ = (d, v);
-    None // stub — C1 green
+    if v >= d.min && v <= d.max {
+        None
+    } else {
+        Some(Widen {
+            min: v.min(d.min),
+            max: v.max(d.max),
+        })
+    }
 }
 
 /// Modified = the value differs from the engine default in f32 space (Rust
 /// f32 comparison IS the reference page's `Math.fround` semantics).
 pub fn is_dirty(d: &Descriptor, v: f32) -> bool {
-    let _ = (d, v);
-    false // stub — C1 green
+    v != d.default
 }
 
 /// A batch of `(flat index, value)` writes the UI store applies atomically

@@ -132,7 +132,7 @@ pub const VT_FIELDS: [FieldSpec; 11] = [
     fs("aspiration", "aspiration", "", 0.0, 1.0, 0.01),
 ];
 
-/// Segment duration (steady phonemes, diphthongs, [h]).
+/// Segment duration (steady phonemes, diphthongs, `[h]`).
 pub const VT_DUR: FieldSpec = fs("dur_ms", "duration", "ms", 0.0, 400.0, 5.0);
 /// Stop closure-phase duration.
 pub const VT_CLOSURE_MS: FieldSpec = fs("closure_ms", "closure", "ms", 0.0, 150.0, 1.0);
@@ -203,7 +203,7 @@ pub const ATT_KINDS: [AttKind; 7] = [
 pub enum ItemKind {
     /// 11 steady targets + duration (12 slots).
     Steady,
-    /// Duration only (1 slot): diphthongs and [h].
+    /// Duration only (1 slot): diphthongs and `[h]`.
     Dur,
     /// Closure targets (11) + burst targets (11) + closure/burst ms (24 slots).
     Stop,
@@ -289,7 +289,7 @@ pub const SECTIONS: [Section; 6] = [
 
 /// The 41 voice items in EXACT `VoiceTable::to_array` order (the frozen wasm
 /// layout: vowels ×12, diphthong durations ×1, stops ×24, fricatives ×12,
-/// nasals+liquids ×12, [h] ×1, buffer ×12 — 377 slots total).
+/// nasals+liquids ×12, `[h]` ×1, buffer ×12 — 377 slots total).
 pub const VOICE_ITEMS: [VoiceItem; 41] = [
     vi("a", "a", ItemKind::Steady, 0),
     vi("e", "ɛ", ItemKind::Steady, 0),
@@ -369,8 +369,75 @@ impl Descriptors {
     /// (`voksa_web::default_params()`). Errors if the block is not exactly
     /// the frozen 449-float layout.
     pub fn from_defaults(defaults: &[f32]) -> Result<Descriptors, String> {
-        let _ = defaults;
-        Ok(Descriptors { list: Vec::new() }) // stub — C1 green
+        if defaults.len() != voksa_web::FULL_PARAM_COUNT {
+            return Err(format!(
+                "engine default block must be {} floats, got {}",
+                voksa_web::FULL_PARAM_COUNT,
+                defaults.len()
+            ));
+        }
+        let mut list = Vec::with_capacity(defaults.len());
+        for (idx, &default) in defaults.iter().enumerate() {
+            let path = Path::from_flat(idx);
+            let (spec, label, help_key) = match path {
+                Path::Knob(k) => {
+                    let spec = &KNOBS[k as usize];
+                    let section = if (k as usize) < 7 {
+                        "prosody"
+                    } else {
+                        "naturalness"
+                    };
+                    (
+                        spec,
+                        spec.label.to_string(),
+                        format!("{section}.{}", spec.key),
+                    )
+                }
+                Path::Att { field, .. } => {
+                    let spec = &ATT_FIELDS[field as usize];
+                    (
+                        spec,
+                        spec.label.to_string(),
+                        format!("att.fields.{}", spec.key),
+                    )
+                }
+                Path::Voice { item, slot } => {
+                    let slot = slot as usize;
+                    let (spec, label) = match VOICE_ITEMS[item as usize].kind {
+                        ItemKind::Steady if slot < 11 => {
+                            (&VT_FIELDS[slot], VT_FIELDS[slot].label.to_string())
+                        }
+                        ItemKind::Steady => (&VT_DUR, VT_DUR.label.to_string()),
+                        ItemKind::Dur => (&VT_DUR, VT_DUR.label.to_string()),
+                        ItemKind::Stop if slot < 11 => (
+                            &VT_FIELDS[slot],
+                            format!("closure {}", VT_FIELDS[slot].label),
+                        ),
+                        ItemKind::Stop if slot < 22 => (
+                            &VT_FIELDS[slot - 11],
+                            format!("burst {}", VT_FIELDS[slot - 11].label),
+                        ),
+                        ItemKind::Stop if slot == 22 => {
+                            (&VT_CLOSURE_MS, VT_CLOSURE_MS.label.to_string())
+                        }
+                        ItemKind::Stop => (&VT_BURST_MS, VT_BURST_MS.label.to_string()),
+                    };
+                    (spec, label, format!("vt.fields.{}", spec.key))
+                }
+            };
+            list.push(Descriptor {
+                idx,
+                path,
+                label,
+                unit: spec.unit,
+                min: spec.min,
+                max: spec.max,
+                step: spec.step,
+                default,
+                help_key,
+            });
+        }
+        Ok(Descriptors { list })
     }
 
     /// The descriptor at a flat index.
@@ -390,19 +457,26 @@ impl Descriptors {
 
     /// The flat-index range a voice item occupies.
     pub fn voice_item_range(&self, item: usize) -> core::ops::Range<usize> {
-        let _ = item;
-        0..0 // stub — C1 green
+        let start = Path::Voice {
+            item: item as u8,
+            slot: 0,
+        }
+        .flat_index();
+        start..start + VOICE_ITEMS[item].kind.span()
     }
 
     /// The flat-index range an attitudinal's 8 fields occupy.
     pub fn att_range(&self, kind: usize) -> core::ops::Range<usize> {
-        let _ = kind;
-        0..0 // stub — C1 green
+        let start = Path::Att {
+            kind: kind as u8,
+            field: 0,
+        }
+        .flat_index();
+        start..start + ATT_FIELDS.len()
     }
 
     /// Flat index of a knob (0..16 in `KNOBS` order).
     pub fn knob_index(&self, knob: usize) -> usize {
-        let _ = knob;
-        0 // stub — C1 green
+        Path::Knob(knob as u8).flat_index()
     }
 }

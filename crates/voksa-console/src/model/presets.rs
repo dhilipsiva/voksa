@@ -70,6 +70,15 @@ pub const PRESETS: [Preset; 6] = [
 /// The write plan for a preset: EVERY parameter back to its engine default,
 /// then the preset's knob overrides. Text and flags are untouched.
 pub fn apply_preset(desc: &Descriptors, name: &str) -> Option<WritePlan> {
-    let _ = (desc, name);
-    None // stub — C1 green
+    use super::descriptor::KNOBS;
+    let preset = PRESETS.iter().find(|p| p.name == name)?;
+    let mut plan: Vec<(usize, f32)> = (0..desc.len()).map(|i| (i, desc.get(i).default)).collect();
+    for &(key, v) in preset.over {
+        let knob = KNOBS
+            .iter()
+            .position(|f| f.key == key)
+            .unwrap_or_else(|| panic!("preset {name} references unknown knob {key}"));
+        plan[desc.knob_index(knob)].1 = v;
+    }
+    Some(WritePlan(plan))
 }

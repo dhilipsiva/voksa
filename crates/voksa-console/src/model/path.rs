@@ -14,8 +14,29 @@ pub const ATT_KIND_COUNT: usize = 7;
 /// Deviation fields per attitudinal.
 pub const ATT_FIELD_COUNT: usize = 8;
 /// Voice-table items: 6 vowels + 16 diphthongs + 6 stops + 7 fricatives +
-/// 4 sonorants + [h] + buffer.
+/// 4 sonorants + `[h]` + buffer.
 pub const VOICE_ITEM_COUNT: usize = 41;
+
+/// Flat offset of the attitudinal section.
+const ATT_OFF: usize = 7;
+/// Flat offset of the voice-table section.
+const VOICE_OFF: usize = 63;
+/// Flat offset of the naturalness knobs.
+const NAT_OFF: usize = 440;
+/// Prosody knobs (flat 0..7); the remaining knobs live at [`NAT_OFF`].
+const PROSODY_KNOBS: usize = 7;
+
+/// Prefix sums of the voice items' spans: `VOICE_OFFSETS[i]` is item `i`'s
+/// offset within the 377-slot voice section; the final entry is 377.
+pub(super) const VOICE_OFFSETS: [usize; VOICE_ITEM_COUNT + 1] = {
+    let mut out = [0usize; VOICE_ITEM_COUNT + 1];
+    let mut i = 0;
+    while i < VOICE_ITEM_COUNT {
+        out[i + 1] = out[i] + VOICE_ITEMS[i].kind.span();
+        i += 1;
+    }
+    out
+};
 
 /// A tunable parameter's address. `Copy` and enumerable: `flat_index` /
 /// `from_flat` are a total bijection with `0..449`.
@@ -48,28 +69,101 @@ pub struct PathError(pub String);
 impl Path {
     /// The path's index in the frozen 449-float layout.
     pub fn flat_index(self) -> usize {
-        let _ = self;
-        0 // stub — C1 green
+        match self {
+            Path::Knob(k) => {
+                let k = k as usize;
+                if k < PROSODY_KNOBS {
+                    k
+                } else {
+                    NAT_OFF + (k - PROSODY_KNOBS)
+                }
+            }
+            Path::Att { kind, field } => ATT_OFF + kind as usize * ATT_FIELD_COUNT + field as usize,
+            Path::Voice { item, slot } => VOICE_OFF + VOICE_OFFSETS[item as usize] + slot as usize,
+        }
     }
 
     /// The path at a flat index (panics if `idx >= 449`).
     pub fn from_flat(idx: usize) -> Path {
-        let _ = idx;
-        Path::Knob(0) // stub — C1 green
+        match idx {
+            0..PROSODY_KNOBS => Path::Knob(idx as u8),
+            ATT_OFF..VOICE_OFF => {
+                let rel = idx - ATT_OFF;
+                Path::Att {
+                    kind: (rel / ATT_FIELD_COUNT) as u8,
+                    field: (rel % ATT_FIELD_COUNT) as u8,
+                }
+            }
+            VOICE_OFF..NAT_OFF => {
+                let rel = idx - VOICE_OFF;
+                let item = VOICE_OFFSETS.partition_point(|&off| off <= rel) - 1;
+                Path::Voice {
+                    item: item as u8,
+                    slot: (rel - VOICE_OFFSETS[item]) as u8,
+                }
+            }
+            NAT_OFF..449 => Path::Knob((PROSODY_KNOBS + (idx - NAT_OFF)) as u8),
+            _ => panic!("flat index {idx} outside the frozen 449-float layout"),
+        }
     }
 }
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // stub — C1 green (uses KNOBS/ATT_KINDS/VOICE_ITEMS key tables)
-        let _ = (&KNOBS, &ATT_KINDS, &VOICE_ITEMS);
-        write!(f, "?")
+        match *self {
+            Path::Knob(k) => write!(f, "k.{}", KNOBS[k as usize].key),
+            Path::Att { kind, field } => write!(f, "a.{}.{}", ATT_KINDS[kind as usize].key, field),
+            Path::Voice { item, slot } => {
+                write!(f, "v.{}.{}", VOICE_ITEMS[item as usize].key, slot)
+            }
+        }
     }
 }
 
 impl FromStr for Path {
     type Err = PathError;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Err(PathError(format!("stub — C1 green: {s}")))
+        let err = || PathError(format!("not a parameter path: {s}"));
+        let (ns, rest) = s.split_once('.').ok_or_else(err)?;
+        match ns {
+            "k" => {
+                let k = KNOBS.iter().position(|f| f.key == rest).ok_or_else(err)?;
+                Ok(Path::Knob(k as u8))
+            }
+            "a" => {
+                // The cmavo key may itself contain an apostrophe but never a
+                // dot, so the LAST dot separates the field index.
+                let (key, field) = rest.rsplit_once('.').ok_or_else(err)?;
+                let kind = ATT_KINDS
+                    .iter()
+                    .position(|a| a.key == key)
+                    .ok_or_else(err)?;
+                let field: usize = field.parse().map_err(|_| err())?;
+                if field >= ATT_FIELD_COUNT {
+                    return Err(err());
+                }
+                Ok(Path::Att {
+                    kind: kind as u8,
+                    field: field as u8,
+                })
+            }
+            "v" => {
+                let (key, slot) = rest.rsplit_once('.').ok_or_else(err)?;
+                let item = VOICE_ITEMS
+                    .iter()
+                    .position(|i| i.key == key)
+                    .ok_or_else(err)?;
+                let slot: usize = slot.parse().map_err(|_| err())?;
+                if slot >= VOICE_ITEMS[item].kind.span() {
+                    return Err(err());
+                }
+                Ok(Path::Voice {
+                    item: item as u8,
+                    slot: slot as u8,
+                })
+            }
+            _ => Err(err()),
+        }
     }
 }

@@ -139,9 +139,8 @@ fn load_minimal_config_defaults_everything_else() {
     assert_eq!(plan.text.as_deref(), Some("coi"));
     assert_eq!(plan.flags, Flags::default(), "absent flags = false");
     assert_eq!(plan.notes, "");
-    let def = defaults();
-    for i in 0..PARAM_TOTAL {
-        let want = if i == 6 { 2.0 } else { def[i] };
+    for (i, &d) in defaults().iter().enumerate() {
+        let want = if i == 6 { 2.0 } else { d };
         assert_eq!(plan.values[i], want, "REPLACE semantics at {i}");
     }
 }
