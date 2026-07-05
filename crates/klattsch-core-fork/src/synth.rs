@@ -222,8 +222,21 @@ impl FormantSynth {
 
             self.vibrato_phase += TAU64 * self.current.vibrato_rate as f64 / sr64;
             self.vibrato_phase -= TAU64 * (self.vibrato_phase / TAU64).floor();
-            let eff_f0 =
-                self.current.f0 + self.current.vibrato_depth * self.vibrato_phase.sin() as f32;
+            // Voksa fork: Klatt & Klatt 1990 flutter — a deterministic slow
+            // quasi-random F0 wobble from three incommensurate sinusoids,
+            // clocked off absolute utterance time so rendering is block-size
+            // invariant. FL = 0 contributes exactly 0.0 (upstream identity).
+            let flutter_hz = if self.current.flutter != 0.0 {
+                let t = self.sample_clock as f64 / sr64;
+                let wobble =
+                    (TAU64 * 12.7 * t).sin() + (TAU64 * 7.1 * t).sin() + (TAU64 * 4.7 * t).sin();
+                (self.current.flutter / 50.0) * (self.current.f0 / 100.0) * wobble as f32
+            } else {
+                0.0
+            };
+            let eff_f0 = self.current.f0
+                + self.current.vibrato_depth * self.vibrato_phase.sin() as f32
+                + flutter_hz;
 
             self.tremolo_phase += TAU64 * self.current.tremolo_rate as f64 / sr64;
             self.tremolo_phase -= TAU64 * (self.tremolo_phase / TAU64).floor();
