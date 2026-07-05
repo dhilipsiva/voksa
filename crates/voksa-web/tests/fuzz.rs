@@ -7,7 +7,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use proptest::prelude::*;
-use proptest::test_runner::Config;
+use proptest::test_runner::{Config, FileFailurePersistence};
 use voksa_web::{FULL_PARAM_COUNT, synth, transcription};
 
 /// 8 kHz keeps the render cost per case ~6× under the shipping 48 kHz; the
@@ -37,8 +37,64 @@ fn short_soup() -> impl Strategy<Value = String> {
         .prop_map(|chars| chars.into_iter().collect())
 }
 
+/// Deep-fuzz regression (minimized): a zeroed block with hostile-but-finite
+/// values in /n/'s voice slots — F1 amplitude −7.2e27, aspiration +3e26, a
+/// 10 s clamped duration. The two huge finite factors MULTIPLY in the noise
+/// branch (≈ −2e54 > f32::MAX) → inf → NaN, and a poisoned filter state
+/// stays NaN for the rest of the render. Ok PCM must be entirely finite;
+/// hostile params degrade to silence, never non-finite output.
+#[test]
+fn hostile_finite_amps_render_finite() {
+    let mut block = vec![0.0f32; 403];
+    block[393] = -7.212_827_5e27; // nasal /n/ F1 amplitude
+    block[401] = 2.962_394_5e26; // nasal /n/ aspiration
+    block[402] = 2_354_284_300.0; // nasal /n/ dur_ms (clamps to 10 s)
+    let pcm = synth("na.", 6, SR, &block).unwrap();
+    let bad = pcm.iter().filter(|s| !s.is_finite()).count();
+    assert_eq!(bad, 0, "{bad} non-finite samples on the hostile-amp block");
+}
+
+/// Companion hostile-but-finite prosody extremes (found green, kept as
+/// coverage): subnormal declination, ±1e29 amplitude factor, 1e31 xu rise.
+#[test]
+fn hostile_finite_prosody_knobs_render_finite() {
+    let candidates: [(&str, u32, Vec<f32>); 3] = [
+        // declination start/end ~0 → F0 ~0 at the engine.
+        ("ib", 2, vec![-7.3e-39, 0.0, 1.0, 0.0, 1.0, 25.0, 1.0]),
+        // huge negative stress amplitude factor on a stressed word.
+        (
+            "coi munje",
+            0,
+            vec![120.0, 95.0, 1.5, 20.0, -1.1e29, 25.0, 1.0],
+        ),
+        // huge xu rise (flags=2 sets xu_rise).
+        (
+            "xu do klama",
+            2,
+            vec![120.0, 95.0, 1.5, 20.0, 1.2, 3.8e31, 1.0],
+        ),
+    ];
+    for (text, flags, block) in candidates {
+        let pcm = synth(text, flags, SR, &block).unwrap();
+        let bad = pcm.iter().filter(|s| !s.is_finite()).count();
+        assert_eq!(
+            bad, 0,
+            "{bad} non-finite samples for {text:?} (flags {flags}, block {block:?})"
+        );
+    }
+}
+
 proptest! {
-    #![proptest_config(Config { cases: cases(), ..Config::default() })]
+    // Direct persistence: the default SourceParallel lookup fails for this
+    // integration-test target ("failed to find lib.rs or main.rs"), silently
+    // dropping failing seeds — the deep-fuzz finding had to be re-minimized.
+    #![proptest_config(Config {
+        cases: cases(),
+        failure_persistence: Some(Box::new(FileFailurePersistence::Direct(
+            "tests/proptest-regressions/fuzz.txt",
+        ))),
+        ..Config::default()
+    })]
 
     /// Totality + finiteness: any flag bits, any f32 block (NaN/inf included),
     /// any short soup — synth returns Ok or a typed error, never panics, and
