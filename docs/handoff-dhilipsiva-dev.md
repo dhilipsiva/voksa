@@ -1,107 +1,153 @@
 # Handoff: embed the voksa tuning console into dhilipsiva.dev
 
-This is a self-contained brief for a design pass + a Claude Code session working
-in the `dhilipsiva/dhilipsiva.dev` repo. It documents everything the embed
-needs; the voksa repo is the source of truth (current `main` — the v0.1.0
-release; the `v0.1.0` tag lands once CP3 is signed off).
+A self-contained brief for a Claude Code session working in the
+`dhilipsiva/dhilipsiva.dev` repo. The voksa repo is the source of truth
+(current `main`, v0.1.0). There are two embedding paths:
+
+1. **Primary — a Dioxus component (git dependency).** If dhilipsiva.dev is (or
+   can host) a Dioxus app, add one dependency and mount one component. The
+   engine is compiled into your wasm; no second wasm file, no C-ABI, no
+   worklet glue to copy. **Use this.**
+2. **Secondary — the raw C-ABI wasm.** For a non-Rust host (a plain JS/React
+   page), instantiate `voksa_web_bg.wasm` yourself. Heavier to wire; documented
+   at the end.
 
 ## What you are embedding
 
 voksa is a pure-Rust, rule-based Lojban speech synthesizer that runs entirely
-in the browser (WASM inside an AudioWorklet — no server, no network calls after
-load). The tuning console lets Lojban community members fiddle prosody +
-attitudinal (emotion) parameters, listen, and **download a config JSON** to
-share back. That JSON replays bit-identically via the native CLI
-(`voksa --config file.json`), which is the whole point: crowdsourced tuning.
+in the browser (no server, no network after load). The tuning console lets
+Lojban community members fiddle prosody + naturalness + attitudinal (emotion)
+parameters and the full per-phoneme voice table, listen, and **export a config
+JSON** to share back. That JSON replays bit-identically via the native CLI
+(`voksa --config file.json`) — crowdsourced voice tuning is the whole point.
 
-Reference implementation (working, unstyled): `crates/voksa-web/www/index.html`
-in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
+The console is `crates/voksa-console` in the voksa repo (ADR 0003): a Dioxus
+0.7 component library. It links `voksa-web` as a plain rlib — `synth` /
+`transcription` / `default_params` are direct Rust calls — and plays audio
+through a ~40-line player-only AudioWorklet it owns. The standalone runner
+`crates/voksa-console-demo` is the reference integration.
 
-## Files to copy from voksa (build artifacts + worklet)
+---
 
-1. `crates/voksa-web/pkg/voksa_web_bg.wasm` — built with
-   `wasm-pack build --release --target web crates/voksa-web` (or take it from a
-   checkout of current `main` (v0.1.0) after running
-   `cargo xtask wasm-size`, which builds + verifies it). ~42 KB gzipped
-   (the xtask gate asserts < 43 KB).
-2. `crates/voksa-web/www/voksa-processor.js` — the AudioWorkletProcessor.
-   Copy VERBATIM; do not port it into a bundler module (worklets load via
-   `audioWorklet.addModule(url)`).
+## Primary path: mount as a Dioxus component
 
-## Hard technical constraints (violating these breaks audio silently)
+### 1. Add the dependency
 
-- The `.wasm` declares **zero imports**. Instantiate with
-  `new WebAssembly.Instance(module, {})` INSIDE the worklet; compile on the
-  main thread (`WebAssembly.compileStreaming(fetch(url))`) and pass the Module
-  via `processorOptions`. Serve the wasm with the `application/wasm` MIME type
-  (or swap to `WebAssembly.compile(await resp.arrayBuffer())`).
-- Encode the text with `TextEncoder` on the MAIN thread and pass bytes —
-  Firefox's AudioWorkletGlobalScope has no TextEncoder.
-- Cache-bust the worklet URL (`voksa-processor.js?v=N`) — `addModule` caches
-  aggressively.
-- Serve over http(s), not `file://`. No COOP/COEP headers needed; no
-  SharedArrayBuffer used.
-- Audio starts only after a user gesture (create/resume the AudioContext in a
-  click handler).
+```toml
+# Cargo.toml
+[dependencies]
+voksa-console = { git = "https://github.com/dhilipsiva/voksa", tag = "console-v1" }
+dioxus = { version = "0.7", features = ["web"] }
+```
 
-## The C-ABI (exports of the wasm)
+(Pin `tag`/`rev` — the crate is `publish = false`, so it is only consumed as a
+git dependency. `voksa-console` pulls its own wasm-only deps —
+`web-sys`/`js-sys`/`wasm-bindgen`/`gloo-timers` — behind
+`cfg(target_arch = "wasm32")`, so a native build of your app still compiles.)
 
-- `voksa_alloc(len) -> ptr` / `voksa_dealloc(ptr, len)` — scratch buffers the
-  page writes into (text bytes, f32 params).
-- `voksa_render_params(text_ptr, text_len, flags, sample_rate, params_ptr,
-  params_len) -> ptr` — renders; returns the f32 PCM base pointer (null on
-  error). Read the length with `voksa_out_len()`, copy the samples OUT of wasm
-  memory immediately (memory growth detaches views), then `voksa_free_f32(ptr, len)`.
-- `voksa_transcribe(text_ptr, text_len, flags) -> ptr` — the phonetic
-  transcription (UTF-8; length via `voksa_out_len()`, free with
-  `voksa_dealloc(ptr, len)`; null on error). Notation: syllable dots, CAPITALS
-  on the stressed syllable (the CLL convention), ` ‖ ` pauses, `(ɪ)` buffer
-  vowels — e.g. `coi MUN.je`, `la DJAN ‖ cu KLA.ma`, `V(ɪ)RU.si`. **Display
-  this line prominently** — it is how the community reports wrong phonetics —
-  and embed it in the exported config JSON as `phonetics` (the reference page
-  does both; refresh it on EVERY text/flag mutation path, including
-  programmatic ones — `.value =` fires no `input` event).
-- `flags` bits: `1` flat (no prosody), `2` xu rise, `4` dotside, `8` buffer.
+### 2. Mount the component
 
-## The f32 param block (449 floats; shorter blocks default the rest)
+```rust
+use dioxus::prelude::*;
+use voksa_console::TuningConsole;
 
-Indices 0–6 (prosody): `declination_start_hz, declination_end_hz,
-stress_duration_factor, stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz,
-rate`.
+#[component]
+fn VoicePage() -> Element {
+    rsx! {
+        // Your QUINE token sheet must already be on the page (see §4).
+        TuningConsole { initial_theme: "dark" }
+    }
+}
+```
 
-Indices 7–62 (attitudinals): 7 kinds × 8 fields, kind-major. Kind order:
-`ui, uu, oi, ii, o'o, au, o'onai`. Field order: `f0_mean_hz, f0_range_mult,
-rate_mult, oq, tilt, di, vibrato_hz, aspiration`.
+`TuningConsole` mounts once and owns all of its state (the 449-parameter store,
+the audio graph, the help/about UI). It renders a single `div.vx-root`.
 
-Indices 63–439 (per-phoneme voice table, 377 floats): the normative ordering is
-the `VoiceTable::to_array` doc comment in `crates/voksa-core/src/phonemes.rs` —
-vowels a e i o u y (12 each: f1,bw1,amp1, f2,bw2,amp2, f3,bw3,amp3, voicing,
-aspiration, dur_ms) → 16 diphthong durations → stops p t k b d g (24 each:
-closure 11 + burst 11 + closure_ms + burst_ms) → fricatives f v s z c j x →
-nasals m n → liquids l r → [h] duration → buffer vowel.
+### 3. Props (`TuningConsoleProps`)
 
-Indices 440–448 (naturalness, 9 floats — Phase 11, DEFAULT ON): `flutter,
-breath_aspiration, baseline_oq_delta, baseline_tilt_delta, micro_f0_hz,
-obstruent_f0_hz, final_lengthen, cluster_shorten, undershoot` (pinned defaults
-25 / 0.06 / +0.10 / −0.10 / 4 / 6 / 1.3 / 0.15 / 0.35; semantics in
-docs/phonology.md §9.2). These are Basic-tab sliders next to the prosody
-knobs, plus a "Naturalness off" preset that sets all nine to their identity
-values for A/B listening.
+| Prop | Type | Default | Meaning |
+|------|------|---------|---------|
+| `initial_theme` | `Option<String>` | `None` | Sets `data-theme` on the root (`"dark"`/`"light"`). `None` inherits the host page's theme. |
+| `class` | `Option<String>` | `None` | Extra classes appended to `vx-root` (host layout hooks). |
+| `inline_styles` | `bool` | `false` | Inline the component stylesheet with `document::Style` instead of linking the manganis asset — for consumers **not** building with `dx` (see §4). |
 
-The layout is frozen append-only, so shorter blocks stay valid forever: a
-7-float (demo-basic), 63-float (demo-attitudinal), or 440-float
-(demo-advanced) block defaults everything past its end.
+### 4. CSS + QUINE tokens (the one integration requirement)
 
-**Do not hand-copy defaults and do not reorder** — call the
-`voksa_default_params()` export (length via `voksa_out_len()`, free with
-`voksa_free_f32`) from a main-thread instance and seed every slider from it,
-exactly as the reference page does. UI defaults then equal the engine's tables
-by construction.
+The crate ships **component classes only** (`console.css`, all `vx-*`),
+styled entirely against QUINE **semantic tokens** (`var(--ember-500)`,
+`var(--surface-card)`, `var(--font-mono)`, …). Two things must be true on the
+page:
+
+- **The component stylesheet is loaded.** With a `dx build`, manganis
+  (`asset!("/assets/console.css")`) bundles it across the git dependency
+  automatically — nothing to do. If you are **not** building with `dx`, pass
+  `inline_styles: true` (the crate embeds the CSS via `include_str!`, exposed
+  as `voksa_console::assets::CONSOLE_CSS_SOURCE`), or link that source yourself.
+  The CSS contains no `url()` references, so inlining is exact.
+- **The host provides the QUINE token sheet.** The console does not ship fonts
+  or token values — the host page must define the QUINE `--*` custom properties
+  (colors, type, spacing, motion) on an ancestor of the mount point, or the
+  console renders unstyled. The reference token sheet the standalone demo
+  vendors is `crates/voksa-console-demo/assets/quine-tokens.css`; on
+  dhilipsiva.dev, use the site's own QUINE integration.
+
+`crates/voksa-console-demo/src/main.rs` is the minimal working example:
+
+```rust
+use dioxus::prelude::*;
+use voksa_console::TuningConsole;
+
+const TOKENS: Asset = asset!("/assets/quine-tokens.css");
+
+fn main() { dioxus::launch(App); }
+
+#[component]
+fn App() -> Element {
+    rsx! {
+        document::Stylesheet { href: TOKENS }   // host-provided QUINE tokens
+        div { class: "vx-demo-page", TuningConsole {} }
+    }
+}
+```
+
+Run it with `cd crates/voksa-console-demo && dx serve`.
+
+### 5. Embed contract (already honored by the component)
+
+No site chrome; the title row is non-sticky (the host owns the navbar); the
+source column's sticky offset is page-relative; theme follows the host
+`data-theme`. Audio starts only after a user gesture — the first ▶ speak click
+unlocks the AudioContext (browser autoplay policy), after which "speak on
+change" can drive playback. Render is on the main thread (< 100 ms for a
+typical sentence).
+
+### What the component already implements
+
+You get all of this out of the box — no design work required beyond providing
+QUINE tokens:
+
+- Lojban-labeled controls with English glosses; a `?` help popover on every
+  control resolving ~74 authored entries; an about panel (`λ`).
+- **Prosody + naturalness** (7 + 9 knobs, with an A/B latch that hears the
+  voice with the naturalness layer off), **attitudinals** (7 emotion panels ×
+  8 deviation fields, with per-emotion "try it" examples), and the **full
+  per-phoneme voice table** (41 phonemes, 377 parameters, a changed-only view).
+- A **phonetic sentence picker** (18 curated coverage sentences, each gated by
+  a native synthesize test), a **live phonetic-analysis line** (colored
+  syllable/stress/pause/buffer tokens), a waveform, WAV download, auto-speak,
+  and the share loop: **export config JSON / load config (file or drag-drop,
+  REPLACE semantics, widen-never-clamp) / a notes field** that travels in the
+  JSON, plus a "send it back" CTA (GitHub issue + mailto).
+
+---
 
 ## The config JSON (what users share back)
 
-Flat keys for text/flags/prosody/naturalness (same names as the layout above),
-plus delta-only `attitudinals` and `phonemes` objects:
+The console's export/load already produces and consumes this; the schema is the
+CLI's (`voksa --config`), so a shared config replays bit-identically. Flat keys
+for text/flags/prosody/naturalness (same names as the layout below), plus
+**delta-only** `attitudinals` and `phonemes` objects (only changed values),
+plus `phonetics`/`notes`/`sampleRate`/`voksaVersion` stamps:
 
 ```json
 {
@@ -110,54 +156,90 @@ plus delta-only `attitudinals` and `phonemes` objects:
   "rate": 1.0,
   "flutter": 25.0,
   "attitudinals": { "ui": { "f0_mean_hz": 22, "di": 0.1 } },
+  "phonemes": { "s": { "dur_ms": 96 }, "k": { "burst": { "amp3": 1.0 }, "closure_ms": 52 } },
+  "phonetics": "coi MUN.je",
   "notes": "joy reads better with a small creak",
+  "sampleRate": 48000,
   "voksaVersion": "0.1.0"
 }
 ```
 
 `phonemes` holds per-letter voice-table overrides (stops nest `closure`/`burst`
-objects) — copy the export shape from the reference page rather than inventing
-key names. The page also auto-stamps `phonetics` (the transcription line the
-tuner was looking at), `sampleRate`, and `voksaVersion` (must equal the version
-of the wasm you embed — 0.1.0 on current `main`; the voksa repo guards its own
-demo's stamp with a native test, `crates/voksa-web/tests/version.rs`).
-
-Missing keys = defaults, so minimal JSON is valid. Loading must NOT clamp
-out-of-range values to slider bounds (widen the slider instead) — the CLI
+objects). Missing keys = defaults, so minimal JSON is valid. `voksaVersion` is
+stamped from `env!("CARGO_PKG_VERSION")` at build time — it always matches the
+engine you embed. Loading REPLACES all state and must NOT clamp out-of-range
+values to slider bounds (the console widens the slider instead) — the CLI
 accepts any finite value and web/CLI replay must stay identical.
 
-## Design asks (from dhilipsiva)
+## Phonetic transcription notation
 
-- Lojban labels with English sub-text. Section headers are the cmavo
-  (`.ui`, `.uu`, `.oi`, `.ii`, `.o'o`, `.au`, `.o'onai`) with glosses
-  (happiness / pity / complaint-pain / fear / patience / desire / anger).
-  A "try it" affordance per attitudinal (example phrases: `coi munje .ui`,
-  `mi klama .uu`, `coi munje .oi`, `coi munje .ii`, `mi klama .o'o`,
-  `mi djica .au`, `mi fengu .o'onai`).
-- Two tiers: Basic (7 prosody + 9 naturalness sliders + 4 flags, with a
-  "Naturalness off" preset) and Advanced (7 attitudinal
-  panels × 8 sliders, plus the per-phoneme voice table: six sections of
-  collapsible panels, 377 sliders). Reset per panel + global.
-- A **phonetic sentence picker**: copy `www/sentences.json` (18 curated
-  coverage sentences, each with an English what-it-exercises gloss + optional
-  flags) and render it as a dropdown + a "next" cycle button that sets text +
-  flags and auto-speaks. Every entry is gated by a native test in the voksa
-  repo, so the list is guaranteed synthesizable.
-- Download config JSON / Load config JSON / Download WAV (16-bit mono RIFF —
-  the reference page has a 15-line encoder) / a notes field that lands in the
-  JSON / a waveform or equivalent visual.
-- **Auto-speak on change** (see the reference page): any input change re-speaks
-  after a ~400 ms debounce, gated by a "speak on change" toggle (default ON);
-  a new utterance REPLACES the playing one (disconnect the previous
-  AudioWorkletNode), never stacks. Keep the manual ▶ Speak button too.
-- A clear "send me your config" call-to-action (mailto:dhilipsiva@pm.me or a
-  GitHub issue link on dhilipsiva/voksa — owner's choice).
-- State plainly that the attitudinal mappings are voksa's invention (the CLL
-  defines the *meaning* of attitudinals, not their sound) — that's WHY
-  community tuning matters.
+The live analysis line (and the exported `phonetics`) uses CLL-flavored
+notation: syllable dots, CAPITALS on the stressed syllable, ` ‖ ` pauses, `(ɪ)`
+buffer vowels — e.g. `coi MUN.je`, `la DJAN ‖ cu KLA.ma`, `V(ɪ)RU.si`. Numbers
+show their normalized cmavo (`li 3.14` → `li ci pi pa vo`). Display it
+prominently — it is how the community reports wrong phonetics.
+
+## The f32 parameter layout (frozen, append-only)
+
+The console addresses parameters by this 449-float layout; you only need it for
+the C-ABI path or to reason about the config schema.
+
+- **0–6 prosody**: `declination_start_hz, declination_end_hz,
+  stress_duration_factor, stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz,
+  rate`.
+- **7–62 attitudinals**: 7 kinds × 8 fields, kind-major. Kinds:
+  `ui, uu, oi, ii, o'o, au, o'onai`. Fields: `f0_mean_hz, f0_range_mult,
+  rate_mult, oq, tilt, di, vibrato_hz, aspiration`.
+- **63–439 voice table (377)**: the `VoiceTable::to_array` order in
+  `crates/voksa-core/src/phonemes.rs` — vowels a e i o u y (12 each) → 16
+  diphthong durations → stops p t k b d g (24 each: closure 11 + burst 11 +
+  closure_ms + burst_ms) → fricatives f v s z c j x → nasals m n → liquids l r
+  → `[h]` duration → buffer vowel.
+- **440–448 naturalness (9, DEFAULT ON)**: `flutter, breath_aspiration,
+  baseline_oq_delta, baseline_tilt_delta, micro_f0_hz, obstruent_f0_hz,
+  final_lengthen, cluster_shorten, undershoot` (pinned 25 / 0.06 / +0.10 /
+  −0.10 / 4 / 6 / 1.3 / 0.15 / 0.35; semantics in docs/phonology.md §9.2).
+
+The layout is frozen append-only, so shorter blocks stay valid: a 7-, 63-, or
+440-float block defaults everything past its end. **Do not hand-copy defaults**
+— seed from `voksa_web::default_params()` (the console does this at runtime, so
+UI defaults equal the engine tables by construction).
+
+The attitudinal mappings are voksa's **invention** — the CLL defines the
+*meaning* of an attitudinal, never its sound. That is exactly why community
+tuning matters; the console says so on its attitudinal rack.
+
+---
+
+## Secondary path: raw C-ABI (non-Rust hosts)
+
+Skip this if you are using the Dioxus component. For a plain JS host, embed the
+zero-import wasm directly:
+
+- Build it with `wasm-pack build --release --target web crates/voksa-web` (or
+  take `crates/voksa-web/pkg/voksa_web_bg.wasm` after `cargo xtask wasm-size`,
+  which builds + verifies it — ~42 KB gzipped, the gate asserts < 43 KB **and
+  zero imports**).
+- The `.wasm` declares **zero imports**: instantiate with
+  `new WebAssembly.Instance(module, {})` inside a worklet; compile on the main
+  thread (`WebAssembly.compileStreaming(fetch(url))`) and pass the Module via
+  `processorOptions`. Serve it with `application/wasm` MIME.
+- Encode text with `TextEncoder` on the **main** thread and pass bytes —
+  Firefox's AudioWorkletGlobalScope has no TextEncoder. Cache-bust the worklet
+  URL (`addModule` caches aggressively). Serve over http(s), not `file://`. No
+  COOP/COEP needed. Audio starts only after a user gesture.
+- Exports: `voksa_alloc(len)->ptr` / `voksa_dealloc(ptr,len)`;
+  `voksa_render_params(text_ptr, text_len, flags, sample_rate, params_ptr,
+  params_len)->ptr` (f32 PCM base; length via `voksa_out_len()`; copy OUT
+  immediately — memory growth detaches views — then `voksa_free_f32(ptr,len)`);
+  `voksa_transcribe(text_ptr, text_len, flags)->ptr` (UTF-8; free with
+  `voksa_dealloc`); `voksa_default_params()->ptr` (the canonical block; seed
+  every slider from it). `flags` bits: `1` flat, `2` xu, `4` dotside, `8`
+  buffer. The wasm-wasip2 WIT component (`crates/voksa-component`,
+  `voksa:synth@0.1.0`) is a third option for WASI hosts (ADR 0002).
 
 ## Attribution
 
 voksa: MIT OR Apache-2.0, github.com/dhilipsiva/voksa. Synthesis engine:
-vendored fork of klattsch-core 0.1.1 (MIT, Tony Gies). No trackers needed; the
-page works fully offline after load.
+vendored fork of klattsch-core 0.1.1 (MIT, Tony Gies). No trackers; the page
+works fully offline after load.

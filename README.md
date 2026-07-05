@@ -18,18 +18,19 @@ linguistic rule derived from the CLL (Complete Lojban Language) specification.
 
 ## Try it
 
-The web demo is a single static page:
+The tuning console is a Dioxus app:
 
 ```sh
 nix develop
-wasm-pack build --release --target web crates/voksa-web
-python3 -m http.server -d crates/voksa-web 8000
-# open http://localhost:8000/www/index.html
+cd crates/voksa-console-demo
+dx serve                       # then open the printed localhost URL
 ```
 
 Type Lojban (try the curated phonetic test sentences), watch the live
-phonetic transcription, open the **Advanced** tab to retune the voice itself,
-and share your config JSON.
+phonetic analysis, retune prosody / naturalness / attitudinals / the full
+per-phoneme voice table, and export your config JSON to share. The console is
+also a reusable Dioxus **component** (`crates/voksa-console`), consumed by
+dhilipsiva.dev as a git dependency — see `docs/handoff-dhilipsiva-dev.md`.
 
 ## CLI
 
@@ -66,7 +67,9 @@ voksa-core            no_std text front-end + schedule compiler (all CLL rules)
 voksa-engine-klattsch std adapter: schedule IR → klattsch parameter events
 klattsch-core-fork    vendored klattsch-core 0.1.1 (MIT) + OQ/diplophonia/flutter
 voksa-cli             native playback (cpal, alloc-free callback) + WAV render
-voksa-web             raw C-ABI wasm + AudioWorklet + the tuning-console demo
+voksa-web             raw C-ABI wasm + AudioWorklet (non-Rust embedding surface)
+voksa-console         Dioxus tuning-console component (ADR 0003) — the primary UI
+voksa-console-demo    standalone `dx serve` runner (vendored QUINE tokens)
 voksa-component       wasm32-wasip2 WIT component (voksa:synth) — see ADR 0002
 voksa-testkit         dev-only FFT/LPC/NSDF measurement harness
 ```
@@ -82,6 +85,7 @@ nix develop                    # everything below assumes the dev shell
 cargo nextest run --workspace  # the test battery (incl. proptest fuzz suites)
 cargo clippy --workspace --all-targets -- -D warnings
 cargo xtask wasm-size          # browser wasm gate: <43 KB gzip, ZERO imports
+cargo xtask console-size       # Dioxus console bundle gate (gzip canary)
 cargo xtask fuzz               # deep fuzz (PROPTEST_CASES=65536)
 cargo xtask listening-battery  # CP1 human listening artifacts
 ```
