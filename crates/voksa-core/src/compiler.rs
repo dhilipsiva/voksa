@@ -107,7 +107,12 @@ pub fn tokenize(text: &str) -> Result<Vec<RawToken>, CompileError> {
     Ok(tokens)
 }
 
-enum Item {
+/// One spoken item: the utterance's word/pause sequence after normalization,
+/// mandatory-pause insertion, and writer-period union (CLL §4.2 merge). The
+/// SINGLE pipeline both [`compile_with`] (audio) and
+/// [`crate::transcribe::transcribe`] (display) consume — they cannot disagree.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UtteranceItem {
     Word(WordAnalysis),
     Pause,
 }
@@ -119,14 +124,15 @@ pub fn compile(text: &str, opts: &CompileOptions) -> Result<UtteranceSchedule, C
     compile_with(text, opts, &crate::phonemes::VoiceTable::PINNED)
 }
 
-/// Like [`compile`] but with a RUNTIME per-phoneme table (demo tuning console
-/// D2b). `compile_with(text, opts, &VoiceTable::default())` is byte-identical
-/// to `compile(text, opts)`.
-pub fn compile_with(
+/// The utterance's spoken word/pause sequence for `text` under `opts`:
+/// tokenize (+ digit normalization), analyze every word, insert the mandatory
+/// pauses (dotside-aware), and union in the writer-marked periods (merged per
+/// CLL §4.2). This is the compiler's front half, shared with
+/// [`crate::transcribe::transcribe`].
+pub fn utterance_items(
     text: &str,
     opts: &CompileOptions,
-    voice: &crate::phonemes::VoiceTable,
-) -> Result<UtteranceSchedule, CompileError> {
+) -> Result<Vec<UtteranceItem>, CompileError> {
     // Tokenize, remembering which boundaries the writer marked with periods.
     let mut words: Vec<WordAnalysis> = Vec::new();
     let mut explicit: Vec<bool> = Vec::new();
@@ -152,33 +158,44 @@ pub fn compile_with(
         return Err(CompileError::Empty);
     }
 
-    // Phase 10: detect attitudinal (UI-cmavo) colorings before `words` is
-    // consumed. word_index i here maps 1:1 to the schedule's word_index (pause
-    // insertion preserves word order).
-    let attitudinals = detect_attitudinals(&words);
-
     // Mandatory pauses (Phase 4), then union in the writer-marked ones.
     let segments = insert_pauses(words.into_iter().map(Token::Word).collect(), opts.dotside);
-    let mut items: Vec<Item> = Vec::new();
+    let mut items: Vec<UtteranceItem> = Vec::new();
     let mut wi = 0usize;
     for seg in segments {
         match seg {
-            Segment::Pause => items.push(Item::Pause),
+            Segment::Pause => items.push(UtteranceItem::Pause),
             Segment::Word(w) => {
-                if explicit[wi] && !matches!(items.last(), Some(Item::Pause)) {
-                    items.push(Item::Pause);
+                if explicit[wi] && !matches!(items.last(), Some(UtteranceItem::Pause)) {
+                    items.push(UtteranceItem::Pause);
                 }
-                items.push(Item::Word(w));
+                items.push(UtteranceItem::Word(w));
                 wi += 1;
             }
             // The tokenizer never produces foreign text (zoi parsing arrives
             // with normalization); pause-bracket defensively.
-            Segment::Foreign(_) => items.push(Item::Pause),
+            Segment::Foreign(_) => items.push(UtteranceItem::Pause),
         }
     }
-    if explicit[wi] && !matches!(items.last(), Some(Item::Pause)) {
-        items.push(Item::Pause);
+    if explicit[wi] && !matches!(items.last(), Some(UtteranceItem::Pause)) {
+        items.push(UtteranceItem::Pause);
     }
+    Ok(items)
+}
+
+/// Like [`compile`] but with a RUNTIME per-phoneme table (demo tuning console
+/// D2b). `compile_with(text, opts, &VoiceTable::default())` is byte-identical
+/// to `compile(text, opts)`.
+pub fn compile_with(
+    text: &str,
+    opts: &CompileOptions,
+    voice: &crate::phonemes::VoiceTable,
+) -> Result<UtteranceSchedule, CompileError> {
+    let items = utterance_items(text, opts)?;
+
+    // Phase 10: detect attitudinal (UI-cmavo) colorings. Indices among the
+    // Word items map 1:1 to the schedule's word_index (pauses consume none).
+    let attitudinals = detect_attitudinals(&items);
 
     // Fold into events + spans.
     let mut events: Vec<Event> = Vec::new();
@@ -187,7 +204,7 @@ pub fn compile_with(
     let mut word_index = 0usize;
     for item in items {
         match item {
-            Item::Pause => {
+            UtteranceItem::Pause => {
                 events.push(Event {
                     at_ms: t_ms,
                     transition_ms: 5.0,
@@ -195,7 +212,7 @@ pub fn compile_with(
                 });
                 t_ms += PAUSE_MS;
             }
-            Item::Word(w) => {
+            UtteranceItem::Word(w) => {
                 t_ms = schedule_word(
                     &w,
                     word_index,
@@ -223,11 +240,19 @@ fn is_marker(lowered: &str) -> bool {
     attitudinal_kind(lowered).is_some() || intensity_mult(lowered).is_some()
 }
 
-/// Detect attitudinal colorings over the analyzed word list (Phase 10). Each
+/// Detect attitudinal colorings over the utterance items (Phase 10). Each
 /// attitudinal cmavo colors the nearest preceding non-marker word (or, when it
 /// is utterance-initial, the first non-marker word); a following intensity
-/// cmavo (`cai`/`sai`/`ru'e`/`nai`) scales/flips the deviation.
-fn detect_attitudinals(words: &[WordAnalysis]) -> Vec<AttitudinalScope> {
+/// cmavo (`cai`/`sai`/`ru'e`/`nai`) scales/flips the deviation. Indices are
+/// positions among the WORD items — the schedule's `word_index`.
+fn detect_attitudinals(items: &[UtteranceItem]) -> Vec<AttitudinalScope> {
+    let words: Vec<&WordAnalysis> = items
+        .iter()
+        .filter_map(|item| match item {
+            UtteranceItem::Word(w) => Some(w),
+            UtteranceItem::Pause => None,
+        })
+        .collect();
     let mut out: Vec<AttitudinalScope> = Vec::new();
     for (i, w) in words.iter().enumerate() {
         let Some(kind) = attitudinal_kind(&w.lowered) else {

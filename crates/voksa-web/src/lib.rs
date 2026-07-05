@@ -135,9 +135,11 @@ pub fn synth(
 /// it; flat/xu don't) — the syllable/stress/pause line the demo shows so the
 /// community can spot wrong phonetics. Shared by [`voksa_transcribe`] + tests.
 pub fn transcription(text: &str, flags: u32) -> Result<String, CompileError> {
-    // RED stub (D2c): rendering lands with the failing test.
-    let _ = (text, flags);
-    Ok(String::new())
+    let opts = CompileOptions {
+        dotside: flags & FLAG_DOTSIDE != 0,
+        buffer: flags & FLAG_BUFFER != 0,
+    };
+    voksa_core::transcribe::transcribe(text, &opts)
 }
 
 /// The full default f32 param block — prosody, then the pinned attitudinal
@@ -266,6 +268,40 @@ unsafe fn render_into(
             let ptr = samples.as_mut_ptr();
             OUT_LEN.store(samples.len(), Ordering::Relaxed);
             std::mem::forget(samples);
+            ptr
+        }
+        Err(_) => {
+            OUT_LEN.store(0, Ordering::Relaxed);
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// Phonetic transcription of `text` (UTF-8 at `text_ptr`/`text_len`) under the
+/// flag bits: returns a pointer to UTF-8 bytes (length via [`voksa_out_len`];
+/// free with [`voksa_dealloc`] passing that length). Null (length 0) on a
+/// compile error or invalid UTF-8.
+///
+/// # Safety
+/// `text_ptr`/`text_len` must describe a readable byte range in wasm memory.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn voksa_transcribe(
+    text_ptr: *const u8,
+    text_len: usize,
+    flags: u32,
+) -> *mut u8 {
+    let bytes = unsafe { std::slice::from_raw_parts(text_ptr, text_len) };
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        OUT_LEN.store(0, Ordering::Relaxed);
+        return std::ptr::null_mut();
+    };
+    match transcription(text, flags) {
+        Ok(s) => {
+            let mut b = s.into_bytes();
+            b.shrink_to_fit(); // guarantee capacity == len for the free
+            let ptr = b.as_mut_ptr();
+            OUT_LEN.store(b.len(), Ordering::Relaxed);
+            std::mem::forget(b);
             ptr
         }
         Err(_) => {
