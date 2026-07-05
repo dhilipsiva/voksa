@@ -52,6 +52,7 @@ pub fn HelpDot(topic: String, title: String) -> Element {
             r#type: "button",
             tabindex: "-1",
             aria_label: "help: {title}",
+            title: "help: {title}",
             onclick: move |e| {
                 e.stop_propagation();
                 let p = e.client_coordinates();

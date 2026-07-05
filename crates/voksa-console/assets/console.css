@@ -315,7 +315,7 @@
 .vx-resetall:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
 
 /* prosody | naturalness side by side (stacks on mobile) */
-.vx-rackrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.vx-rackrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
 .vx-rackrow > .vx-rack { min-width: 0; }
 
 /* master-detail: the selector rail on the left, the editor on the right */
@@ -690,27 +690,28 @@
 /* ── help dot + popover ───────────────────────────────────────────── */
 .vx-help {
   flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
   font-size: 10px;
+  font-weight: 600;
   line-height: 1;
-  color: var(--text-faint);
-  background: none;
+  color: var(--text-muted);
+  background: var(--bg-raised);
   border: 1px solid var(--border-subtle);
   border-radius: 99px;
   padding: 0;
   cursor: help;
-  opacity: 0.3;
-  transition: opacity var(--dur-fast) var(--ease-out);
+  opacity: 0.75;
+  transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 .vx-srow:hover .vx-help,
 .vx-help:hover,
 .vx-help:focus-visible { opacity: 1; }
-.vx-help:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-help:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 55%, transparent); background: var(--accent-soft); }
 .vx-help:focus-visible { outline: none; box-shadow: var(--ring); }
 
 .vx-pop-backdrop { position: fixed; inset: 0; z-index: 88; }
