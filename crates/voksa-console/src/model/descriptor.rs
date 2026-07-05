@@ -479,4 +479,12 @@ impl Descriptors {
     pub fn knob_index(&self, knob: usize) -> usize {
         Path::Knob(knob as u8).flat_index()
     }
+
+    /// The flat-index range of the whole voice-table section (63..440) — the
+    /// scope of the table-level reset.
+    pub fn voice_range(&self) -> core::ops::Range<usize> {
+        let start = self.voice_item_range(0).start;
+        let end = self.voice_item_range(VOICE_ITEMS.len() - 1).end;
+        start..end
+    }
 }

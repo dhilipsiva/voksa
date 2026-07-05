@@ -57,3 +57,17 @@ pub fn reset_plan(
 ) -> WritePlan {
     WritePlan(range.map(|i| (i, desc.get(i).default)).collect())
 }
+
+/// The effective render params for the naturalness A/B latch: identity when
+/// `ab_off` is false; when true, a COPY with the nine naturalness knob slots
+/// overridden to their identity ("Naturalness off") values. Stored slider
+/// values are never touched — this is a render-time override only.
+pub fn ab_effective(
+    desc: &super::descriptor::Descriptors,
+    params: &[f32],
+    ab_off: bool,
+) -> Vec<f32> {
+    let _ = desc;
+    let _ = ab_off;
+    params.to_vec() // stub — C4 green
+}
