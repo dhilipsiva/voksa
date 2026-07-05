@@ -1168,7 +1168,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "voksa-cli"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "cpal",
  "hound",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "voksa-component"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "voksa-web",
  "wit-bindgen",
@@ -1189,7 +1189,7 @@ dependencies = [
 
 [[package]]
 name = "voksa-core"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "insta",
  "proptest",
@@ -1197,7 +1197,7 @@ dependencies = [
 
 [[package]]
 name = "voksa-engine-klattsch"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "insta",
  "klattsch-core",
@@ -1207,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "voksa-testkit"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "hound",
  "spectrum-analyzer",
@@ -1215,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "voksa-web"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "proptest",
  "serde",
