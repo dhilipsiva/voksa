@@ -178,11 +178,33 @@ pub fn apply_prosody(schedule: UtteranceSchedule, opts: &ProsodyOptions) -> Utte
 /// lengthened nuclei not at all. Runs AFTER the duration transforms (it needs
 /// final linguistic durations) and BEFORE the xu insert (which would fake a
 /// short final vowel). Bandwidths/amps unchanged; diphthongs skipped.
-fn apply_undershoot(s: UtteranceSchedule, undershoot: f32) -> UtteranceSchedule {
+fn apply_undershoot(mut s: UtteranceSchedule, undershoot: f32) -> UtteranceSchedule {
     if undershoot == 0.0 {
         return s;
     }
-    // RED stub (P11 N-C): implementation lands with the failing tests.
+    /// The canonical neutral center (== silence_targets / Vowel::Y / schwa).
+    const CENTER: [f32; 3] = [500.0, 1500.0, 2500.0];
+    for i in 0..s.events.len() {
+        if !matches!(s.events[i].micro, MicroClass::Vowel(_)) {
+            continue;
+        }
+        // The vowel's duration = gap to the next DIFFERENT-class event, so a
+        // microprosody settle insert (same class, mid-vowel) doesn't fake a
+        // short vowel.
+        let mut j = i + 1;
+        while j < s.events.len() && s.events[j].micro == s.events[i].micro {
+            j += 1;
+        }
+        let seg_end = s.events.get(j).map_or(s.total_ms, |e| e.at_ms);
+        let d = seg_end - s.events[i].at_ms;
+        let u = undershoot * (1.0 - d / UNDERSHOOT_REF_MS).max(0.0);
+        if u <= 0.0 {
+            continue;
+        }
+        for (f, c) in s.events[i].frame.targets.formants.iter_mut().zip(CENTER) {
+            f.freq_hz += (c - f.freq_hz) * u;
+        }
+    }
     s
 }
 
@@ -190,7 +212,7 @@ fn apply_undershoot(s: UtteranceSchedule, undershoot: f32) -> UtteranceSchedule 
 /// deltas on every frame, breath (aspiration) on voiced frames — the default
 /// voice's source realism, composed BEFORE the attitudinal overlay (which
 /// nudges the same lanes per word). Identity when all four knobs are 0.
-fn apply_naturalness(s: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSchedule {
+fn apply_naturalness(mut s: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSchedule {
     if opts.flutter == 0.0
         && opts.breath_aspiration == 0.0
         && opts.baseline_oq_delta == 0.0
@@ -198,7 +220,17 @@ fn apply_naturalness(s: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSc
     {
         return s;
     }
-    // RED stub (P11 N-C): implementation lands with the failing tests.
+    for e in &mut s.events {
+        e.frame.flutter = (e.frame.flutter + opts.flutter).clamp(0.0, 100.0);
+        e.frame.oq = (e.frame.oq + opts.baseline_oq_delta).clamp(0.2, 2.0);
+        e.frame.tilt = (e.frame.tilt + opts.baseline_tilt_delta).clamp(-0.95, 0.95);
+        // Breathiness only makes sense on a voiced frame (same convention as
+        // the attitudinal overlay, which stacks its deltas on top of these).
+        if e.frame.targets.voicing > 0.0 && opts.breath_aspiration != 0.0 {
+            e.frame.targets.aspiration =
+                (e.frame.targets.aspiration + opts.breath_aspiration).clamp(0.0, 1.0);
+        }
+    }
     s
 }
 

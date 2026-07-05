@@ -56,6 +56,11 @@
     <div id="panel-basic" class="panel">
       <div class="flags" id="flags"></div>
       <div id="sliders"></div>
+      <p class="muted" style="margin: 0.6rem 0 0.2rem;"><b>naturalness</b> — micro-variation
+        that softens the robot: pitch flutter, breath, intrinsic vowel pitch,
+        consonant pitch kicks, final lengthening, cluster shortening, vowel
+        undershoot. The “Naturalness off” preset zeroes them all for A/B.</p>
+      <div id="nat-sliders"></div>
     </div>
     <div id="panel-advanced" class="panel" hidden>
       <p class="muted"><b>cnima'o — attitudinals.</b> A UI cmavo colors the word
@@ -91,7 +96,7 @@
 
     <script type="module">
       // ?v= cache-busts the worklet (addModule caches aggressively).
-      const V = '7';
+      const V = '8';
 
       // Compile the wasm FIRST and read the canonical default param block from
       // it (a second, main-thread instance — zero imports make this a
@@ -137,12 +142,34 @@
         { key: 'dotside', label: 'dotside',           bit: 0x4 },
         { key: 'buffer',  label: 'buffer vowels',     bit: 0x8 },
       ];
+      // The 9 Phase-11 naturalness knobs, IN THE ORDER of the wasm f32 layout
+      // section at [NAT_OFF..NAT_OFF+9) (appended AFTER the voice table — the
+      // layout is frozen append-only). Keys mirror the CLI config JSON.
+      // `off` = the identity value (byte-exact no-op) the "Naturalness off"
+      // preset uses.
+      const NAT_OFF = 440;
+      const NAT_PARAMS = [
+        { key: 'flutter',             label: 'Pitch flutter (Klatt FL)',    min: 0,    max: 100, step: 1,    def: 0, off: 0 },
+        { key: 'breath_aspiration',   label: 'Breathiness +',               min: 0,    max: 0.5, step: 0.01, def: 0, off: 0 },
+        { key: 'baseline_oq_delta',   label: 'Open quotient Δ (softness)',  min: -0.5, max: 0.8, step: 0.01, def: 0, off: 0 },
+        { key: 'baseline_tilt_delta', label: 'Spectral tilt Δ (darkness)',  min: -0.9, max: 0.9, step: 0.01, def: 0, off: 0 },
+        { key: 'micro_f0_hz',         label: 'Vowel-height pitch (Hz)',     min: 0,    max: 15,  step: 0.5,  def: 0, off: 0 },
+        { key: 'obstruent_f0_hz',     label: 'Consonant pitch kick (Hz)',   min: 0,    max: 20,  step: 0.5,  def: 0, off: 0 },
+        { key: 'final_lengthen',      label: 'Final lengthening ×',         min: 1,    max: 2,   step: 0.05, def: 1, off: 1 },
+        { key: 'cluster_shorten',     label: 'Cluster shortening',          min: 0,    max: 0.4, step: 0.01, def: 0, off: 0 },
+        { key: 'undershoot',          label: 'Vowel undershoot',            min: 0,    max: 1,   step: 0.05, def: 0, off: 0 },
+      ];
+      // Every Basic-tab knob (7 prosody + 9 naturalness) — the config/reset/
+      // disable loops; readParamsArray keeps the two sections at their own
+      // offsets in the f32 block.
+      const ALL_KNOBS = [...PARAMS, ...NAT_PARAMS];
       const PRESETS = {
         Default:     {},
         'Sing-song': { declination_start_hz: 150, declination_end_hz: 80, stress_f0_excursion_hz: 35, stress_duration_factor: 1.8 },
         Monotone:    { declination_start_hz: 110, declination_end_hz: 110, stress_f0_excursion_hz: 3, stress_amp_factor: 1.05, stress_duration_factor: 1.1 },
         Fast:        { rate: 1.7 },
         'Slow & calm': { rate: 0.8, stress_f0_excursion_hz: 12, declination_start_hz: 110, declination_end_hz: 90 },
+        'Naturalness off': Object.fromEntries(NAT_PARAMS.map((p) => [p.key, p.off])),
       };
 
       // The 8 deviation fields, IN THE ORDER of Deviation::to_array (the wasm
@@ -177,13 +204,14 @@
           def: { f0_mean_hz: 10,  f0_range_mult: 1.3, rate_mult: 0.90, oq: -0.20, tilt: 0.25,  di: 0.15, vibrato_hz: 0, aspiration: 0 } },
       ];
 
-      // Re-seed the prosody + attitudinal descriptor defaults from the wasm's
-      // canonical block (UI == engine by construction).
+      // Re-seed the prosody + attitudinal + naturalness descriptor defaults
+      // from the wasm's canonical block (UI == engine by construction).
       if (DEFAULTS) {
         PARAMS.forEach((p, i) => { p.def = DEFAULTS[i]; });
         ATTITUDINALS.forEach((a, k) => {
           ATT_FIELDS.forEach((f, i) => { a.def[f.key] = DEFAULTS[7 + k * 8 + i]; });
         });
+        NAT_PARAMS.forEach((p, i) => { p.def = DEFAULTS[NAT_OFF + i] ?? p.def; });
       }
 
       // ---- build the UI from the descriptors ----
@@ -194,19 +222,24 @@
         flagsBox.appendChild(l);
       }
       const slidersBox = document.getElementById('sliders');
-      for (const p of PARAMS) {
+      const natBox = document.getElementById('nat-sliders');
+      function buildKnobRow(box, p) {
         const row = document.createElement('div');
         row.className = 'row';
         row.innerHTML =
           `<label for="p-${p.key}">${p.label}</label>` +
           `<input type="range" id="p-${p.key}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.def}">` +
           `<output id="o-${p.key}">${p.def}</output>`;
-        slidersBox.appendChild(row);
+        box.appendChild(row);
+        // Exact-set (D2b review lesson): the innerHTML value can step-snap.
+        setSliderExact(row.querySelector('input'), row.querySelector('output'), p.def);
       }
+      for (const p of PARAMS) buildKnobRow(slidersBox, p);
+      for (const p of NAT_PARAMS) buildKnobRow(natBox, p);
       const flagEl = (k) => document.getElementById(`flag-${k}`);
       const slideEl = (k) => document.getElementById(`p-${k}`);
       const outEl = (k) => document.getElementById(`o-${k}`);
-      for (const p of PARAMS) {
+      for (const p of ALL_KNOBS) {
         slideEl(p.key).addEventListener('input', () => { outEl(p.key).textContent = slideEl(p.key).value; });
       }
 
@@ -364,7 +397,8 @@
             cur += n;
           }
         }
-        if (cur !== DEFAULTS.length) console.error('voice defaults mismatch:', cur, DEFAULTS.length);
+        if (cur !== NAT_OFF || DEFAULTS.length !== NAT_OFF + NAT_PARAMS.length)
+          console.error('param layout mismatch:', cur, DEFAULTS.length);
       }
 
       // Build the panels + the FLAT slider registry (exact wasm layout order).
@@ -433,7 +467,8 @@
         flagEl('xu').disabled = flat;
         if (flat) flagEl('xu').checked = false;
         document.getElementById('sliders').classList.toggle('disabled', flat);
-        for (const p of PARAMS) slideEl(p.key).disabled = flat;
+        natBox.classList.toggle('disabled', flat);
+        for (const p of ALL_KNOBS) slideEl(p.key).disabled = flat;
         attBox.classList.toggle('disabled', flat);
         for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) attEl(a.key, f.key).disabled = flat;
         voiceBox.classList.toggle('disabled', flat);
@@ -444,18 +479,19 @@
       // ---- config <-> UI ----
       // The wasm f32 block: 7 prosody knobs, then 7 attitudinals x 8 fields
       // (AttitudinalKind::ALL x Deviation::to_array order), then the 377-float
-      // VoiceTable::to_array section = 440 floats.
+      // VoiceTable::to_array section, then the 9 naturalness knobs = 449 floats.
       function readParamsArray() {
         const arr = PARAMS.map((p) => parseFloat(slideEl(p.key).value));
         for (const a of ATTITUDINALS) for (const f of ATT_FIELDS) arr.push(parseFloat(attEl(a.key, f.key).value));
         for (const s of VOICE_SLIDERS) arr.push(parseFloat(document.getElementById(s.id).value));
+        for (const p of NAT_PARAMS) arr.push(parseFloat(slideEl(p.key).value));
         return Float32Array.from(arr);
       }
       function readFlagsBits() { return FLAGS.reduce((b, f) => b | (flagEl(f.key).checked ? f.bit : 0), 0); }
       function currentConfig() {
         const c = { text: document.getElementById('text').value };
         for (const f of FLAGS) c[f.key] = flagEl(f.key).checked;
-        for (const p of PARAMS) c[p.key] = parseFloat(slideEl(p.key).value);
+        for (const p of ALL_KNOBS) c[p.key] = parseFloat(slideEl(p.key).value);
         // Attitudinals export ONLY the deltas from the pinned vectors — the CLI
         // treats missing keys as pinned, so shared JSON stays small + readable.
         // Delta comparisons run in f32 space (the engine consumes f32), so
@@ -499,7 +535,7 @@
       function applyConfig(c) {
         if (typeof c.text === 'string') document.getElementById('text').value = c.text;
         for (const f of FLAGS) if (typeof c[f.key] === 'boolean') flagEl(f.key).checked = c[f.key];
-        for (const p of PARAMS) {
+        for (const p of ALL_KNOBS) {
           if (typeof c[p.key] === 'number') setSliderExact(slideEl(p.key), outEl(p.key), c[p.key]);
         }
         // Delta semantics: reset to pinned, then apply the config's overrides.
@@ -532,10 +568,10 @@
       }
       function resetDefaults() {
         for (const f of FLAGS) flagEl(f.key).checked = false;
-        for (const p of PARAMS) {
+        for (const p of ALL_KNOBS) {
           const el = slideEl(p.key);
           el.min = p.min; el.max = p.max; el.step = p.step; // undo any widening
-          el.value = p.def; outEl(p.key).textContent = p.def;
+          setSliderExact(el, outEl(p.key), p.def);
         }
         for (const a of ATTITUDINALS) resetAtt(a);
         resetVoiceAll();
@@ -664,6 +700,7 @@
       document.getElementById('text').addEventListener('input', autoSpeak);
       flagsBox.addEventListener('change', autoSpeak);
       slidersBox.addEventListener('input', autoSpeak);
+      natBox.addEventListener('input', autoSpeak);
       attBox.addEventListener('input', autoSpeak);
       voiceBox.addEventListener('input', autoSpeak);
 

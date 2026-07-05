@@ -11,7 +11,8 @@ use klattsch_core::schedule::{MsEvent, Schedule};
 use voksa_core::compiler::{CompileError, CompileOptions, compile};
 use voksa_core::phonemes::{Phoneme, Targets};
 use voksa_core::schedule::{
-    Event, NEUTRAL_DI, NEUTRAL_OQ, NEUTRAL_TILT, NEUTRAL_VIBRATO_HZ, schedule_phonemes,
+    Event, NEUTRAL_DI, NEUTRAL_FLUTTER, NEUTRAL_OQ, NEUTRAL_TILT, NEUTRAL_VIBRATO_HZ,
+    schedule_phonemes,
 };
 
 /// Vibrato rate (Hz) paired with any nonzero depth — a natural ~5.5 Hz flutter
@@ -84,6 +85,7 @@ pub fn lower_events(events: &[Event]) -> Vec<MsEvent> {
     let mut prev_tilt = NEUTRAL_TILT;
     let mut prev_di = NEUTRAL_DI;
     let mut prev_vib = NEUTRAL_VIBRATO_HZ;
+    let mut prev_flutter = NEUTRAL_FLUTTER;
     events
         .iter()
         .map(|e| {
@@ -104,6 +106,10 @@ pub fn lower_events(events: &[Event]) -> Vec<MsEvent> {
                 u.vibrato_depth = Some(e.frame.vibrato_hz);
                 u.vibrato_rate = Some(DEFAULT_VIBRATO_RATE_HZ);
                 prev_vib = e.frame.vibrato_hz;
+            }
+            if e.frame.flutter != prev_flutter {
+                u.flutter = Some(e.frame.flutter);
+                prev_flutter = e.frame.flutter;
             }
             MsEvent::new(e.at_ms, u, e.transition_ms)
         })

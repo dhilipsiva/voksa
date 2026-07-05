@@ -80,6 +80,15 @@ pub struct Config {
     pub stress_amp_factor: f32,
     pub xu_rise_hz: f32,
     pub rate: f32,
+    pub flutter: f32,
+    pub breath_aspiration: f32,
+    pub baseline_oq_delta: f32,
+    pub baseline_tilt_delta: f32,
+    pub micro_f0_hz: f32,
+    pub obstruent_f0_hz: f32,
+    pub final_lengthen: f32,
+    pub cluster_shorten: f32,
+    pub undershoot: f32,
     /// Attitudinal deviation overrides keyed by cmavo (`"ui"`, `"uu"`, `"oi"`,
     /// `"ii"`, `"o'o"`, `"au"`, `"o'onai"`). Absent = pinned defaults.
     pub attitudinals: BTreeMap<String, AttitudinalOverride>,
@@ -105,6 +114,15 @@ impl Default for Config {
             stress_amp_factor: p.stress_amp_factor,
             xu_rise_hz: p.xu_rise_hz,
             rate: p.rate,
+            flutter: p.flutter,
+            breath_aspiration: p.breath_aspiration,
+            baseline_oq_delta: p.baseline_oq_delta,
+            baseline_tilt_delta: p.baseline_tilt_delta,
+            micro_f0_hz: p.micro_f0_hz,
+            obstruent_f0_hz: p.obstruent_f0_hz,
+            final_lengthen: p.final_lengthen,
+            cluster_shorten: p.cluster_shorten,
+            undershoot: p.undershoot,
             attitudinals: BTreeMap::new(),
             phonemes: BTreeMap::new(),
         }
@@ -141,9 +159,15 @@ impl Config {
             stress_amp_factor: self.stress_amp_factor,
             xu_rise_hz: self.xu_rise_hz,
             rate: self.rate,
-            // The Phase-11 naturalness keys join the config in N-C; until
-            // then they ride the defaults.
-            ..Default::default()
+            flutter: self.flutter,
+            breath_aspiration: self.breath_aspiration,
+            baseline_oq_delta: self.baseline_oq_delta,
+            baseline_tilt_delta: self.baseline_tilt_delta,
+            micro_f0_hz: self.micro_f0_hz,
+            obstruent_f0_hz: self.obstruent_f0_hz,
+            final_lengthen: self.final_lengthen,
+            cluster_shorten: self.cluster_shorten,
+            undershoot: self.undershoot,
         }
     }
 

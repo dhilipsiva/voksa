@@ -74,9 +74,17 @@ fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
         stress_amp_factor: g(4, d.stress_amp_factor),
         xu_rise_hz: g(5, d.xu_rise_hz),
         rate: g(6, d.rate),
-        // The Phase-11 naturalness knobs cross at [NATURALNESS_PARAM_OFF..)
-        // (appended in N-C); until then they ride the defaults.
-        ..d
+        // Phase-11 naturalness knobs cross at [NATURALNESS_PARAM_OFF..)
+        // (appended after the voice table — the layout is frozen append-only).
+        flutter: g(NATURALNESS_PARAM_OFF, d.flutter),
+        breath_aspiration: g(NATURALNESS_PARAM_OFF + 1, d.breath_aspiration),
+        baseline_oq_delta: g(NATURALNESS_PARAM_OFF + 2, d.baseline_oq_delta),
+        baseline_tilt_delta: g(NATURALNESS_PARAM_OFF + 3, d.baseline_tilt_delta),
+        micro_f0_hz: g(NATURALNESS_PARAM_OFF + 4, d.micro_f0_hz),
+        obstruent_f0_hz: g(NATURALNESS_PARAM_OFF + 5, d.obstruent_f0_hz),
+        final_lengthen: g(NATURALNESS_PARAM_OFF + 6, d.final_lengthen),
+        cluster_shorten: g(NATURALNESS_PARAM_OFF + 7, d.cluster_shorten),
+        undershoot: g(NATURALNESS_PARAM_OFF + 8, d.undershoot),
     }
 }
 
