@@ -16,6 +16,7 @@
 pub mod assets;
 pub mod audio;
 pub mod engine;
+pub mod help;
 pub mod model;
 pub mod ui;
 
