@@ -10,7 +10,7 @@
 //! the Phase-10 attitudinal overlay can compose on top.
 
 use crate::alloc::vec::Vec;
-use crate::schedule::{BASE_F0_HZ, Event, UtteranceSchedule};
+use crate::schedule::{BASE_F0_HZ, Event, MicroClass, UtteranceSchedule, VowelHeight};
 
 /// Options for [`apply_prosody`]. Declination and stress realization are
 /// always on; the xu terminal rise is per-utterance. The float fields are the
@@ -177,36 +177,107 @@ fn apply_cluster_shortening(s: UtteranceSchedule, shorten: f32) -> UtteranceSche
     if shorten == 0.0 {
         return s;
     }
-    // RED stub (P11 N-B): implementation lands with the failing tests.
-    s
+    let mut windows: Vec<(f32, f32, f32)> = s
+        .spans
+        .iter()
+        .filter(|sp| sp.onset_count >= 2 && sp.nucleus_off_ms > 0.0)
+        .map(|sp| {
+            let k = sp.onset_count as f32;
+            let factor = (1.0 - shorten * (k - 1.0)).max(CLUSTER_SHORTEN_FLOOR);
+            (sp.start_ms, sp.start_ms + sp.nucleus_off_ms, factor)
+        })
+        .collect();
+    windows.sort_by(|a, b| a.0.partial_cmp(&b.0).expect("finite span times"));
+    // Onset compression moves nuclei: remap nucleus_off_ms too.
+    stretch_windows(s, &windows, true)
 }
 
 /// Microprosody (Phase-11 lever 3): intrinsic vowel F0 (high +Δ, low −Δ) and
 /// obstruent perturbations on the following vowel onset (post-voiceless +Δ,
 /// post-voiced −OBSTRUENT_DIP_RATIO·Δ) settling over MICRO_DECAY_MS via an
 /// inserted event. Identity when both magnitudes are 0. Runs BEFORE the
-/// stress stretch (offsets are additive and ride declination untouched).
+/// stress stretch (offsets are additive and ride declination untouched; the
+/// settle inserts get re-timed by later stretches for free). Monophthongs
+/// only — diphthongs are already dynamic (MVP).
 fn apply_microprosody(
-    s: UtteranceSchedule,
+    mut s: UtteranceSchedule,
     micro_f0_hz: f32,
     obstruent_f0_hz: f32,
 ) -> UtteranceSchedule {
     if micro_f0_hz == 0.0 && obstruent_f0_hz == 0.0 {
         return s;
     }
-    // RED stub (P11 N-B): implementation lands with the failing tests.
+    let mut inserts: Vec<Event> = Vec::new();
+    for i in 0..s.events.len() {
+        let MicroClass::Vowel(height) = s.events[i].micro else {
+            continue;
+        };
+        let intrinsic = match height {
+            VowelHeight::High => micro_f0_hz,
+            VowelHeight::Low => -micro_f0_hz,
+            VowelHeight::Mid => 0.0,
+        };
+        s.events[i].frame.f0_hz += intrinsic;
+        if obstruent_f0_hz == 0.0 || i == 0 {
+            continue;
+        }
+        let perturb = match s.events[i - 1].micro {
+            MicroClass::VoicelessObstruent => obstruent_f0_hz,
+            MicroClass::VoicedObstruent => -OBSTRUENT_DIP_RATIO * obstruent_f0_hz,
+            // Sonorants/vowels/aspirates carry no perturbation; a pause
+            // (Silence) explicitly blocks it.
+            _ => 0.0,
+        };
+        if perturb == 0.0 {
+            continue;
+        }
+        let settled_f0 = s.events[i].frame.f0_hz;
+        s.events[i].frame.f0_hz += perturb;
+        let next_at = s.events.get(i + 1).map_or(s.total_ms, |e| e.at_ms);
+        // Settle back to the intrinsic-only value over MICRO_DECAY_MS — only
+        // when the vowel actually lasts that long (short vowels carry the
+        // perturbation through).
+        if next_at - s.events[i].at_ms > MICRO_DECAY_MS {
+            let mut settle = s.events[i];
+            settle.at_ms += MICRO_DECAY_MS;
+            settle.transition_ms = MICRO_DECAY_MS;
+            settle.frame.f0_hz = settled_f0;
+            inserts.push(settle);
+        }
+    }
+    for ev in inserts {
+        let idx = s.events.partition_point(|e| e.at_ms <= ev.at_ms);
+        s.events.insert(idx, ev);
+    }
     s
 }
 
 /// Phrase-final lengthening (Phase-11 lever 4b): stretch the LAST span's
-/// rhyme window by `factor`. Identity at 1.0. Runs before the xu rise so the
-/// rise ramps across the real (lengthened) remainder.
+/// rhyme window by `factor`. Identity at 1.0. Runs after the stress stretch
+/// (composing multiplicatively on a stressed final) and before the xu rise
+/// (which then ramps across the real, lengthened remainder).
 fn apply_final_lengthening(s: UtteranceSchedule, factor: f32) -> UtteranceSchedule {
     if factor == 1.0 {
         return s;
     }
-    // RED stub (P11 N-B): implementation lands with the failing tests.
-    s
+    let Some(last) = s
+        .spans
+        .iter()
+        .max_by(|a, b| {
+            a.start_ms
+                .partial_cmp(&b.start_ms)
+                .expect("finite span times")
+        })
+        .copied()
+    else {
+        return s;
+    };
+    let window = [(
+        last.start_ms + last.nucleus_off_ms,
+        last.start_ms + last.dur_ms,
+        factor,
+    )];
+    stretch_windows(s, &window, false)
 }
 
 /// Global tempo: scale every timing by `1/rate` (rate 1.0 = exact identity, so
@@ -267,11 +338,35 @@ fn inside(at_ms: f32, (ws, we): (f32, f32)) -> bool {
 /// [`STRESS_DURATION_FACTOR`]×, shifting all later material (events, spans,
 /// pauses, total) by the added time. Onset consonants keep unit rate — the
 /// stretch window opens at the nucleus, not the span start (CP1 fix).
-fn stretch_stressed_spans(mut s: UtteranceSchedule, factor: f32) -> UtteranceSchedule {
-    let windows = stressed_stretch_windows(&s);
+fn stretch_stressed_spans(s: UtteranceSchedule, factor: f32) -> UtteranceSchedule {
+    let windows: Vec<(f32, f32, f32)> = stressed_stretch_windows(&s)
+        .into_iter()
+        .map(|(ws, we)| (ws, we, factor))
+        .collect();
+    // No nucleus remap: stress windows OPEN at the nucleus, so nucleus_off_ms
+    // is unaffected (and remapping would introduce ULP drift vs Phase 7.1).
+    stretch_windows(s, &windows, false)
+}
+
+/// The generalized piecewise time-map (Phase 11): stretch the schedule along
+/// sorted, non-overlapping `(start, end, factor)` windows — each window scales
+/// about its own start, later times shift by the accumulated added time, and
+/// events inside a window scale their transition times by its factor. With a
+/// single shared factor this is bit-identical to the Phase-7 stress stretch.
+/// `remap_nucleus` re-derives `nucleus_off_ms` too (required when a window
+/// sits INSIDE an onset — the duration rules; the stress path keeps its
+/// historical no-touch behavior).
+fn stretch_windows(
+    mut s: UtteranceSchedule,
+    windows: &[(f32, f32, f32)],
+    remap_nucleus: bool,
+) -> UtteranceSchedule {
+    if windows.is_empty() {
+        return s;
+    }
     let map_time = |t: f32| -> f32 {
         let mut delta = 0.0f32;
-        for (ws, we) in &windows {
+        for (ws, we, factor) in windows {
             if t >= *we - EPS_MS {
                 delta += (we - ws) * (factor - 1.0);
             } else if t > *ws - EPS_MS {
@@ -283,16 +378,27 @@ fn stretch_stressed_spans(mut s: UtteranceSchedule, factor: f32) -> UtteranceSch
         t + delta
     };
     for e in &mut s.events {
-        let in_stressed = windows.iter().any(|w| inside(e.at_ms, *w));
+        let factor = windows
+            .iter()
+            .find(|(ws, we, _)| inside(e.at_ms, (*ws, *we)))
+            .map(|(_, _, f)| *f);
         e.at_ms = map_time(e.at_ms);
-        if in_stressed {
-            e.transition_ms *= factor;
+        if let Some(f) = factor {
+            e.transition_ms *= f;
         }
     }
     for sp in &mut s.spans {
         let end = map_time(sp.start_ms + sp.dur_ms);
+        let nucleus = if remap_nucleus {
+            Some(map_time(sp.start_ms + sp.nucleus_off_ms))
+        } else {
+            None
+        };
         sp.start_ms = map_time(sp.start_ms);
         sp.dur_ms = end - sp.start_ms;
+        if let Some(n) = nucleus {
+            sp.nucleus_off_ms = n - sp.start_ms;
+        }
     }
     s.total_ms = map_time(s.total_ms);
     s
