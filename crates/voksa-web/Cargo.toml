@@ -24,7 +24,15 @@ voksa-engine-klattsch.workspace = true
 # `#[wasm_bindgen_test]` harness for `wasm-pack test --headless --chrome`. The
 # functions under test are plain Rust, so no wasm-bindgen runtime dep is needed.
 wasm-bindgen-test.workspace = true
-# Native-only fuzz suite (tests/fuzz.rs, Phase-11 W1).
+
+# Native-only fuzz suite (tests/fuzz.rs, Phase-11 W1). Target-scoped OFF wasm:
+# proptest → rand → getrandom 0.3, which HARD-ERRORS on wasm32-unknown-unknown
+# (it needs an explicit `wasm_js` backend). Since the workspace now also builds
+# voksa-console (dioxus pulls getrandom), the lock unified getrandom to 0.3.x;
+# an unconditional dev-dep here would drag it into the advisory `wasm-test`
+# build (`cargo build --tests` for wasm32) and fail to compile — even though
+# tests/fuzz.rs is `#![cfg(not(target_arch = "wasm32"))]`.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest.workspace = true
 
 # rustc emits bulk-memory / nontrapping-fptoint / sign-ext by default for wasm32
