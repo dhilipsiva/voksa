@@ -329,6 +329,67 @@ fn naturalness_stage_sets_vq_lanes_and_breath() {
 // ---- the frozen contract ------------------------------------------------------
 
 #[test]
+fn settle_inserts_carry_their_parents_undershoot() {
+    // P11 ship-review finding: the microprosody settle insert is an F0-ONLY
+    // copy of its parent vowel event. Undershoot must treat the same-class
+    // RUN as one segment — computing a separate (deeper) u from the settle's
+    // remainder bends the formants toward schwa MID-vowel via a spurious
+    // glide the phonology.md §9.2 duration formula never sanctions.
+    let opts = ProsodyOptions {
+        obstruent_f0_hz: 6.0,
+        undershoot: 0.35,
+        ..isolating()
+    };
+    let s = apply_prosody(compiled("ti"), &opts);
+    let vowels: Vec<_> = s
+        .events
+        .iter()
+        .filter(|e| matches!(e.micro, MicroClass::Vowel(_)))
+        .collect();
+    assert_eq!(
+        vowels.len(),
+        2,
+        "post-obstruent /i/ = parent + settle insert"
+    );
+    assert_eq!(
+        vowels[0].frame.targets.formants, vowels[1].frame.targets.formants,
+        "the settle insert must carry its parent's undershoot exactly"
+    );
+}
+
+#[test]
+fn stressed_post_obstruent_vowel_fully_spared_by_undershoot() {
+    // §9.2: "stressed/lengthened nuclei not at all" — including the settle
+    // insert a post-obstruent stressed vowel carries. The stretched TA rhyme
+    // (160 ms × 1.5 = 240 ≥ UNDERSHOOT_REF_MS) must keep the pinned /a/
+    // formants on EVERY event of the vowel run.
+    let opts = ProsodyOptions {
+        obstruent_f0_hz: 6.0,
+        undershoot: 0.35,
+        stress_duration_factor: 1.5,
+        ..isolating()
+    };
+    let s = apply_prosody(compiled("tavla"), &opts);
+    let first_low = s
+        .events
+        .iter()
+        .position(|e| e.micro == MicroClass::Vowel(VowelHeight::Low))
+        .expect("ta vowel");
+    let run: Vec<_> = s.events[first_low..]
+        .iter()
+        .take_while(|e| e.micro == MicroClass::Vowel(VowelHeight::Low))
+        .collect();
+    assert_eq!(run.len(), 2, "stressed /a/ = parent + settle insert");
+    for e in run {
+        assert_eq!(
+            e.frame.targets.formants[0].freq_hz, 730.0,
+            "stressed nucleus must be fully spared (docs/formants.md /a/ F1)"
+        );
+        assert_eq!(e.frame.targets.formants[1].freq_hz, 1090.0);
+    }
+}
+
+#[test]
 fn snapshot_naturalness_off_coi_munje() {
     // FROZEN: this snapshot is the Phase-10 voice and must NEVER regenerate —
     // naturalness_off() stays byte-identical across all Phase-11 default flips.
