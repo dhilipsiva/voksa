@@ -67,7 +67,20 @@ pub fn ab_effective(
     params: &[f32],
     ab_off: bool,
 ) -> Vec<f32> {
-    let _ = desc;
-    let _ = ab_off;
-    params.to_vec() // stub — C4 green
+    use super::descriptor::KNOBS;
+    let mut out = params.to_vec();
+    if ab_off {
+        let off = super::presets::PRESETS
+            .iter()
+            .find(|p| p.name == "Naturalness off")
+            .expect("the 'Naturalness off' preset defines the identity values");
+        for &(key, v) in off.over {
+            let knob = KNOBS
+                .iter()
+                .position(|f| f.key == key)
+                .expect("preset knob key exists");
+            out[desc.knob_index(knob)] = v;
+        }
+    }
+    out
 }

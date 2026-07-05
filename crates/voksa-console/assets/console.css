@@ -474,6 +474,223 @@
   .vx-srow { grid-template-columns: 118px minmax(0, 1fr) 84px; }
 }
 
+/* ── A/B latch (naturalness rack) ─────────────────────────────────── */
+.vx-ab { margin-bottom: 10px; }
+.vx-abseg {
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.vx-abbtn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-raised);
+  border: none;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.vx-abbtn-b { border-left: 1px solid var(--border-subtle); }
+.vx-abbtn-a.vx-abbtn-sel { background: var(--accent-soft); color: var(--ember-300); }
+.vx-abbtn-b.vx-abbtn-sel {
+  background: color-mix(in oklab, var(--phosphor-500) 14%, transparent);
+  color: var(--phosphor-300);
+}
+.vx-abbanner {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--phosphor-300);
+  border: 1px solid color-mix(in oklab, var(--phosphor-500) 32%, transparent);
+  background: color-mix(in oklab, var(--phosphor-500) 10%, transparent);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+}
+
+/* ── theorem callout + ∴ note ─────────────────────────────────────── */
+.vx-theorem {
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  border-left: 2px solid color-mix(in oklab, var(--quanta-500) 55%, transparent);
+  background: color-mix(in oklab, var(--quanta-500) 6%, transparent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.vx-mono { font-family: var(--font-mono); color: var(--text-body); }
+.vx-note {
+  font-size: 11px;
+  color: var(--amber-500);
+  background: color-mix(in oklab, var(--amber-500) 8%, transparent);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+
+/* ── emotion chips + editor ───────────────────────────────────────── */
+.vx-emochips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.vx-emochip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-top: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.vx-emochip-sel {
+  background: var(--accent-soft);
+  border-top-color: var(--ember-500);
+}
+.vx-emolabel { font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+.vx-emosub { font-size: 9px; color: var(--text-faint); }
+.vx-emodot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--ember-500);
+}
+
+.vx-scopeeditor {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  padding: 10px 12px;
+}
+.vx-scopehead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.vx-scopelabel { font-size: 14px; font-weight: 600; color: var(--text-strong); font-family: var(--font-mono); }
+.vx-scopesub { font-size: 10px; color: var(--text-faint); }
+.vx-scopespacer { flex: 1; }
+.vx-try {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-body);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 26px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.vx-try:hover:not(:disabled) { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-try:disabled { opacity: 0.45; cursor: default; }
+.vx-reset-scope {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 26px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.vx-reset-scope:hover { color: var(--ember-300); }
+
+/* ── voice-table tools + phoneme grid ─────────────────────────────── */
+.vx-vttools { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.vx-phgrid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.vx-phsection { display: flex; flex-direction: column; gap: 4px; }
+.vx-phseclabel {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+.vx-phlojban { text-transform: none; letter-spacing: 0; font-style: italic; }
+.vx-phkeys { display: flex; flex-wrap: wrap; gap: 5px; }
+.vx-phkey {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.vx-phkey-mod { border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-phkey-sel {
+  background: var(--accent-soft);
+  border-color: var(--ember-500);
+  color: var(--text-strong);
+}
+.vx-phkey-dim { opacity: 0.25; }
+.vx-phkey:disabled { opacity: 0.45; cursor: default; }
+.vx-phdot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--ember-500);
+}
+
+/* ── formant matrix + MatrixCell ──────────────────────────────────── */
+.vx-matrixlabel {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin: 8px 0 4px;
+}
+.vx-matrix {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.vx-mcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.vx-mcell.vx-mod { border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-mcell.vx-off { opacity: 0.45; }
+.vx-mtop { display: flex; align-items: baseline; justify-content: space-between; }
+.vx-mlabel { font-size: 9.5px; color: var(--text-muted); }
+.vx-mslider { height: 22px; }
+.vx-mslider .vx-thumb { width: 11px; height: 11px; top: 5.5px; margin-left: -5px; }
+.vx-mvalue {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: text;
+  text-align: right;
+  align-self: flex-end;
+}
+.vx-mcell.vx-mod .vx-mvalue { color: var(--ember-300); }
+.vx-mvalue.vx-value-edit {
+  width: 100%;
+  color: var(--text-strong);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  text-align: right;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .vx-thumb { transition: none; }
+  .vx-thumb, .vx-phkey { transition: none; }
 }

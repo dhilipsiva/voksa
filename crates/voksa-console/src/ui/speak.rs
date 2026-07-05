@@ -36,7 +36,9 @@ pub struct Audio(pub Rc<RefCell<AudioGraph>>);
 pub fn speak_now(store: ParamStore, ui: Ui, audio: Audio) {
     let text = ui.text.peek().clone();
     let flags = *ui.flags.peek();
-    let params = store.snapshot();
+    // The A/B latch is a render-time override: when hearing B, the nine
+    // naturalness knobs render at identity without touching stored values.
+    let params = crate::model::ab_effective(&store.desc(), &store.snapshot(), *ui.ab_off.peek());
     let mut status = ui.status;
     let mut pcm_sig = ui.pcm;
     match engine::render(&text, flags, &params, audio::SAMPLE_RATE) {
@@ -65,6 +67,7 @@ pub fn use_auto_speak(store: ParamStore, ui: Ui, audio: Audio) {
         let _ = store.generation.read();
         let _ = ui.text.read();
         let _ = ui.flags.read();
+        let _ = ui.ab_off.read();
         if !*ui.auto_speak.peek() {
             return;
         }

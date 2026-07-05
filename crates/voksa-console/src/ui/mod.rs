@@ -3,6 +3,7 @@
 //! (`docs/design/tuning-console/`, Workbench = reference implementation).
 
 mod console;
+mod editors;
 mod racks;
 mod rows;
 mod source;
@@ -39,6 +40,15 @@ pub struct Ui {
     pub status: Signal<Status>,
     /// The last rendered PCM (drives the waveform + WAV download).
     pub pcm: Signal<Option<Rc<Vec<f32>>>>,
+    /// Selected voice-table item (index into `VOICE_ITEMS`; 0 = /a/).
+    pub sel_phoneme: Signal<usize>,
+    /// Selected attitudinal (index into `ATT_KINDS`; 0 = .ui).
+    pub sel_emotion: Signal<usize>,
+    /// Voice-table "changed only" view (dims untouched keycaps).
+    pub vt_changed_only: Signal<bool>,
+    /// Naturalness A/B latch: `true` renders with the nine knobs at identity
+    /// (the phase-10 voice) without touching stored values.
+    pub ab_off: Signal<bool>,
 }
 
 impl Ui {
@@ -52,6 +62,10 @@ impl Ui {
             auto_speak: Signal::new(true),
             status: Signal::new(Status::Ready),
             pcm: Signal::new(None),
+            sel_phoneme: Signal::new(0),
+            sel_emotion: Signal::new(0),
+            vt_changed_only: Signal::new(false),
+            ab_off: Signal::new(false),
         }
     }
 }

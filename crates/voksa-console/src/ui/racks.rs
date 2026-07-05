@@ -5,6 +5,7 @@
 use dioxus::prelude::*;
 
 use super::Ui;
+use super::editors::{AttitudinalSection, VoiceTableSection};
 use super::rows::ParamRow;
 use super::store::ParamStore;
 use crate::model::{PARAM_TOTAL, PRESETS, apply_preset, reset_plan};
@@ -15,6 +16,9 @@ pub fn TuningColumn() -> Element {
     let store = use_context::<ParamStore>();
     let ui = use_context::<Ui>();
     let flat: ReadSignal<bool> = use_memo(move || ui.flags.read().flat).into();
+    let ab_off = ui.ab_off;
+    // Naturalness rows are inert under flat OR while hearing the B (off) arm.
+    let nat_disabled: ReadSignal<bool> = use_memo(move || ui.flags.read().flat || ab_off()).into();
     let prosody_dirty = use_memo(move || store.dirty_count(0..7));
     let nat_dirty = use_memo(move || store.dirty_count(440..PARAM_TOTAL));
 
@@ -34,11 +38,45 @@ pub fn TuningColumn() -> Element {
             Rack {
                 id: "naturalness",
                 title: "naturalness",
-                sub: "the micro-variation that softens the robot — A/B against the frozen phase-10 voice",
+                sub: "the micro-variation that softens the robot",
                 dirty: nat_dirty,
                 flat,
+                AbLatch {}
                 for k in 440..PARAM_TOTAL {
-                    ParamRow { key: "{k}", idx: k, disabled: flat }
+                    ParamRow { key: "{k}", idx: k, disabled: nat_disabled }
+                }
+            }
+            AttitudinalSection {}
+            VoiceTableSection {}
+        }
+    }
+}
+
+/// The A/B listening latch: A = current tuning, B = the phase-10 voice (nine
+/// naturalness knobs at identity) — a render-time override, values preserved.
+#[component]
+fn AbLatch() -> Element {
+    let ui = use_context::<Ui>();
+    let mut ab = ui.ab_off;
+    rsx! {
+        div { class: "vx-ab",
+            div { class: "vx-abseg",
+                button {
+                    class: "vx-abbtn vx-abbtn-a",
+                    class: if !ab() { "vx-abbtn-sel" },
+                    onclick: move |_| ab.set(false),
+                    "A · current"
+                }
+                button {
+                    class: "vx-abbtn vx-abbtn-b",
+                    class: if ab() { "vx-abbtn-sel" },
+                    onclick: move |_| ab.set(true),
+                    "B · naturalness off"
+                }
+            }
+            if ab() {
+                div { class: "vx-abbanner",
+                    "▶ hearing B — the phase-10 voice (all nine at identity). Sliders paused; your values are kept."
                 }
             }
         }
@@ -53,8 +91,10 @@ fn RackNav() -> Element {
     let mut preset = ui.preset;
     rsx! {
         nav { class: "vx-racknav",
-            a { class: "vx-anchor", href: "#prosody", "A · prosody" }
-            a { class: "vx-anchor", href: "#naturalness", "B · naturalness" }
+            a { class: "vx-anchor", href: "#prosody", "A" }
+            a { class: "vx-anchor", href: "#naturalness", "B" }
+            a { class: "vx-anchor", href: "#attitudinals", "C" }
+            a { class: "vx-anchor", href: "#voicetable", "D" }
             span { class: "vx-navspacer" }
             select {
                 class: "vx-select vx-preset",
