@@ -3,8 +3,10 @@
 
 use voksa_core::compiler::{CompileOptions, compile};
 use voksa_core::prosody::{
-    DECLINATION_END_HZ, DECLINATION_START_HZ, ProsodyOptions, STRESS_AMP_FACTOR,
-    STRESS_DURATION_FACTOR, STRESS_F0_EXCURSION_HZ, XU_RISE_HZ, apply_prosody,
+    BASELINE_OQ_DELTA, BASELINE_TILT_DELTA, BREATH_ASPIRATION, CLUSTER_SHORTEN, DECLINATION_END_HZ,
+    DECLINATION_START_HZ, FINAL_LENGTHEN, FLUTTER_FL, MICRO_F0_HZ, OBSTRUENT_F0_HZ, ProsodyOptions,
+    STRESS_AMP_FACTOR, STRESS_DURATION_FACTOR, STRESS_F0_EXCURSION_HZ, UNDERSHOOT, XU_RISE_HZ,
+    apply_prosody,
 };
 use voksa_core::schedule::{SyllableSpan, UtteranceSchedule};
 
@@ -14,6 +16,13 @@ fn compiled(text: &str) -> UtteranceSchedule {
 
 fn prosodic(text: &str) -> UtteranceSchedule {
     apply_prosody(compiled(text), &ProsodyOptions::default())
+}
+
+/// The frozen Phase-7 voice: the exact-arithmetic contract tests below run
+/// with the naturalness levers OFF — their 120/95 Hz + 1.5× math predates the
+/// Phase-11 micro-variation (which the naturalness.rs suite covers per-stage).
+fn phase7(text: &str) -> UtteranceSchedule {
+    apply_prosody(compiled(text), &ProsodyOptions::naturalness_off())
 }
 
 fn stressed_spans(s: &UtteranceSchedule) -> Vec<SyllableSpan> {
@@ -26,7 +35,7 @@ fn in_span(at: f32, sp: &SyllableSpan) -> bool {
 
 #[test]
 fn declination_endpoints_and_monotone_baseline() {
-    let s = prosodic("mi tavla do bau la lojban.");
+    let s = phase7("mi tavla do bau la lojban.");
     let voiced: Vec<(f32, f32)> = s
         .events
         .iter()
@@ -66,7 +75,7 @@ fn declination_endpoints_and_monotone_baseline() {
 #[test]
 fn stress_stretches_duration_and_shifts_later_material() {
     let before = compiled("coi munje");
-    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let after = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     // munje = word 1, syllables mun (stressed) + je. Only the rhyme (nucleus
     // onward) stretches 1.5×; the onset consonants stay at unit rate.
     let b_stressed = stressed_spans(&before)[0];
@@ -98,7 +107,7 @@ fn stretch_leaves_onset_at_unit_rate() {
     // Event-level CP1 guarantee: the onset consonant's event keeps its unit
     // transition time; only the nucleus event's transition scales 1.5×.
     let before = compiled("coi munje");
-    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let after = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     let stressed = stressed_spans(&after)[0];
     assert!(stressed.nucleus_off_ms > 0.0, "mun has an onset");
     let nucleus_at = stressed.start_ms + stressed.nucleus_off_ms;
@@ -135,7 +144,7 @@ fn stretch_leaves_onset_at_unit_rate() {
 fn excursion_and_amp_boost_remain_whole_span() {
     // The stretch is nucleus-scoped, but the F0 excursion + amplitude boost
     // still cover the WHOLE stressed syllable, onset consonants included.
-    let after = prosodic("coi munje");
+    let after = phase7("coi munje");
     let stressed = stressed_spans(&after)[0];
     assert!(stressed.nucleus_off_ms > 0.0, "mun has an onset");
     let onset_event = after
@@ -165,7 +174,7 @@ fn buffered_stressed_onset_not_stretched() {
         buffer: true,
     };
     let before = compile("vrusi", &opts).unwrap();
-    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let after = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     let b_buf = before.spans.iter().find(|sp| !sp.countable).unwrap();
     let a_buf = after.spans.iter().find(|sp| !sp.countable).unwrap();
     assert!(
@@ -185,10 +194,10 @@ fn xu_rise_with_stressed_final_span_stays_sorted() {
         compiled("xu la djan."),
         &ProsodyOptions {
             xu_rise: true,
-            ..Default::default()
+            ..ProsodyOptions::naturalness_off()
         },
     );
-    let flat = apply_prosody(compiled("xu la djan."), &ProsodyOptions::default());
+    let flat = apply_prosody(compiled("xu la djan."), &ProsodyOptions::naturalness_off());
     assert_eq!(risen.events.len(), flat.events.len() + 1);
     for w in risen.events.windows(2) {
         assert!(w[0].at_ms <= w[1].at_ms + 1e-3, "events stay time-sorted");
@@ -247,14 +256,14 @@ fn stress_excursion_and_amp_boost_apply_in_span_only() {
 
 /// Helper returning (transformed, transformed) to keep the borrow story tidy.
 fn apply_prosodic_pair(before: &UtteranceSchedule) -> (UtteranceSchedule, UtteranceSchedule) {
-    let a = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let a = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     (a.clone(), a)
 }
 
 #[test]
 fn two_brivla_accumulate_shifts() {
     let before = compiled("le prenu cu klama");
-    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let after = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     let b_stressed = stressed_spans(&before);
     let a_stressed = stressed_spans(&after);
     assert_eq!(b_stressed.len(), 2, "prenu + klama");
@@ -272,12 +281,12 @@ fn two_brivla_accumulate_shifts() {
 
 #[test]
 fn xu_rise_adds_one_sorted_event_with_cloned_targets() {
-    let flat = apply_prosody(compiled("xu do klama"), &ProsodyOptions::default());
+    let flat = apply_prosody(compiled("xu do klama"), &ProsodyOptions::naturalness_off());
     let risen = apply_prosody(
         compiled("xu do klama"),
         &ProsodyOptions {
             xu_rise: true,
-            ..Default::default()
+            ..ProsodyOptions::naturalness_off()
         },
     );
     assert_eq!(risen.events.len(), flat.events.len() + 1);
@@ -321,7 +330,7 @@ fn xu_rise_adds_one_sorted_event_with_cloned_targets() {
 #[test]
 fn pauses_shift_but_never_stretch() {
     let before = compiled("coi la djan. cu klama");
-    let after = apply_prosody(before.clone(), &ProsodyOptions::default());
+    let after = apply_prosody(before.clone(), &ProsodyOptions::naturalness_off());
     let count_silence = |s: &UtteranceSchedule| {
         s.events
             .iter()
@@ -373,6 +382,30 @@ fn default_options_equal_pinned_constants() {
     assert_eq!(d.xu_rise_hz, XU_RISE_HZ);
     assert_eq!(d.rate, 1.0);
     assert!(!d.xu_rise);
+    assert_eq!(d.flutter, FLUTTER_FL);
+    assert_eq!(d.breath_aspiration, BREATH_ASPIRATION);
+    assert_eq!(d.baseline_oq_delta, BASELINE_OQ_DELTA);
+    assert_eq!(d.baseline_tilt_delta, BASELINE_TILT_DELTA);
+    assert_eq!(d.micro_f0_hz, MICRO_F0_HZ);
+    assert_eq!(d.obstruent_f0_hz, OBSTRUENT_F0_HZ);
+    assert_eq!(d.final_lengthen, FINAL_LENGTHEN);
+    assert_eq!(d.cluster_shorten, CLUSTER_SHORTEN);
+    assert_eq!(d.undershoot, UNDERSHOOT);
+}
+
+#[test]
+fn pinned_naturalness_constants_are_the_cp3_values() {
+    // Phase-11 N-D flips the naturalness defaults ON. These are the release
+    // values (docs/phonology.md §9.2) — the audible default voice of v0.1.0.
+    assert_eq!(FLUTTER_FL, 25.0);
+    assert_eq!(BREATH_ASPIRATION, 0.06);
+    assert_eq!(BASELINE_OQ_DELTA, 0.10);
+    assert_eq!(BASELINE_TILT_DELTA, -0.10);
+    assert_eq!(MICRO_F0_HZ, 4.0);
+    assert_eq!(OBSTRUENT_F0_HZ, 6.0);
+    assert_eq!(FINAL_LENGTHEN, 1.3);
+    assert_eq!(CLUSTER_SHORTEN, 0.15);
+    assert_eq!(UNDERSHOOT, 0.35);
 }
 
 fn last_voiced_f0(s: &UtteranceSchedule) -> f32 {

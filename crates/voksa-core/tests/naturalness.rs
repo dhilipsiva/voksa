@@ -339,11 +339,10 @@ fn snapshot_naturalness_off_coi_munje() {
 }
 
 #[test]
-fn naturalness_off_equals_default_while_identity_pinned() {
-    // Until N-D flips the pinned constants, default == naturalness_off. This
-    // test is REPLACED in N-D by default_options_equal_pinned_constants — it
-    // documents the N-B/N-C state.
-    assert_eq!(
+fn default_voice_differs_from_naturalness_off() {
+    // N-D flipped the pinned constants ON: the default voice now carries the
+    // naturalness levers, and naturalness_off() is the frozen Phase-10 sound.
+    assert_ne!(
         apply_prosody(compiled("coi munje"), &ProsodyOptions::default()),
         apply_prosody(compiled("coi munje"), &ProsodyOptions::naturalness_off()),
     );
