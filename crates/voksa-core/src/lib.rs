@@ -4,6 +4,7 @@
 //! `wasm32-unknown-unknown` inside an AudioWorklet.
 
 #![no_std]
+#![warn(missing_docs)]
 
 extern crate alloc;
 

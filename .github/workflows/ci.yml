@@ -63,6 +63,19 @@ jobs:
           tool: cargo-nextest
       - run: cargo xtask fuzz
 
+  # Phase-11 W2: rustdoc must build warning-free for the four shipping crates
+  # (the vendored fork, testkit, and xtask are deliberately excluded).
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev
+      - run: cargo doc --no-deps -p voksa-core -p voksa-engine-klattsch -p voksa-web -p voksa-cli
+        env:
+          RUSTDOCFLAGS: -D warnings
+
   wasm-build:
     runs-on: ubuntu-latest
     steps:

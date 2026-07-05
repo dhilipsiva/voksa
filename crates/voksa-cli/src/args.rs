@@ -26,9 +26,13 @@ pub struct CliArgs {
 /// Why argument parsing failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgError {
+    /// An unrecognized `--flag` (the offending token attached).
     UnknownFlag(String),
+    /// `--out` was the last token — no path followed it.
     MissingOutPath,
+    /// `--config` was the last token — no path followed it.
     MissingConfigPath,
+    /// Nothing to speak: no positional words and no `--config`.
     NoText,
     /// `--xu` is a prosody feature; it cannot combine with `--flat`.
     XuWithFlat,
@@ -46,7 +50,7 @@ impl fmt::Display for ArgError {
     }
 }
 
-/// Parse an argument iterator (already skipping argv[0]). Non-flag tokens are
+/// Parse an argument iterator (already skipping argv`[0]`). Non-flag tokens are
 /// the text, joined by single spaces; flags may interleave with the text.
 pub fn parse(mut args: impl Iterator<Item = String>) -> Result<CliArgs, ArgError> {
     let mut parsed = CliArgs::default();

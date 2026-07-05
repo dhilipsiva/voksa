@@ -19,13 +19,21 @@ use voksa_core::prosody::ProsodyOptions;
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct AttitudinalOverride {
+    /// Additive mean-F0 shift override (Hz).
     pub f0_mean_hz: Option<f32>,
+    /// F0-excursion multiplier override (<1 = flatter).
     pub f0_range_mult: Option<f32>,
+    /// Duration/tempo multiplier override (>1 = slower).
     pub rate_mult: Option<f32>,
+    /// Open-quotient delta override (+ = breathier).
     pub oq: Option<f32>,
+    /// Spectral-tilt delta override (+ = brighter).
     pub tilt: Option<f32>,
+    /// Diplophonia (creak) override, 0..1.
     pub di: Option<f32>,
+    /// Vibrato depth override (Hz).
     pub vibrato_hz: Option<f32>,
+    /// Breathiness (added aspiration) override, 0..1.
     pub aspiration: Option<f32>,
 }
 
@@ -34,33 +42,51 @@ pub struct AttitudinalOverride {
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct TargetsOverride {
+    /// F1 center frequency override (Hz).
     pub f1_hz: Option<f32>,
+    /// F1 bandwidth override (Hz).
     pub bw1_hz: Option<f32>,
+    /// F1 linear amplitude override, 0..1.
     pub amp1: Option<f32>,
+    /// F2 center frequency override (Hz).
     pub f2_hz: Option<f32>,
+    /// F2 bandwidth override (Hz).
     pub bw2_hz: Option<f32>,
+    /// F2 linear amplitude override, 0..1.
     pub amp2: Option<f32>,
+    /// F3 center frequency override (Hz).
     pub f3_hz: Option<f32>,
+    /// F3 bandwidth override (Hz).
     pub bw3_hz: Option<f32>,
+    /// F3 linear amplitude override, 0..1.
     pub amp3: Option<f32>,
+    /// Voicing override, 0..1.
     pub voicing: Option<f32>,
+    /// Aspiration-noise drive override, 0..1.
     pub aspiration: Option<f32>,
 }
 
 /// One phoneme's deviation from the pinned voice table (D2b advanced tab).
 /// Steady phonemes (vowels, fricatives, nasals, liquids, `"buffer"`) use the
 /// flattened targets fields + `dur_ms`; stops use the nested `closure`/`burst`
-/// objects + `closure_ms`/`burst_ms`; diphthongs (`"ai"`…) and `"'"` ([h]) use
+/// objects + `closure_ms`/`burst_ms`; diphthongs (`"ai"`…) and `"'"` (`[h]`) use
 /// `dur_ms` only. Class-irrelevant fields simply never apply.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct PhonemeOverride {
+    /// Steady-state target overrides, flattened into the phoneme's own keys
+    /// (steady phonemes only).
     #[serde(flatten)]
     pub steady: TargetsOverride,
+    /// Segment duration override (ms).
     pub dur_ms: Option<f32>,
+    /// Closure-phase target overrides (stops only).
     pub closure: TargetsOverride,
+    /// Release-burst target overrides (stops only).
     pub burst: TargetsOverride,
+    /// Closure duration override (ms; stops only).
     pub closure_ms: Option<f32>,
+    /// Burst duration override (ms; stops only).
     pub burst_ms: Option<f32>,
 }
 
@@ -68,32 +94,53 @@ pub struct PhonemeOverride {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct Config {
+    /// The Lojban text to speak.
     pub text: String,
+    /// Mirrors the CLI `--flat` flag (render without prosody).
     pub flat: bool,
+    /// Mirrors `--xu` (terminal question rise).
     pub xu: bool,
+    /// Mirrors `--dotside` (leading pause before every cmevla).
     pub dotside: bool,
+    /// Mirrors `--buffer` (epenthetic buffer vowels).
     pub buffer: bool,
+    /// Mirrors [`ProsodyOptions::declination_start_hz`].
     pub declination_start_hz: f32,
+    /// Mirrors [`ProsodyOptions::declination_end_hz`].
     pub declination_end_hz: f32,
+    /// Mirrors [`ProsodyOptions::stress_duration_factor`].
     pub stress_duration_factor: f32,
+    /// Mirrors [`ProsodyOptions::stress_f0_excursion_hz`].
     pub stress_f0_excursion_hz: f32,
+    /// Mirrors [`ProsodyOptions::stress_amp_factor`].
     pub stress_amp_factor: f32,
+    /// Mirrors [`ProsodyOptions::xu_rise_hz`].
     pub xu_rise_hz: f32,
+    /// Mirrors [`ProsodyOptions::rate`].
     pub rate: f32,
+    /// Mirrors [`ProsodyOptions::flutter`].
     pub flutter: f32,
+    /// Mirrors [`ProsodyOptions::breath_aspiration`].
     pub breath_aspiration: f32,
+    /// Mirrors [`ProsodyOptions::baseline_oq_delta`].
     pub baseline_oq_delta: f32,
+    /// Mirrors [`ProsodyOptions::baseline_tilt_delta`].
     pub baseline_tilt_delta: f32,
+    /// Mirrors [`ProsodyOptions::micro_f0_hz`].
     pub micro_f0_hz: f32,
+    /// Mirrors [`ProsodyOptions::obstruent_f0_hz`].
     pub obstruent_f0_hz: f32,
+    /// Mirrors [`ProsodyOptions::final_lengthen`].
     pub final_lengthen: f32,
+    /// Mirrors [`ProsodyOptions::cluster_shorten`].
     pub cluster_shorten: f32,
+    /// Mirrors [`ProsodyOptions::undershoot`].
     pub undershoot: f32,
     /// Attitudinal deviation overrides keyed by cmavo (`"ui"`, `"uu"`, `"oi"`,
     /// `"ii"`, `"o'o"`, `"au"`, `"o'onai"`). Absent = pinned defaults.
     pub attitudinals: BTreeMap<String, AttitudinalOverride>,
     /// Per-phoneme voice overrides keyed by phoneme letter (`"a"`…`"y"`,
-    /// `"p"`…`"z"`), diphthong (`"ai"`…`"uy"`, durations only), `"'"` ([h],
+    /// `"p"`…`"z"`), diphthong (`"ai"`…`"uy"`, durations only), `"'"` (`[h]`,
     /// duration only), or `"buffer"`. Absent = pinned defaults.
     pub phonemes: BTreeMap<String, PhonemeOverride>,
 }
@@ -141,6 +188,7 @@ impl Config {
         Self::from_json(&s)
     }
 
+    /// Map the flag fields onto [`CompileOptions`].
     pub fn compile_options(&self) -> CompileOptions {
         CompileOptions {
             dotside: self.dotside,

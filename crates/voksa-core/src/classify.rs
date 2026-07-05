@@ -10,10 +10,15 @@ use crate::alloc::vec::Vec;
 use crate::letters::{Letter, WordError, parse_word};
 use crate::phonemes::Vowel;
 
+/// The three Lojban word shapes (CLL §4.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordClass {
+    /// Name word: ends in a consonant; always pause-delimited.
     Cmevla,
+    /// Predicate word: a consonant pair in the first five letters + ends in a
+    /// vowel other than y.
     Brivla,
+    /// Structure word: everything else.
     Cmavo,
 }
 

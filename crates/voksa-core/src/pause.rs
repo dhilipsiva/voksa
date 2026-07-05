@@ -15,15 +15,20 @@ use crate::word::WordAnalysis;
 /// (zoi/la'o payload — the tokenizer marks these in later phases).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
+    /// An analyzed Lojban word.
     Word(WordAnalysis),
+    /// Pre-marked non-Lojban text (zoi/la'o payload).
     Foreign(String),
 }
 
 /// Output stream: words/foreign chunks with mandatory pauses inserted.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Segment {
+    /// An analyzed Lojban word.
     Word(WordAnalysis),
+    /// Non-Lojban text, always pause-bracketed.
     Foreign(String),
+    /// One merged mandatory pause (boundaries never stack two).
     Pause,
 }
 

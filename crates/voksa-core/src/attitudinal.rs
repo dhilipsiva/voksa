@@ -44,6 +44,7 @@ pub struct AttitudinalScope {
     /// The `word_index` of the CONTENT word the emotion colors (the scope
     /// resolver's target — usually the attitudinal's preceding word).
     pub word_index: usize,
+    /// Which of the seven categories colors the word.
     pub kind: AttitudinalKind,
     /// Intensity multiplier on the whole deviation vector. `nai` = −1.0 flips
     /// polarity; `cai`/`sai`/`ru'e` scale down; bare = 1.0.
@@ -233,6 +234,7 @@ impl Deviation {
 /// to [`apply_attitudinal`] — every snapshot stays pinned.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AttitudinalTable {
+    /// One deviation vector per category, in [`AttitudinalKind::ALL`] order.
     pub deviations: [Deviation; 7],
 }
 

@@ -4,7 +4,7 @@
 //!
 //! Notation (CLL-flavored): syllables joined by `.` within a word; the
 //! stressed syllable UPPERCASE (CLL's capitals-for-stress convention); pauses
-//! as ` ‖ ` (mandatory + writer periods, merged per CLL §4.2); apostrophe [h]
+//! as ` ‖ ` (mandatory + writer periods, merged per CLL §4.2); apostrophe `[h]`
 //! kept; input commas dropped (syllable dots replace them); epenthetic buffer
 //! vowels as `(ɪ)` between the consonants they split; digits/lerfu appear as
 //! their normalized cmavo. Examples: `coi MUN.je`, `la DJAN ‖ cu KLA.ma`,
@@ -33,9 +33,9 @@ pub fn transcribe(text: &str, opts: &CompileOptions) -> Result<String, CompileEr
 }
 
 /// Render one analyzed word: syllables joined by `.`, the stressed syllable
-/// UPPERCASE, `'` for [h], and (when buffering) `(ɪ)` between adjacent
+/// UPPERCASE, `'` for `[h]`, and (when buffering) `(ɪ)` between adjacent
 /// cluster consonants — the SAME adjacency the compiler buffers: onset/coda
-/// consonants only, [h] and nuclei (incl. syllabic sonorants) break the pair.
+/// consonants only, `[h]` and nuclei (incl. syllabic sonorants) break the pair.
 fn render_word(w: &WordAnalysis, buffer: bool) -> String {
     let mut out = String::new();
     // True when the previously emitted phoneme was a cluster consonant.

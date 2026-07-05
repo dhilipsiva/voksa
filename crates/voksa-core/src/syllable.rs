@@ -14,20 +14,27 @@ use crate::clusters::{is_legal_onset, is_sonorant};
 use crate::letters::{Letter, WordError, consonant_to_char, parse_word, vowel_to_char};
 use crate::phonemes::{Consonant, Vowel, is_valid_diphthong};
 
+/// A syllable nucleus (CLL §3.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Nucleus {
+    /// A monophthong nucleus.
     Vowel(Vowel),
+    /// A diphthong nucleus (one of the 16 valid pairs).
     Diphthong(Vowel, Vowel),
     /// A syllabic sonorant (l m n r) — never stressed, never counted (CLL §3.9).
     Syllabic(Consonant),
 }
 
+/// One syllable: onset consonants + nucleus + coda consonants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Syllable {
+    /// Onset consonants (possibly empty).
     pub onset: Vec<Consonant>,
-    /// True when the syllable is introduced by an apostrophe (= [h]).
+    /// True when the syllable is introduced by an apostrophe (= `[h]`).
     pub aspirated: bool,
+    /// The syllable nucleus.
     pub nucleus: Nucleus,
+    /// Coda consonants (possibly empty).
     pub coda: Vec<Consonant>,
 }
 

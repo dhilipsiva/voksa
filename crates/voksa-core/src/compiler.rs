@@ -4,7 +4,7 @@
 //! as a pause — CLL §3.3 makes any inter-word pause legal) → analyze words
 //! (Phase 4) → mandatory pause insertion (+ writer-marked pauses) → syllable/
 //! phoneme expansion with optional buffering (CLL §3.8 "fully-buffered
-//! dialect": a weak [ɪ] between every word-internal consonant pair) → timed
+//! dialect": a weak `[ɪ]` between every word-internal consonant pair) → timed
 //! events + syllable spans.
 
 use crate::alloc::string::String;
@@ -22,22 +22,34 @@ use crate::stress::is_countable;
 use crate::syllable::Nucleus;
 use crate::word::{WordAnalysis, analyze_word};
 
+/// Front-end flags for [`compile`] — the CLI's `--dotside`/`--buffer`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CompileOptions {
     /// Force a leading pause before every cmevla (drop the la-family
     /// exemption).
     pub dotside: bool,
-    /// Fully-buffered dialect: insert a weak [ɪ] between every word-internal
+    /// Fully-buffered dialect: insert a weak `[ɪ]` between every word-internal
     /// consonant pair.
     pub buffer: bool,
 }
 
+/// Why an utterance failed to compile.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompileError {
     /// A word failed morphological analysis.
-    Word { word: String, error: WordError },
+    Word {
+        /// The offending word as written.
+        word: String,
+        /// What the analysis rejected.
+        error: WordError,
+    },
     /// A written figure could not be normalized to PA cmavo.
-    MalformedNumber { figure: String, error: NumberError },
+    MalformedNumber {
+        /// The offending figure as written.
+        figure: String,
+        /// What the normalizer rejected.
+        error: NumberError,
+    },
     /// No words in the input.
     Empty,
 }
@@ -46,7 +58,9 @@ pub enum CompileError {
 /// writer-marked pause (period).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RawToken {
+    /// One word, capitals preserved (they mark stress).
     Word(String),
+    /// A writer-marked pause (period); consecutive marks merge.
     ExplicitPause,
 }
 
@@ -113,7 +127,9 @@ pub fn tokenize(text: &str) -> Result<Vec<RawToken>, CompileError> {
 /// [`crate::transcribe::transcribe`] (display) consume — they cannot disagree.
 #[derive(Debug, Clone, PartialEq)]
 pub enum UtteranceItem {
+    /// One analyzed spoken word.
     Word(WordAnalysis),
+    /// One merged pause (mandatory or writer-marked).
     Pause,
 }
 
@@ -284,7 +300,7 @@ struct Entry {
     span: usize,
     /// True only for onset/coda consonants — the buffer flag inserts between
     /// adjacent pairs of these (CLL §3.8 buffers consonant clusters; syllabic
-    /// nuclei and [h] are not cluster members).
+    /// nuclei and `[h]` are not cluster members).
     is_consonant: bool,
     /// The syllable nucleus (vowel / diphthong / syllabic consonant, or a
     /// buffer span's single entry). The stress stretch anchors here so onset

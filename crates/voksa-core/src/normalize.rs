@@ -44,6 +44,7 @@ pub fn hex_word(c: char) -> Option<&'static str> {
     })
 }
 
+/// Why a written figure could not be normalized to PA cmavo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NumberError {
     /// Comma groups must be canonical: first 1–3 digits, the rest exactly 3.

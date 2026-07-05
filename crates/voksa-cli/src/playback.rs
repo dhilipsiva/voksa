@@ -45,10 +45,15 @@ pub fn fill_from_ring(consumer: &mut rtrb::Consumer<f32>, out: &mut [f32]) -> us
 /// environments (CI, WSL) can detect and skip playback.
 #[derive(Debug)]
 pub enum PlayError {
+    /// The default host has no output device.
     NoDevice,
+    /// The device offers no f32 output format.
     NoF32Config,
+    /// Enumerating the device's supported stream configs failed.
     Configs(String),
+    /// Building the output stream failed.
     Build(String),
+    /// Starting playback on the built stream failed.
     Stream(String),
     /// The utterance failed to compile/render (message already formatted).
     Render(String),

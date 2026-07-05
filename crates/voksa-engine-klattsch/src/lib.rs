@@ -5,6 +5,8 @@
 //! voksa-core's schedule IR into klattsch schedules. Kept deliberately thin:
 //! the end-of-Phase-2 decision gate may swap the engine for a hand-rolled one.
 
+#![warn(missing_docs)]
+
 pub mod lower;
 
 use klattsch_core::schedule::Schedule;

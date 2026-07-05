@@ -1,7 +1,7 @@
 //! Stress assignment (CLL §3.9, §4.8): penultimate over COUNTABLE syllables.
 //!
 //! Countable excludes syllables whose vowel is y — including the iy/uy
-//! diphthongs, whose vowel CLL §3.4 itself defines as [ə] and which §3.9
+//! diphthongs, whose vowel CLL §3.4 itself defines as `[ə]` and which §3.9
 //! requires to carry weak stress — and syllabic-consonant syllables. (Buffer
 //! vowel syllables join the exclusion list with the Phase-5 --buffer flag.)
 

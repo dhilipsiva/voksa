@@ -56,6 +56,7 @@ pub const INITIAL_PAIRS: [(Consonant, Consonant); 48] = [
     (Z, V),
 ];
 
+/// Whether `ab` is one of the 48 valid initial pairs (CLL §3.7).
 pub fn is_initial_pair(a: Consonant, b: Consonant) -> bool {
     INITIAL_PAIRS.contains(&(a, b))
 }

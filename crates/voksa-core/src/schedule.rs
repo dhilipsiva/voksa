@@ -67,7 +67,7 @@ pub enum MicroClass {
     VoicelessObstruent,
     /// l m n r, including syllabic nuclei.
     Sonorant,
-    /// ' ([h]) — carries no perturbation of its own (MVP).
+    /// ' (`[h]`) — carries no perturbation of its own (MVP).
     Aspirate,
     /// Pause events — blocks obstruent perturbation across pauses.
     Silence,
@@ -110,7 +110,9 @@ pub fn micro_class(p: Phoneme) -> MicroClass {
 /// the exact pre-Phase-10 ParamUpdate (the adapter Option-gates them out).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Frame {
+    /// Fundamental frequency (Hz).
     pub f0_hz: f32,
+    /// Formant + voicing + aspiration targets.
     pub targets: Targets,
     /// Glottal open-quotient multiplier (NEUTRAL_OQ = modal).
     pub oq: f32,
@@ -143,8 +145,11 @@ impl Frame {
 /// `at_ms`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Event {
+    /// Event start (ms from utterance start).
     pub at_ms: f32,
+    /// Ramp time from the previous frame's values (ms; 0 = jump).
     pub transition_ms: f32,
+    /// The parameter frame to reach.
     pub frame: Frame,
     /// The segment class this event was emitted from (Phase-11 microprosody /
     /// coarticulation metadata; the 1:1 lowering ignores it).
@@ -154,15 +159,20 @@ pub struct Event {
 /// One syllable's time span, with the metadata prosody needs.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SyllableSpan {
+    /// Syllable onset (ms from utterance start).
     pub start_ms: f32,
+    /// Syllable length (ms).
     pub dur_ms: f32,
     /// Offset from `start_ms` to the vowel-nucleus onset (0 for onsetless
-    /// syllables; includes [h] aspiration and any onset-side epenthetic
+    /// syllables; includes `[h]` aspiration and any onset-side epenthetic
     /// buffer). Stress stretching applies only to the rhyme —
     /// `[start_ms + nucleus_off_ms, start_ms + dur_ms)` — so onset consonant
     /// clusters keep unit rate (CP1: they otherwise smear).
     pub nucleus_off_ms: f32,
+    /// Index of the containing word in the utterance's spoken word sequence
+    /// (matches [`crate::attitudinal::AttitudinalScope::word_index`]).
     pub word_index: usize,
+    /// True when this syllable carries its word's primary stress.
     pub stressed: bool,
     /// False for y-nucleus / iy-uy / syllabic-consonant / buffer syllables.
     pub countable: bool,
@@ -176,8 +186,12 @@ pub struct SyllableSpan {
 /// A compiled utterance: the deterministic parameter schedule.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UtteranceSchedule {
+    /// The timed parameter events, in chronological emission order.
     pub events: Vec<Event>,
+    /// Per-syllable spans — the prosody transform's metadata.
     pub spans: Vec<SyllableSpan>,
+    /// Total schedule length (ms); the adapter renders this plus a short
+    /// decay tail, capped at its offline ceiling.
     pub total_ms: f32,
     /// Attitudinal (UI-cmavo) colorings detected at compile time; consumed by
     /// [`crate::attitudinal::apply_attitudinal`]. Empty for modal utterances.
@@ -209,7 +223,7 @@ pub fn silence_targets() -> Targets {
     }
 }
 
-/// Utterance-final [h] fallback shape (schwa-like); phonotactically the
+/// Utterance-final `[h]` fallback shape (schwa-like); phonotactically the
 /// apostrophe is intervocalic, so this only guards degenerate input.
 const FALLBACK_SCHWA: Targets = Targets {
     formants: [
@@ -233,7 +247,7 @@ const FALLBACK_SCHWA: Targets = Targets {
     aspiration: 1.0,
 };
 
-/// [h] has no shape of its own: unvoiced noise through the following vowel's
+/// `[h]` has no shape of its own: unvoiced noise through the following vowel's
 /// formants at reduced amplitude (docs/formants.md).
 fn aspirate_targets(next: Option<Targets>) -> Targets {
     let mut t = next.unwrap_or(FALLBACK_SCHWA);
@@ -246,7 +260,7 @@ fn aspirate_targets(next: Option<Targets>) -> Targets {
 }
 
 /// Schedule one segment starting at `at_ms`; push its events, return its end
-/// time. `next` is the following segment's leading targets ([h] lookahead);
+/// time. `next` is the following segment's leading targets (`[h]` lookahead);
 /// `micro` is the segment class its events carry (Phase-11 metadata).
 pub fn schedule_segment(
     seg: &SegmentSpec,

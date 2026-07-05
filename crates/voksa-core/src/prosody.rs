@@ -19,6 +19,7 @@ use crate::schedule::{BASE_F0_HZ, Event, MicroClass, UtteranceSchedule, VowelHei
 /// convention exactly. [`Self::naturalness_off`] is the frozen Phase-10 voice.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProsodyOptions {
+    /// Apply the terminal question rise (xu utterances).
     pub xu_rise: bool,
     /// Utterance-initial F0 baseline (Hz).
     pub declination_start_hz: f32,

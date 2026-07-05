@@ -13,11 +13,14 @@ use crate::letters::WordError;
 use crate::stress::resolve_stress;
 use crate::syllable::{Nucleus, Syllable, syllabify};
 
+/// A fully analyzed word: letters → syllables → class → stress.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WordAnalysis {
     /// Lowercased text (commas preserved).
     pub lowered: String,
+    /// cmevla / brivla / cmavo (CLL §4.2).
     pub class: WordClass,
+    /// The word's syllables (CLL §3.9).
     pub syllables: Vec<Syllable>,
     /// Resolved primary-stress syllable index (None = unstressed word).
     pub stress: Option<usize>,

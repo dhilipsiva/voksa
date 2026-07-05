@@ -5,6 +5,8 @@
 //! rendered up front, streamed into an `rtrb` SPSC ring, and the cpal output
 //! callback only pops from the ring (docs/research/02-architecture-v2.md).
 
+#![warn(missing_docs)]
+
 pub mod args;
 pub mod config;
 pub mod playback;

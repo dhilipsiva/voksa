@@ -8,18 +8,25 @@
 
 use crate::alloc::vec::Vec;
 
-/// The six Lojban vowels. `y` = [ə], never stressed, never counted for stress.
+/// The six Lojban vowels. `y` = `[ə]`, never stressed, never counted for stress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Vowel {
+    /// a `[a]`
     A,
+    /// e `[ɛ]`
     E,
+    /// i `[i]`
     I,
+    /// o `[o]`
     O,
+    /// u `[u]`
     U,
+    /// y `[ə]` (schwa; never stressed, never counted for stress)
     Y,
 }
 
 impl Vowel {
+    /// All six vowels in canonical a e i o u y order ([`Self::index`] slots).
     pub const ALL: [Vowel; 6] = [Vowel::A, Vowel::E, Vowel::I, Vowel::O, Vowel::U, Vowel::Y];
 
     /// This vowel's slot in [`Self::ALL`] / [`VoiceTable::vowels`].
@@ -38,26 +45,44 @@ impl Vowel {
 /// The seventeen Lojban consonants (CLL: b c d f g j k l m n p r s t v x z).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Consonant {
+    /// b `[b]` (voiced bilabial stop)
     B,
+    /// c `[ʃ]` (unvoiced coronal sibilant)
     C,
+    /// d `[d]` (voiced dental/alveolar stop)
     D,
+    /// f `[f]` (unvoiced labial fricative)
     F,
+    /// g `[ɡ]` (voiced velar stop)
     G,
+    /// j `[ʒ]` (voiced coronal sibilant)
     J,
+    /// k `[k]` (unvoiced velar stop)
     K,
+    /// l `[l]` (lateral approximant; may be syllabic)
     L,
+    /// m `[m]` (bilabial nasal; may be syllabic)
     M,
+    /// n `[n]` (dental/alveolar nasal; may be syllabic)
     N,
+    /// p `[p]` (unvoiced bilabial stop)
     P,
+    /// r `[r]` (any rhotic; may be syllabic)
     R,
+    /// s `[s]` (unvoiced alveolar sibilant)
     S,
+    /// t `[t]` (unvoiced dental/alveolar stop)
     T,
+    /// v `[v]` (voiced labial fricative)
     V,
+    /// x `[x]` (unvoiced velar fricative)
     X,
+    /// z `[z]` (voiced alveolar sibilant)
     Z,
 }
 
 impl Consonant {
+    /// All seventeen consonants in alphabetical order.
     pub const ALL: [Consonant; 17] = [
         Consonant::B,
         Consonant::C,
@@ -80,13 +105,16 @@ impl Consonant {
 }
 
 /// One phoneme-level unit. Diphthongs are single syllable nuclei (16 valid,
-/// NO triphthongs); `H` is the apostrophe [h], intervocalic aspiration.
+/// NO triphthongs); `H` is the apostrophe `[h]`, intervocalic aspiration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Phoneme {
+    /// A monophthong nucleus.
     Vowel(Vowel),
+    /// One of the 16 valid diphthongs (see [`DIPHTHONGS`]).
     Diphthong(Vowel, Vowel),
+    /// A consonant segment.
     Consonant(Consonant),
-    /// ' (apostrophe) = [h]: aspiration noise shaped by the FOLLOWING vowel's
+    /// ' (apostrophe) = `[h]`: aspiration noise shaped by the FOLLOWING vowel's
     /// formants (docs/formants.md: no locus of its own).
     H,
 }
@@ -112,6 +140,7 @@ pub const DIPHTHONGS: [(Vowel, Vowel); 16] = [
     (Vowel::U, Vowel::Y),
 ];
 
+/// Whether `(a, b)` is one of the 16 valid diphthongs.
 pub fn is_valid_diphthong(a: Vowel, b: Vowel) -> bool {
     DIPHTHONGS.contains(&(a, b))
 }
@@ -126,14 +155,18 @@ impl Phoneme {
 /// One formant resonance target: center frequency, bandwidth, linear amplitude.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Formant {
+    /// Formant center frequency (Hz).
     pub freq_hz: f32,
+    /// Formant bandwidth (Hz).
     pub bw_hz: f32,
+    /// Linear amplitude, 0.0..1.0.
     pub amp: f32,
 }
 
 /// Steady-state acoustic targets for one segment.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Targets {
+    /// F1–F3 resonance targets, low to high.
     pub formants: [Formant; 3],
     /// 0.0 = fully unvoiced .. 1.0 = fully voiced.
     pub voicing: f32,
@@ -196,15 +229,24 @@ pub enum SegmentKind {
     /// Vowels, fricatives, nasals, liquids: hold targets.
     Steady(Targets),
     /// Diphthongs: 25% onset at `from`, 50% linear glide, 25% offset at `to`.
-    Glide { from: Targets, to: Targets },
+    Glide {
+        /// Onset targets (the first vowel's).
+        from: Targets,
+        /// Offset targets (the second vowel's).
+        to: Targets,
+    },
     /// Stops: closure (silence or voice bar) then release burst.
     Stop {
+        /// Closure targets: silence, or a voice-bar murmur for voiced stops.
         closure: Targets,
+        /// Release-burst targets.
         burst: Targets,
+        /// Closure duration (ms).
         closure_ms: f32,
+        /// Burst duration (ms).
         burst_ms: f32,
     },
-    /// [h]: noise through the FOLLOWING vowel's formants — the adapter
+    /// `[h]`: noise through the FOLLOWING vowel's formants — the adapter
     /// resolves the shape from the next segment at lowering time.
     Aspirate,
 }
@@ -212,12 +254,14 @@ pub enum SegmentKind {
 /// A phoneme's full acoustic specification.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SegmentSpec {
+    /// How the segment evolves over its duration.
     pub kind: SegmentKind,
+    /// Total segment duration (ms).
     pub dur_ms: f32,
 }
 
 impl SegmentSpec {
-    /// The targets a segment presents at its onset (used by a preceding [h]
+    /// The targets a segment presents at its onset (used by a preceding `[h]`
     /// and by transition planning). `None` only for [`SegmentKind::Aspirate`].
     pub fn leading_targets(&self) -> Option<Targets> {
         match self.kind {
@@ -240,7 +284,7 @@ pub fn specs(phonemes: &[Phoneme]) -> Vec<SegmentSpec> {
     phonemes.iter().map(|p| spec(*p)).collect()
 }
 
-/// The epenthetic buffer vowel (--buffer flag): [ɪ]-like, acoustically
+/// The epenthetic buffer vowel (--buffer flag): `[ɪ]`-like, acoustically
 /// distinct from all six Lojban vowels, as short and weak as possible
 /// (CLL §3.8; seeds from docs/formants.md — see `data::BUFFER`). Never
 /// written, never stressed, never counted. Equivalent to
@@ -252,7 +296,9 @@ pub fn buffer_spec() -> SegmentSpec {
 /// One steady phoneme's runtime voice: targets + duration. Stride 12.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SteadyVoice {
+    /// Steady-state acoustic targets, held for the whole segment.
     pub targets: Targets,
+    /// Segment duration (ms).
     pub dur_ms: f32,
 }
 
@@ -260,9 +306,13 @@ pub struct SteadyVoice {
 /// Stride 24.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StopVoice {
+    /// Closure targets: silence, or a voice-bar murmur for voiced stops.
     pub closure: Targets,
+    /// Release-burst targets.
     pub burst: Targets,
+    /// Closure duration (ms).
     pub closure_ms: f32,
+    /// Burst duration (ms).
     pub burst_ms: f32,
 }
 
@@ -277,6 +327,7 @@ pub const STOP_ORDER: [Consonant; 6] = [
     Consonant::D,
     Consonant::G,
 ];
+/// [`VoiceTable::fricatives`] order: f v s z c j x.
 pub const FRICATIVE_ORDER: [Consonant; 7] = [
     Consonant::F,
     Consonant::V,
@@ -286,7 +337,9 @@ pub const FRICATIVE_ORDER: [Consonant; 7] = [
     Consonant::J,
     Consonant::X,
 ];
+/// [`VoiceTable::nasals`] order: m n.
 pub const NASAL_ORDER: [Consonant; 2] = [Consonant::M, Consonant::N];
+/// [`VoiceTable::liquids`] order: l r.
 pub const LIQUID_ORDER: [Consonant; 2] = [Consonant::L, Consonant::R];
 
 /// A diphthong's slot in [`DIPHTHONGS`] / [`VoiceTable::diphthong_dur_ms`].
@@ -296,7 +349,7 @@ pub fn diphthong_index(a: Vowel, b: Vowel) -> Option<usize> {
 
 /// The RUNTIME per-phoneme acoustic table (demo tuning console D2b): every
 /// independent parameter of the segmental layer. Diphthong ENDPOINTS derive
-/// from the (tuned) vowel targets and [h] takes its shape from the following
+/// from the (tuned) vowel targets and `[h]` takes its shape from the following
 /// vowel (docs/formants.md) — only their durations are free here. `Default`
 /// equals the pinned docs/formants.md seeds, so
 /// `spec_with(p, &VoiceTable::default())` is byte-identical to `spec(p)`.
@@ -314,7 +367,7 @@ pub struct VoiceTable {
     pub nasals: [SteadyVoice; 2],
     /// [`LIQUID_ORDER`]: l r.
     pub liquids: [SteadyVoice; 2],
-    /// [h] duration (shape always follows the next vowel).
+    /// `[h]` duration (shape always follows the next vowel).
     pub h_dur_ms: f32,
     /// The epenthetic buffer vowel (--buffer flag).
     pub buffer: SteadyVoice,
@@ -403,6 +456,7 @@ impl Default for VoiceTable {
 }
 
 impl SteadyVoice {
+    /// Flat-f32 stride of one SteadyVoice: targets (11) + `dur_ms` = 12.
     pub const FIELDS: usize = Targets::FIELDS + 1;
 
     /// `[targets(11), dur_ms]`.
@@ -425,6 +479,8 @@ impl SteadyVoice {
 }
 
 impl StopVoice {
+    /// Flat-f32 stride of one StopVoice: closure + burst targets (2×11) +
+    /// the two durations = 24.
     pub const FIELDS: usize = 2 * Targets::FIELDS + 2;
 
     /// `[closure(11), burst(11), closure_ms, burst_ms]`.
@@ -581,7 +637,7 @@ fn steady_from(sv: SteadyVoice) -> SegmentSpec {
 
 /// Like [`spec`] but reading the acoustic numbers from a RUNTIME table (demo
 /// tuning console D2b). Diphthong glide ENDPOINTS come from the (tuned) vowel
-/// entries; [h] keeps taking its shape from the following vowel at lowering
+/// entries; `[h]` keeps taking its shape from the following vowel at lowering
 /// time. `spec_with(p, &VoiceTable::default())` is byte-identical to
 /// `spec(p)`.
 pub fn spec_with(p: Phoneme, voice: &VoiceTable) -> SegmentSpec {
@@ -649,7 +705,7 @@ mod data {
     const STOP_CLOSURE_MS: f32 = 60.0;
     const STOP_BURST_MS: f32 = 25.0;
 
-    /// The epenthetic buffer vowel seed ([ɪ]-like; docs/formants.md).
+    /// The epenthetic buffer vowel seed (`[ɪ]`-like; docs/formants.md).
     pub(super) const BUFFER: SteadyVoice = SteadyVoice {
         targets: t(
             400.0, 90.0, 0.5, 1900.0, 110.0, 0.3, 2600.0, 150.0, 0.15, 1.0, 0.0,

@@ -1,6 +1,6 @@
 //! Lojban orthography → letter stream.
 //!
-//! Strict lowercase alphabet: the 6 vowels, 17 consonants, apostrophe (= [h],
+//! Strict lowercase alphabet: the 6 vowels, 17 consonants, apostrophe (= `[h]`,
 //! intervocalic only, CLL §3.3) and comma (syllable separator, never a pause,
 //! CLL §3.3/§3.9). Periods and capital stress marks are word-boundary/prosody
 //! concerns handled by later phases; callers pre-strip them.
@@ -8,17 +8,25 @@
 use crate::alloc::vec::Vec;
 use crate::phonemes::{Consonant, Vowel};
 
+/// One validated letter of a Lojban word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Letter {
+    /// A vowel.
     V(Vowel),
+    /// A consonant.
     C(Consonant),
+    /// ' = `[h]`, intervocalic aspiration (CLL §3.3).
     Apostrophe,
+    /// , = syllable separator, never a pause (CLL §3.3).
     Comma,
 }
 
+/// Why a word failed letter-stream validation or later analysis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordError {
+    /// The word has no characters.
     Empty,
+    /// A character outside the Lojban alphabet (the offender attached).
     InvalidCharacter(char),
     /// Apostrophe must sit between two vowels (CLL §3.3).
     MisplacedApostrophe,
@@ -34,6 +42,7 @@ pub enum WordError {
     InvalidStressMark,
 }
 
+/// The vowel written as `ch` (lowercase only), if any.
 pub fn vowel_from_char(ch: char) -> Option<Vowel> {
     Some(match ch {
         'a' => Vowel::A,
@@ -46,6 +55,7 @@ pub fn vowel_from_char(ch: char) -> Option<Vowel> {
     })
 }
 
+/// The consonant written as `ch` (lowercase only), if any.
 pub fn consonant_from_char(ch: char) -> Option<Consonant> {
     Some(match ch {
         'b' => Consonant::B,
@@ -69,6 +79,7 @@ pub fn consonant_from_char(ch: char) -> Option<Consonant> {
     })
 }
 
+/// The written lowercase letter for a vowel.
 pub fn vowel_to_char(v: Vowel) -> char {
     match v {
         Vowel::A => 'a',
@@ -80,6 +91,7 @@ pub fn vowel_to_char(v: Vowel) -> char {
     }
 }
 
+/// The written lowercase letter for a consonant.
 pub fn consonant_to_char(c: Consonant) -> char {
     match c {
         Consonant::B => 'b',

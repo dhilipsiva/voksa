@@ -5,6 +5,8 @@
 //! worklet marshals text into wasm memory, calls [`voksa_render`], copies the
 //! samples out, and plays them 128 frames at a time.
 
+#![warn(missing_docs)]
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use voksa_core::attitudinal::{AttitudinalTable, Deviation};
@@ -13,10 +15,14 @@ use voksa_core::phonemes::VoiceTable;
 use voksa_core::prosody::ProsodyOptions;
 use voksa_engine_klattsch::{render_utterance, render_utterance_expressive};
 
-/// `flags` bit layout, mirroring the native CLI (default 0 = prosodic).
+/// `flags` bit: disable prosody, mirroring the CLI `--flat` (the `flags`
+/// default 0 = prosodic).
 pub const FLAG_FLAT: u32 = 0x1;
+/// `flags` bit: xu terminal rise (CLI `--xu`).
 pub const FLAG_XU: u32 = 0x2;
+/// `flags` bit: leading pause before every cmevla (CLI `--dotside`).
 pub const FLAG_DOTSIDE: u32 = 0x4;
+/// `flags` bit: epenthetic buffer vowels (CLI `--buffer`).
 pub const FLAG_BUFFER: u32 = 0x8;
 
 /// Count of f32 prosody knobs in the fixed layout the demo + CLI share:
