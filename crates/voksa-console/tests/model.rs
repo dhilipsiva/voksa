@@ -143,6 +143,33 @@ fn widen_never_clamp() {
 }
 
 #[test]
+fn filter_plan_keeps_only_changing_writes() {
+    use voksa_console::model::{WritePlan, filter_plan};
+    let current = vec![1.0f32, 2.0, 3.0];
+    let plan = WritePlan(vec![(0, 1.0), (1, 2.5), (2, 3.0)]);
+    assert_eq!(
+        filter_plan(&current, &plan),
+        WritePlan(vec![(1, 2.5)]),
+        "skip-if-equal keeps signal writes minimal"
+    );
+}
+
+#[test]
+fn reset_plans_cover_their_scope_with_defaults() {
+    use voksa_console::model::reset_plan;
+    let d = desc();
+    // A single voice item: k's whole 24-slot span back to engine defaults.
+    let plan = reset_plan(&d, d.voice_item_range(24));
+    assert_eq!(plan.0.len(), 24);
+    assert_eq!(plan.0[0], (151 + 48, 500.0), "k closure f1 default");
+    assert_eq!(plan.0[22], (221, 60.0), "k closure_ms default");
+    // An emotion's 8 fields.
+    let plan = reset_plan(&d, d.att_range(0));
+    assert_eq!(plan.0.len(), 8);
+    assert_eq!(plan.0[0], (7, 14.0), "ui f0_mean pinned default");
+}
+
+#[test]
 fn dirty_is_f32_exact() {
     let d = desc();
     let a_f1 = d.get(63);
