@@ -192,6 +192,19 @@ pub fn load(desc: &Descriptors, json: &str) -> Result<LoadPlan, String> {
                 .ok_or_else(|| format!("{key} must be a boolean")),
         }
     };
+    // A string field errors on present-but-not-a-string (like the knob/flag
+    // helpers), so a config the console accepts also parses through voksa-cli's
+    // `Config` (whose `text`/`notes` are `String`). Absent = `None`.
+    let str_field = |key: &str| -> Result<Option<String>, String> {
+        match obj.get(key) {
+            None => Ok(None),
+            Some(v) => Ok(Some(
+                v.as_str()
+                    .ok_or_else(|| format!("{key} must be a string"))?
+                    .to_string(),
+            )),
+        }
+    };
 
     let mut values: Vec<f32> = (0..desc.len()).map(|i| desc.get(i).default).collect();
 
@@ -279,17 +292,13 @@ pub fn load(desc: &Descriptors, json: &str) -> Result<LoadPlan, String> {
 
     Ok(LoadPlan {
         values,
-        text: obj.get("text").and_then(|v| v.as_str()).map(String::from),
+        text: str_field("text")?,
         flags: Flags {
             flat: flag("flat")?,
             xu: flag("xu")?,
             dotside: flag("dotside")?,
             buffer: flag("buffer")?,
         },
-        notes: obj
-            .get("notes")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string(),
+        notes: str_field("notes")?.unwrap_or_default(),
     })
 }

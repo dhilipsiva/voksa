@@ -161,6 +161,26 @@ fn load_rejects_malformed_json_and_ignores_unknown_keys() {
 }
 
 #[test]
+fn load_rejects_wrongly_typed_text_and_notes() {
+    let d = desc();
+    // voksa-cli's Config has `text: String` / `notes: String`, so a non-string
+    // there fails to parse — the console must reject the SAME file, else a
+    // config it accepts fails to replay via `voksa --config`. (C7 F1: load's
+    // contract is "wrongly-typed known values error without touching state".)
+    assert!(
+        load(&d, r#"{"text": 42, "rate": 1.5}"#).is_err(),
+        "non-string text errors (was silently coerced to None)"
+    );
+    assert!(
+        load(&d, r#"{"notes": 5}"#).is_err(),
+        "non-string notes errors (was silently coerced to \"\")"
+    );
+    // string text/notes (and their absence) still load fine.
+    assert!(load(&d, r#"{"text": "coi", "notes": "ok"}"#).is_ok());
+    assert!(load(&d, r#"{"rate": 1.0}"#).is_ok());
+}
+
+#[test]
 fn presets_reset_everything_then_override_knobs() {
     let d = desc();
     let plan = apply_preset(&d, "Naturalness off").expect("known preset");
