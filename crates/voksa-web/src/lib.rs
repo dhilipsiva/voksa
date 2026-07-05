@@ -1,9 +1,12 @@
 //! voksa browser adapter. The shipping surface is a raw C-ABI with NO
 //! wasm-bindgen runtime, so the compiled module declares zero imports and an
-//! AudioWorklet instantiates it synchronously with
-//! `new WebAssembly.Instance(module, {})` (see www/voksa-processor.js). The
-//! worklet marshals text into wasm memory, calls [`voksa_render`], copies the
-//! samples out, and plays them 128 frames at a time.
+//! AudioWorklet can instantiate it synchronously with
+//! `new WebAssembly.Instance(module, {})`: a host worklet marshals text into
+//! wasm memory, calls [`voksa_render`], copies the samples out, and plays them
+//! 128 frames at a time. This C-ABI is the SECONDARY embedding path (non-Rust
+//! hosts); the primary path is the `voksa-console` Dioxus component, which
+//! links this crate as a plain rlib (ADR 0003). See
+//! `docs/handoff-dhilipsiva-dev.md`.
 
 #![warn(missing_docs)]
 
