@@ -263,6 +263,7 @@
         if (b.classList.contains('att-reset')) { resetAtt(a); autoSpeak(); }
         else if (b.classList.contains('att-try')) {
           document.getElementById('text').value = a.example;
+          updatePhonetics(); // programmatic .value fires no 'input' event
           if (!speakBtn.disabled) speakBtn.click();
         }
       });
