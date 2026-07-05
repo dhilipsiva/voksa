@@ -50,6 +50,15 @@ in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
   params_len) -> ptr` — renders; returns the f32 PCM base pointer (null on
   error). Read the length with `voksa_out_len()`, copy the samples OUT of wasm
   memory immediately (memory growth detaches views), then `voksa_free_f32(ptr, len)`.
+- `voksa_transcribe(text_ptr, text_len, flags) -> ptr` — the phonetic
+  transcription (UTF-8; length via `voksa_out_len()`, free with
+  `voksa_dealloc(ptr, len)`; null on error). Notation: syllable dots, CAPITALS
+  on the stressed syllable (the CLL convention), ` ‖ ` pauses, `(ɪ)` buffer
+  vowels — e.g. `coi MUN.je`, `la DJAN ‖ cu KLA.ma`, `V(ɪ)RU.si`. **Display
+  this line prominently** — it is how the community reports wrong phonetics —
+  and embed it in the exported config JSON as `phonetics` (the reference page
+  does both; refresh it on EVERY text/flag mutation path, including
+  programmatic ones — `.value =` fires no `input` event).
 - `flags` bits: `1` flat (no prosody), `2` xu rise, `4` dotside, `8` buffer.
 
 ## The f32 param block (440 floats; shorter blocks default the rest)
