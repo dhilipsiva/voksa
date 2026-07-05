@@ -5,6 +5,19 @@
 /// `x` is the maximum `|sample|` over `pcm[x·step .. (x+1)·step]` (0 when that
 /// slice is past the end). Length is always `cols`.
 pub fn peaks(pcm: &[f32], cols: usize) -> Vec<f32> {
-    let _ = pcm;
-    vec![0.0; cols] // stub — C3 green
+    if cols == 0 {
+        return Vec::new();
+    }
+    let step = (pcm.len() / cols).max(1);
+    (0..cols)
+        .map(|x| {
+            let start = x * step;
+            let end = (start + step).min(pcm.len());
+            if start >= pcm.len() {
+                0.0
+            } else {
+                pcm[start..end].iter().fold(0.0f32, |m, s| m.max(s.abs()))
+            }
+        })
+        .collect()
 }

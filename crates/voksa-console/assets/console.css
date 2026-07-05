@@ -181,7 +181,14 @@
 .vx-flag:disabled { opacity: 0.45; cursor: default; }
 .vx-flag:focus-visible { outline: none; box-shadow: var(--ring); }
 
-/* ── transcript / transport / share (fleshed out in C3/C5) ────────── */
+/* ── transcript ───────────────────────────────────────────────────── */
+.vx-legend {
+  flex: 1;
+  text-align: right;
+  font-size: 9px;
+  font-style: italic;
+  color: var(--text-faint);
+}
 .vx-transcript {
   font-size: 15px;
   background: var(--bg-raised);
@@ -189,10 +196,21 @@
   border-radius: var(--radius-md);
   padding: 10px 12px;
   min-height: 40px;
+  word-break: break-word;
 }
 .vx-tfaint { color: var(--text-faint); font-size: 11px; }
+.vx-tprefix { color: var(--text-faint); }
+.vx-t-plain { color: var(--text-body); }
+.vx-t-stress { color: var(--text-strong); font-weight: 600; }
+.vx-t-dot { color: var(--text-faint); }
+.vx-t-pause { color: var(--accent); }
+.vx-t-buffer { color: var(--phosphor-300); font-weight: 500; }
+.vx-t-asp { color: var(--text-muted); }
+
+/* ── transport ────────────────────────────────────────────────────── */
+.vx-transportrow { display: flex; align-items: center; gap: 10px; }
 .vx-speak {
-  width: 100%;
+  flex: 1;
   height: 44px;
   font-family: var(--font-mono);
   font-size: 14px;
@@ -205,7 +223,63 @@
 }
 .vx-speak:hover:not(:disabled) { background: var(--ember-500); box-shadow: var(--glow-ember); }
 .vx-speak:disabled { opacity: 0.45; cursor: default; }
-.vx-status { margin-top: 8px; font-size: 10.5px; color: var(--text-faint); }
+.vx-switch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.vx-switch input { accent-color: var(--ember-500); }
+
+/* waveform: an instrument screen — deliberately dark in BOTH themes */
+.vx-wave {
+  margin-top: 10px;
+  height: 76px;
+  border-radius: var(--radius-md);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 15px, color-mix(in oklab, var(--phosphor-500) 8%, transparent) 15px 16px),
+    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklab, var(--phosphor-500) 8%, transparent) 23px 24px),
+    #0A0E0C;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+.vx-wavesvg { display: block; width: 100%; height: 100%; }
+.vx-wavemid { stroke: color-mix(in oklab, var(--phosphor-500) 22%, transparent); stroke-width: 1; }
+.vx-waveline {
+  stroke: var(--phosphor-500);
+  stroke-width: 1;
+  fill: none;
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--phosphor-500) 60%, transparent));
+}
+
+.vx-transportfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 8px;
+}
+.vx-status { font-size: 10.5px; color: var(--text-faint); }
+.vx-status-ok { color: var(--text-muted); }
+.vx-status-alive { color: var(--alive); }
+.vx-status-boot { color: var(--amber-500); }
+.vx-status-err { color: var(--crimson-500); }
+.vx-wav {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 26px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.vx-wav:hover:not(:disabled) { color: var(--alive); border-color: color-mix(in oklab, var(--alive) 45%, transparent); }
+.vx-wav:disabled { opacity: 0.4; cursor: default; }
 .vx-notes {
   width: 100%;
   min-height: 64px;

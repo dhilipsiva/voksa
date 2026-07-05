@@ -14,6 +14,7 @@
 #![warn(missing_docs)]
 
 pub mod assets;
+pub mod audio;
 pub mod engine;
 pub mod model;
 pub mod ui;

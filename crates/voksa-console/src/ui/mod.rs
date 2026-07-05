@@ -6,11 +6,15 @@ mod console;
 mod racks;
 mod rows;
 mod source;
+mod speak;
 mod store;
 mod title;
 
 pub use console::{TuningConsole, TuningConsoleProps};
+pub use speak::{Audio, Status};
 pub use store::{Cell, ParamStore};
+
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
@@ -29,6 +33,12 @@ pub struct Ui {
     pub sentence: Signal<String>,
     /// The tuner's notes (travel inside the export).
     pub notes: Signal<String>,
+    /// Auto-speak on change (default ON).
+    pub auto_speak: Signal<bool>,
+    /// Playback / render status.
+    pub status: Signal<Status>,
+    /// The last rendered PCM (drives the waveform + WAV download).
+    pub pcm: Signal<Option<Rc<Vec<f32>>>>,
 }
 
 impl Ui {
@@ -39,6 +49,9 @@ impl Ui {
             preset: Signal::new("Default".to_string()),
             sentence: Signal::new(String::new()),
             notes: Signal::new(String::new()),
+            auto_speak: Signal::new(true),
+            status: Signal::new(Status::Ready),
+            pcm: Signal::new(None),
         }
     }
 }

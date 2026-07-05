@@ -19,6 +19,34 @@ serde.workspace = true
 serde_json.workspace = true
 dioxus.workspace = true
 
+# Browser-only interop (ADR 0003): the main-thread audio graph + WAV download.
+# The player worklet is plain JS (include_str!); no Rust runs in the worklet.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+js-sys = { workspace = true }
+gloo-timers = { workspace = true, features = ["futures"] }
+console_error_panic_hook = { workspace = true }
+web-sys = { workspace = true, features = [
+    "AudioContext",
+    "AudioContextOptions",
+    "AudioContextState",
+    "AudioWorklet",
+    "AudioWorkletNode",
+    "AudioWorkletNodeOptions",
+    "BaseAudioContext",
+    "AudioNode",
+    "AudioDestinationNode",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "MessagePort",
+    "MessageEvent",
+    "Window",
+    "Document",
+    "HtmlAnchorElement",
+] }
+
 [dev-dependencies]
 # The config round-trip contract test: exported JSON must parse through the
 # CLI's REAL Config (so `voksa --config` replays exactly what the console

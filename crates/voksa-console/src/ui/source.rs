@@ -7,7 +7,14 @@ use dioxus::prelude::*;
 use serde::Deserialize;
 
 use super::Ui;
-use crate::model::Flags;
+use super::speak::{Audio, Status, speak_now};
+use super::store::ParamStore;
+use crate::audio;
+use crate::engine;
+use crate::model::{Flags, TokKind, peaks, tokenize, wav_bytes};
+
+/// Waveform display columns.
+const WAVE_COLS: usize = 240;
 
 #[derive(Deserialize, Clone, PartialEq)]
 struct Sentence {
@@ -200,24 +207,128 @@ fn FlagChip(flag: FlagKind) -> Element {
     }
 }
 
-/// Live phonetic analysis (wired to the engine in C3).
+fn tok_class(kind: TokKind) -> &'static str {
+    match kind {
+        TokKind::Stress => "vx-t-stress",
+        TokKind::Dot => "vx-t-dot",
+        TokKind::Pause => "vx-t-pause",
+        TokKind::Buffer => "vx-t-buffer",
+        TokKind::Aspirate => "vx-t-asp",
+        TokKind::Plain => "vx-t-plain",
+    }
+}
+
+/// Live phonetic analysis — recomputed on every text/flag change (a cheap
+/// sync engine call; covers programmatic changes too via the memo).
 #[component]
 fn TranscriptCard() -> Element {
+    let ui = use_context::<Ui>();
+    let toks = use_memo(move || {
+        let text = ui.text.read().clone();
+        let flags = *ui.flags.read();
+        engine::transcribe(&text, flags).map(|s| tokenize(&s)).ok()
+    });
     rsx! {
         section { class: "vx-card",
-            div { class: "vx-cardhead", span { class: "vx-slash", "// " } "phonetic analysis" }
-            div { class: "vx-transcript", span { class: "vx-tfaint", "engine wiring lands in C3" } }
+            div { class: "vx-cardhead",
+                span { class: "vx-slash", "// " }
+                "phonetic analysis"
+                span { class: "vx-legend", "CAPS stress · ‖ pause · (ɪ) buffer" }
+            }
+            div { class: "vx-transcript",
+                match toks() {
+                    Some(list) if !list.is_empty() => rsx! {
+                        span { class: "vx-tprefix", "→ " }
+                        for (i, tok) in list.iter().enumerate() {
+                            span { key: "{i}", class: tok_class(tok.kind), "{tok.text}" }
+                        }
+                    },
+                    Some(_) => rsx! { span { class: "vx-tfaint", "—" } },
+                    None => rsx! { span { class: "vx-tfaint", "can't transcribe that" } },
+                }
+            }
         }
     }
 }
 
-/// Transport (speak/waveform/status — wired in C3).
+fn wave_path(pcm: &[f32]) -> String {
+    let cols = peaks(pcm, WAVE_COLS);
+    let mut d = String::new();
+    for (x, &p) in cols.iter().enumerate() {
+        let h = (p.clamp(0.0, 1.0) * 48.0).max(0.35);
+        d.push_str(&format!("M{x} {:.2}L{x} {:.2}", 50.0 - h, 50.0 + h));
+    }
+    d
+}
+
+/// Transport: speak, auto-speak toggle, waveform, status, WAV download.
 #[component]
 fn TransportCard() -> Element {
+    let store = use_context::<ParamStore>();
+    let ui = use_context::<Ui>();
+    let audio = use_context::<Audio>();
+    let mut auto = ui.auto_speak;
+
+    let path = use_memo(move || ui.pcm.read().as_ref().map(|p| wave_path(p)));
+    let has_pcm = use_memo(move || ui.pcm.read().is_some());
+    let status = ui.status.read().clone();
+    let (status_text, status_kind) = match &status {
+        Status::Booting => ("booting…".to_string(), "boot"),
+        Status::Ready => ("ready".to_string(), "ok"),
+        Status::Speaking => ("speaking…".to_string(), "alive"),
+        Status::NeedsGesture => ("tap ▶ speak to enable audio".to_string(), "boot"),
+        Status::Error(m) => (m.clone(), "err"),
+    };
+
+    let audio_speak = audio.clone();
     rsx! {
         section { class: "vx-card",
-            button { class: "vx-speak", disabled: true, "▶ speak" }
-            div { class: "vx-status", "audio lands in C3" }
+            div { class: "vx-transportrow",
+                button {
+                    class: "vx-speak",
+                    onclick: move |_| speak_now(store, ui, audio_speak.clone()),
+                    "▶ speak"
+                }
+                label { class: "vx-switch",
+                    input {
+                        r#type: "checkbox",
+                        checked: auto(),
+                        onchange: move |e| auto.set(e.checked()),
+                    }
+                    span { "speak on change" }
+                }
+            }
+            div { class: "vx-wave",
+                svg {
+                    class: "vx-wavesvg",
+                    view_box: "0 0 {WAVE_COLS} 100",
+                    preserve_aspect_ratio: "none",
+                    line {
+                        class: "vx-wavemid",
+                        x1: "0",
+                        y1: "50",
+                        x2: "{WAVE_COLS}",
+                        y2: "50",
+                    }
+                    if let Some(d) = path() {
+                        path { class: "vx-waveline", d: "{d}" }
+                    }
+                }
+            }
+            div { class: "vx-transportfoot",
+                div { class: "vx-status vx-status-{status_kind}", "{status_text}" }
+                button {
+                    class: "vx-wav",
+                    disabled: !has_pcm(),
+                    onclick: move |_| {
+                        if let Some(pcm) = ui.pcm.peek().as_ref() {
+                            let bytes = wav_bytes(pcm, audio::SAMPLE_RATE);
+                            audio::download("voksa.wav", &bytes, "audio/wav");
+                        }
+                    },
+                    "⤓ wav"
+                }
+            }
         }
     }
 }

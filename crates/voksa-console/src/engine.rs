@@ -25,6 +25,9 @@ pub fn transcribe(text: &str, flags: Flags) -> Result<String, CompileError> {
 /// error Callout show this. `CompileError` impls neither `Display` nor
 /// `Error`, so the console owns its own wording.
 pub fn describe(err: &CompileError) -> String {
-    let _ = err;
-    String::new() // stub — C3 green
+    match err {
+        CompileError::Word { word, .. } => format!("can't pronounce “{word}”"),
+        CompileError::MalformedNumber { figure, .. } => format!("bad number “{figure}”"),
+        CompileError::Empty => "nothing to speak".to_string(),
+    }
 }

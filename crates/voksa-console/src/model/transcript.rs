@@ -31,9 +31,42 @@ pub struct Tok {
     pub kind: TokKind,
 }
 
+fn classify(c: char) -> TokKind {
+    match c {
+        '‖' => TokKind::Pause,
+        '.' => TokKind::Dot,
+        '\'' => TokKind::Aspirate,
+        _ if c.is_uppercase() => TokKind::Stress,
+        _ => TokKind::Plain,
+    }
+}
+
 /// Classify the transcription string into styled runs (adjacent same-kind
 /// characters merge; `(ɪ)` is one Buffer token).
 pub fn tokenize(s: &str) -> Vec<Tok> {
-    let _ = s;
-    Vec::new() // stub — C3 green
+    let chars: Vec<char> = s.chars().collect();
+    let mut toks: Vec<Tok> = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        // The buffer vowel is a fixed 3-char unit; detect it before per-char
+        // classification so it never merges into a neighboring run.
+        if chars[i] == '(' && chars.get(i + 1) == Some(&'ɪ') && chars.get(i + 2) == Some(&')') {
+            toks.push(Tok {
+                text: "(ɪ)".to_string(),
+                kind: TokKind::Buffer,
+            });
+            i += 3;
+            continue;
+        }
+        let kind = classify(chars[i]);
+        match toks.last_mut() {
+            Some(last) if last.kind == kind => last.text.push(chars[i]),
+            _ => toks.push(Tok {
+                text: chars[i].to_string(),
+                kind,
+            }),
+        }
+        i += 1;
+    }
+    toks
 }
