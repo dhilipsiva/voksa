@@ -26,6 +26,8 @@ wasm-bindgen-test.workspace = true
 # and synthesizes every entry. Dev-only — serde never enters the cdylib.
 serde.workspace = true
 serde_json.workspace = true
+# Native-only fuzz suite (tests/fuzz.rs, Phase-11 W1).
+proptest.workspace = true
 
 # rustc emits bulk-memory / nontrapping-fptoint / sign-ext by default for wasm32
 # these days, and `-C target-feature=+simd128` (see .cargo/config.toml) adds

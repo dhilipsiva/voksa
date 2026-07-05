@@ -1088,6 +1088,7 @@ dependencies = [
 name = "voksa-web"
 version = "0.0.1"
 dependencies = [
+ "proptest",
  "serde",
  "serde_json",
  "voksa-core",
