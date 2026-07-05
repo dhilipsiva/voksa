@@ -288,17 +288,17 @@ UtteranceSchedule {
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 524.75,
+                            freq_hz: 527.375,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 1780.5,
+                            freq_hz: 1810.25,
                             bw_hz: 110.0,
                             amp: 0.6,
                         },
                         Formant {
-                            freq_hz: 2483.5,
+                            freq_hz: 2481.75,
                             bw_hz: 150.0,
                             amp: 0.3,
                         },

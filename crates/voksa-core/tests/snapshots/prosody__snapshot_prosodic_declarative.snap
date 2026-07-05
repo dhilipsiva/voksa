@@ -186,17 +186,17 @@ UtteranceSchedule {
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 715.9125,
+                            freq_hz: 730.0,
                             bw_hz: 90.0,
                             amp: 1.2,
                         },
                         Formant {
-                            freq_hz: 1115.1125,
+                            freq_hz: 1090.0,
                             bw_hz: 110.0,
                             amp: 0.96000004,
                         },
                         Formant {
-                            freq_hz: 2443.675,
+                            freq_hz: 2440.0,
                             bw_hz: 150.0,
                             amp: 0.36,
                         },
@@ -430,17 +430,17 @@ UtteranceSchedule {
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 557.75,
+                            freq_hz: 563.875,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 955.5,
+                            freq_hz: 897.75,
                             bw_hz: 110.0,
                             amp: 0.8,
                         },
                         Formant {
-                            freq_hz: 2425.75,
+                            freq_hz: 2417.875,
                             bw_hz: 150.0,
                             amp: 0.25,
                         },
@@ -880,17 +880,17 @@ UtteranceSchedule {
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 707.0575,
+                            freq_hz: 730.0,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 1130.8975,
+                            freq_hz: 1090.0,
                             bw_hz: 110.0,
                             amp: 0.8,
                         },
                         Formant {
-                            freq_hz: 2445.985,
+                            freq_hz: 2440.0,
                             bw_hz: 150.0,
                             amp: 0.3,
                         },

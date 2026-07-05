@@ -96,7 +96,7 @@
 
     <script type="module">
       // ?v= cache-busts the worklet (addModule caches aggressively).
-      const V = '8';
+      const V = '9';
 
       // Compile the wasm FIRST and read the canonical default param block from
       // it (a second, main-thread instance — zero imports make this a
@@ -534,9 +534,16 @@
       }
       function applyConfig(c) {
         if (typeof c.text === 'string') document.getElementById('text').value = c.text;
-        for (const f of FLAGS) if (typeof c[f.key] === 'boolean') flagEl(f.key).checked = c[f.key];
+        // REPLACE semantics throughout (ship-review finding): the CLI treats
+        // every absent key as the engine default, so the demo must too — a
+        // pre-P11 config (7 prosody keys only) loaded over dirty UI state
+        // (e.g. the "Naturalness off" preset) would otherwise play and
+        // re-export a merge that `voksa --config` never produces.
+        for (const f of FLAGS) flagEl(f.key).checked = typeof c[f.key] === 'boolean' ? c[f.key] : false;
         for (const p of ALL_KNOBS) {
-          if (typeof c[p.key] === 'number') setSliderExact(slideEl(p.key), outEl(p.key), c[p.key]);
+          const el = slideEl(p.key);
+          el.min = p.min; el.max = p.max; el.step = p.step; // undo any widening
+          setSliderExact(el, outEl(p.key), typeof c[p.key] === 'number' ? c[p.key] : p.def);
         }
         // Delta semantics: reset to pinned, then apply the config's overrides.
         for (const a of ATTITUDINALS) resetAtt(a);

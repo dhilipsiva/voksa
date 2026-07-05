@@ -186,26 +186,30 @@ fn apply_undershoot(mut s: UtteranceSchedule, undershoot: f32) -> UtteranceSched
     }
     /// The canonical neutral center (== silence_targets / Vowel::Y / schwa).
     const CENTER: [f32; 3] = [500.0, 1500.0, 2500.0];
-    for i in 0..s.events.len() {
-        if !matches!(s.events[i].micro, MicroClass::Vowel(_)) {
-            continue;
-        }
-        // The vowel's duration = gap to the next DIFFERENT-class event, so a
-        // microprosody settle insert (same class, mid-vowel) doesn't fake a
-        // short vowel.
+    // A same-class RUN is ONE segment: a microprosody settle insert is an
+    // F0-only copy of its parent vowel, so the whole run gets the ONE `u`
+    // computed from the run's full duration — a per-event `u` would give the
+    // settle a deeper undershoot from the vowel's remainder, bending the
+    // formants toward schwa MID-vowel (P11 ship-review finding).
+    let mut i = 0;
+    while i < s.events.len() {
         let mut j = i + 1;
         while j < s.events.len() && s.events[j].micro == s.events[i].micro {
             j += 1;
         }
-        let seg_end = s.events.get(j).map_or(s.total_ms, |e| e.at_ms);
-        let d = seg_end - s.events[i].at_ms;
-        let u = undershoot * (1.0 - d / UNDERSHOOT_REF_MS).max(0.0);
-        if u <= 0.0 {
-            continue;
+        if matches!(s.events[i].micro, MicroClass::Vowel(_)) {
+            let seg_end = s.events.get(j).map_or(s.total_ms, |e| e.at_ms);
+            let d = seg_end - s.events[i].at_ms;
+            let u = undershoot * (1.0 - d / UNDERSHOOT_REF_MS).max(0.0);
+            if u > 0.0 {
+                for e in &mut s.events[i..j] {
+                    for (f, c) in e.frame.targets.formants.iter_mut().zip(CENTER) {
+                        f.freq_hz += (c - f.freq_hz) * u;
+                    }
+                }
+            }
         }
-        for (f, c) in s.events[i].frame.targets.formants.iter_mut().zip(CENTER) {
-            f.freq_hz += (c - f.freq_hz) * u;
-        }
+        i = j;
     }
     s
 }
