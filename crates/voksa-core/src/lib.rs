@@ -22,6 +22,7 @@ pub mod prosody;
 pub mod schedule;
 pub mod stress;
 pub mod syllable;
+pub mod transcribe;
 pub mod word;
 
 use alloc::format;

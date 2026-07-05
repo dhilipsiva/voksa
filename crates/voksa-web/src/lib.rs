@@ -131,6 +131,15 @@ pub fn synth(
     }
 }
 
+/// Phonetic transcription of `text` under the flag bits (dotside/buffer change
+/// it; flat/xu don't) — the syllable/stress/pause line the demo shows so the
+/// community can spot wrong phonetics. Shared by [`voksa_transcribe`] + tests.
+pub fn transcription(text: &str, flags: u32) -> Result<String, CompileError> {
+    // RED stub (D2c): rendering lands with the failing test.
+    let _ = (text, flags);
+    Ok(String::new())
+}
+
 /// The full default f32 param block — prosody, then the pinned attitudinal
 /// vectors, then the pinned voice table, in the canonical layout. The demo
 /// reads this FROM the wasm (via [`voksa_default_params`]) to seed its
@@ -437,6 +446,20 @@ mod tests {
             synth("mi klama", 0, SR, &[]).unwrap(),
             synth("mi klama", 0, SR, &tuned).unwrap(),
             "a tuned /a/ F1 must change the render"
+        );
+    }
+
+    #[test]
+    fn transcription_renders_stress_and_flags() {
+        assert_eq!(transcription("coi munje", 0).unwrap(), "coi MUN.je");
+        // dotside + buffer flags must reach the transcription.
+        assert_eq!(
+            transcription("la djan. cu klama", FLAG_DOTSIDE).unwrap(),
+            "la ‖ DJAN ‖ cu KLA.ma"
+        );
+        assert_eq!(
+            transcription("le zdani", FLAG_BUFFER).unwrap(),
+            "le Z(ɪ)DA.ni"
         );
     }
 
