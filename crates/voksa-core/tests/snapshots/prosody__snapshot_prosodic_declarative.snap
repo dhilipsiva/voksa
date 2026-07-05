@@ -28,13 +28,13 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Sonorant,
         },
@@ -42,33 +42,33 @@ UtteranceSchedule {
             at_ms: 80.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 119.207924,
+                f0_hz: 123.18839,
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 270.0,
+                            freq_hz: 290.125,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 2290.0,
+                            freq_hz: 2220.875,
                             bw_hz: 110.0,
                             amp: 0.7,
                         },
                         Formant {
-                            freq_hz: 3010.0,
+                            freq_hz: 2965.375,
                             bw_hz: 150.0,
                             amp: 0.45,
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 High,
@@ -78,7 +78,7 @@ UtteranceSchedule {
             at_ms: 230.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 137.72278,
+                f0_hz: 137.66663,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -100,11 +100,11 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 0.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicelessObstruent,
         },
@@ -112,7 +112,7 @@ UtteranceSchedule {
             at_ms: 290.0,
             transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 137.12872,
+                f0_hz: 137.05792,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -134,11 +134,11 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 1.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicelessObstruent,
         },
@@ -146,7 +146,7 @@ UtteranceSchedule {
             at_ms: 315.0,
             transition_ms: 52.5,
             frame: Frame {
-                f0_hz: 136.8812,
+                f0_hz: 138.80429,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -166,13 +166,49 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
+            },
+            micro: Vowel(
+                Low,
+            ),
+        },
+        Event {
+            at_ms: 390.0,
+            transition_ms: 75.0,
+            frame: Frame {
+                f0_hz: 132.04343,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 715.9125,
+                            bw_hz: 90.0,
+                            amp: 1.2,
+                        },
+                        Formant {
+                            freq_hz: 1115.1125,
+                            bw_hz: 110.0,
+                            amp: 0.96000004,
+                        },
+                        Formant {
+                            freq_hz: 2443.675,
+                            bw_hz: 150.0,
+                            amp: 0.36,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.06,
+                },
+                oq: 1.1,
+                tilt: -0.1,
+                di: 0.0,
+                vibrato_hz: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Low,
@@ -180,9 +216,9 @@ UtteranceSchedule {
         },
         Event {
             at_ms: 555.0,
-            transition_ms: 35.0,
+            transition_ms: 29.75,
             frame: Frame {
-                f0_hz: 114.50495,
+                f0_hz: 114.369484,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -202,21 +238,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 0.6,
-                    aspiration: 0.5,
+                    aspiration: 0.56,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 675.0,
-            transition_ms: 32.0,
+            at_ms: 657.0,
+            transition_ms: 27.2,
             frame: Frame {
-                f0_hz: 113.31683,
+                f0_hz: 113.33469,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -236,57 +272,57 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Sonorant,
         },
         Event {
-            at_ms: 755.0,
+            at_ms: 725.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 112.52475,
+                f0_hz: 108.64482,
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 730.0,
+                            freq_hz: 713.9,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 1090.0,
+                            freq_hz: 1118.7,
                             bw_hz: 110.0,
                             amp: 0.8,
                         },
                         Formant {
-                            freq_hz: 2440.0,
+                            freq_hz: 2444.2,
                             bw_hz: 150.0,
                             amp: 0.3,
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Low,
             ),
         },
         Event {
-            at_ms: 915.0,
+            at_ms: 885.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 110.9406,
+                f0_hz: 111.02161,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -306,21 +342,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 975.0,
+            at_ms: 945.0,
             transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 110.346535,
+                f0_hz: 110.4129,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -342,55 +378,91 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 1.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 1000.0,
+            at_ms: 970.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 110.09901,
+                f0_hz: 106.55928,
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 570.0,
+                            freq_hz: 563.875,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 840.0,
+                            freq_hz: 897.75,
                             bw_hz: 110.0,
                             amp: 0.8,
                         },
                         Formant {
-                            freq_hz: 2410.0,
+                            freq_hz: 2417.875,
                             bw_hz: 150.0,
                             amp: 0.25,
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Mid,
             ),
         },
         Event {
-            at_ms: 1150.0,
+            at_ms: 1020.0,
+            transition_ms: 50.0,
+            frame: Frame {
+                f0_hz: 109.65202,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 557.75,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 955.5,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2425.75,
+                            bw_hz: 150.0,
+                            amp: 0.25,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.06,
+                },
+                oq: 1.1,
+                tilt: -0.1,
+                di: 0.0,
+                vibrato_hz: 0.0,
+                flutter: 25.0,
+            },
+            micro: Vowel(
+                Mid,
+            ),
+        },
+        Event {
+            at_ms: 1120.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 108.61386,
+                f0_hz: 108.63752,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -410,21 +482,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 1210.0,
+            at_ms: 1180.0,
             transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 108.019806,
+                f0_hz: 108.02881,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -446,19 +518,19 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 1.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 1235.0,
+            at_ms: 1205.0,
             transition_ms: 20.0,
             frame: Frame {
-                f0_hz: 107.77228,
+                f0_hz: 107.775185,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -478,21 +550,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Diphthong,
         },
         Event {
-            at_ms: 1285.0,
+            at_ms: 1255.0,
             transition_ms: 100.0,
             frame: Frame {
-                f0_hz: 107.27723,
+                f0_hz: 107.26793,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -512,21 +584,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Diphthong,
         },
         Event {
-            at_ms: 1435.0,
+            at_ms: 1405.0,
             transition_ms: 32.0,
             frame: Frame {
-                f0_hz: 105.79208,
+                f0_hz: 105.74617,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -546,57 +618,57 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Sonorant,
         },
         Event {
-            at_ms: 1515.0,
+            at_ms: 1485.0,
             transition_ms: 35.0,
             frame: Frame {
-                f0_hz: 105.0,
+                f0_hz: 100.93456,
                 targets: Targets {
                     formants: [
                         Formant {
-                            freq_hz: 730.0,
+                            freq_hz: 713.9,
                             bw_hz: 90.0,
                             amp: 1.0,
                         },
                         Formant {
-                            freq_hz: 1090.0,
+                            freq_hz: 1118.7,
                             bw_hz: 110.0,
                             amp: 0.8,
                         },
                         Formant {
-                            freq_hz: 2440.0,
+                            freq_hz: 2444.2,
                             bw_hz: 150.0,
                             amp: 0.3,
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Low,
             ),
         },
         Event {
-            at_ms: 1675.0,
+            at_ms: 1645.0,
             transition_ms: 32.0,
             frame: Frame {
-                f0_hz: 123.41584,
+                f0_hz: 123.311356,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -616,21 +688,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Sonorant,
         },
         Event {
-            at_ms: 1755.0,
+            at_ms: 1725.0,
             transition_ms: 52.5,
             frame: Frame {
-                f0_hz: 122.623764,
+                f0_hz: 122.49975,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -650,23 +722,23 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Mid,
             ),
         },
         Event {
-            at_ms: 1980.0,
-            transition_ms: 35.0,
+            at_ms: 1950.0,
+            transition_ms: 29.75,
             frame: Frame {
-                f0_hz: 100.39604,
+                f0_hz: 100.2171,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -686,21 +758,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 0.6,
-                    aspiration: 0.6,
+                    aspiration: 0.66,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 2100.0,
-            transition_ms: 20.0,
+            at_ms: 2052.0,
+            transition_ms: 17.0,
             frame: Frame {
-                f0_hz: 99.20792,
+                f0_hz: 99.18231,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -720,21 +792,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 2160.0,
-            transition_ms: 5.0,
+            at_ms: 2103.0,
+            transition_ms: 4.25,
             frame: Frame {
-                f0_hz: 98.61386,
+                f0_hz: 98.66491,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -756,19 +828,19 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 1.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: VoicedObstruent,
         },
         Event {
-            at_ms: 2185.0,
-            transition_ms: 35.0,
+            at_ms: 2124.25,
+            transition_ms: 45.5,
             frame: Frame {
-                f0_hz: 98.36633,
+                f0_hz: 90.84933,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -788,23 +860,59 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Vowel(
                 Low,
             ),
         },
         Event {
-            at_ms: 2345.0,
-            transition_ms: 32.0,
+            at_ms: 2189.25,
+            transition_ms: 65.0,
             frame: Frame {
-                f0_hz: 96.78218,
+                f0_hz: 93.94207,
+                targets: Targets {
+                    formants: [
+                        Formant {
+                            freq_hz: 707.0575,
+                            bw_hz: 90.0,
+                            amp: 1.0,
+                        },
+                        Formant {
+                            freq_hz: 1130.8975,
+                            bw_hz: 110.0,
+                            amp: 0.8,
+                        },
+                        Formant {
+                            freq_hz: 2445.985,
+                            bw_hz: 150.0,
+                            amp: 0.3,
+                        },
+                    ],
+                    voicing: 1.0,
+                    aspiration: 0.06,
+                },
+                oq: 1.1,
+                tilt: -0.1,
+                di: 0.0,
+                vibrato_hz: 0.0,
+                flutter: 25.0,
+            },
+            micro: Vowel(
+                Low,
+            ),
+        },
+        Event {
+            at_ms: 2332.25,
+            transition_ms: 41.6,
+            frame: Frame {
+                f0_hz: 96.82611,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -824,21 +932,21 @@ UtteranceSchedule {
                         },
                     ],
                     voicing: 1.0,
-                    aspiration: 0.0,
+                    aspiration: 0.06,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Sonorant,
         },
         Event {
-            at_ms: 2425.0,
+            at_ms: 2436.25,
             transition_ms: 5.0,
             frame: Frame {
-                f0_hz: 95.9901,
+                f0_hz: 96.01451,
                 targets: Targets {
                     formants: [
                         Formant {
@@ -860,11 +968,11 @@ UtteranceSchedule {
                     voicing: 0.0,
                     aspiration: 0.0,
                 },
-                oq: 1.0,
-                tilt: 0.0,
+                oq: 1.1,
+                tilt: -0.1,
                 di: 0.0,
                 vibrato_hz: 0.0,
-                flutter: 0.0,
+                flutter: 25.0,
             },
             micro: Silence,
         },
@@ -892,8 +1000,8 @@ UtteranceSchedule {
         },
         SyllableSpan {
             start_ms: 555.0,
-            dur_ms: 360.0,
-            nucleus_off_ms: 200.0,
+            dur_ms: 330.0,
+            nucleus_off_ms: 170.0,
             word_index: 1,
             stressed: false,
             countable: true,
@@ -901,7 +1009,7 @@ UtteranceSchedule {
             coda_count: 0,
         },
         SyllableSpan {
-            start_ms: 915.0,
+            start_ms: 885.0,
             dur_ms: 235.0,
             nucleus_off_ms: 85.0,
             word_index: 2,
@@ -911,7 +1019,7 @@ UtteranceSchedule {
             coda_count: 0,
         },
         SyllableSpan {
-            start_ms: 1150.0,
+            start_ms: 1120.0,
             dur_ms: 285.0,
             nucleus_off_ms: 85.0,
             word_index: 3,
@@ -921,7 +1029,7 @@ UtteranceSchedule {
             coda_count: 0,
         },
         SyllableSpan {
-            start_ms: 1435.0,
+            start_ms: 1405.0,
             dur_ms: 240.0,
             nucleus_off_ms: 80.0,
             word_index: 4,
@@ -931,7 +1039,7 @@ UtteranceSchedule {
             coda_count: 0,
         },
         SyllableSpan {
-            start_ms: 1675.0,
+            start_ms: 1645.0,
             dur_ms: 305.0,
             nucleus_off_ms: 80.0,
             word_index: 5,
@@ -941,9 +1049,9 @@ UtteranceSchedule {
             coda_count: 0,
         },
         SyllableSpan {
-            start_ms: 1980.0,
-            dur_ms: 445.0,
-            nucleus_off_ms: 205.0,
+            start_ms: 1950.0,
+            dur_ms: 486.25,
+            nucleus_off_ms: 174.25,
             word_index: 5,
             stressed: false,
             countable: true,
@@ -951,6 +1059,6 @@ UtteranceSchedule {
             coda_count: 1,
         },
     ],
-    total_ms: 2525.0,
+    total_ms: 2536.25,
     attitudinals: [],
 }

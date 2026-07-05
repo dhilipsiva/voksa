@@ -15,8 +15,8 @@ use crate::schedule::{BASE_F0_HZ, Event, MicroClass, UtteranceSchedule, VowelHei
 /// Options for [`apply_prosody`]. Declination and stress realization are
 /// always on; the xu terminal rise is per-utterance. The float fields are the
 /// tunable knobs (demo tuning console) — they DEFAULT to the pinned constants
-/// below, so `ProsodyOptions::default()` reproduces the phonology.md §9.1
-/// convention exactly (and every snapshot stays byte-identical).
+/// below, so `ProsodyOptions::default()` reproduces the phonology.md §9
+/// convention exactly. [`Self::naturalness_off`] is the frozen Phase-10 voice.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProsodyOptions {
     pub xu_rise: bool,
@@ -36,7 +36,7 @@ pub struct ProsodyOptions {
     pub rate: f32,
 
     // ---- Phase-11 naturalness (identity values = byte-exact no-op; the
-    // pinned defaults switch on at N-D; see [`Self::naturalness_off`]) ----
+    // pinned defaults are ON since N-D; see [`Self::naturalness_off`]) ----
     /// Klatt flutter FL percent (0 = off): slow deterministic F0 wobble.
     pub flutter: f32,
     /// Baseline breathiness: aspiration added to voiced frames (0 = off).
@@ -120,27 +120,28 @@ pub const STRESS_AMP_FACTOR: f32 = 1.2;
 /// xu terminal rise applied across the final syllable.
 pub const XU_RISE_HZ: f32 = 25.0;
 
-// ---- Phase-11 naturalness pinned constants. IDENTITY until N-D flips the
-// default voice ON (the flip is the one deliberate sound change of Phase 11;
-// `naturalness_off()` stays at these identity values forever). ----
-/// Klatt flutter FL percent.
-pub const FLUTTER_FL: f32 = 0.0;
+// ---- Phase-11 naturalness pinned constants — the DEFAULT voice since N-D
+// flipped them ON (the one deliberate sound change of Phase 11; values in
+// docs/phonology.md §9.2). `naturalness_off()` keeps the frozen identity
+// values forever — that arm is the Phase-10 voice, byte-exact. ----
+/// Klatt flutter FL percent (deterministic sum-of-sines F0 wobble).
+pub const FLUTTER_FL: f32 = 25.0;
 /// Baseline breathiness (aspiration on voiced frames).
-pub const BREATH_ASPIRATION: f32 = 0.0;
-/// Baseline open-quotient delta.
-pub const BASELINE_OQ_DELTA: f32 = 0.0;
-/// Baseline spectral-tilt delta.
-pub const BASELINE_TILT_DELTA: f32 = 0.0;
-/// Intrinsic vowel F0 magnitude (Hz).
-pub const MICRO_F0_HZ: f32 = 0.0;
-/// Post-voiceless obstruent F0 rise (Hz).
-pub const OBSTRUENT_F0_HZ: f32 = 0.0;
+pub const BREATH_ASPIRATION: f32 = 0.06;
+/// Baseline open-quotient delta (softer glottal source).
+pub const BASELINE_OQ_DELTA: f32 = 0.10;
+/// Baseline spectral-tilt delta (darker, less buzzy spectrum).
+pub const BASELINE_TILT_DELTA: f32 = -0.10;
+/// Intrinsic vowel F0 magnitude (Hz): high vowels +, low vowels −.
+pub const MICRO_F0_HZ: f32 = 4.0;
+/// Post-voiceless obstruent F0 rise (Hz), decaying over MICRO_DECAY_MS.
+pub const OBSTRUENT_F0_HZ: f32 = 6.0;
 /// Phrase-final rhyme lengthening.
-pub const FINAL_LENGTHEN: f32 = 1.0;
-/// Onset-cluster compression rate.
-pub const CLUSTER_SHORTEN: f32 = 0.0;
+pub const FINAL_LENGTHEN: f32 = 1.3;
+/// Onset-cluster compression rate (per extra consonant).
+pub const CLUSTER_SHORTEN: f32 = 0.15;
 /// Duration-dependent formant undershoot fraction.
-pub const UNDERSHOOT: f32 = 0.0;
+pub const UNDERSHOOT: f32 = 0.35;
 
 /// Voiced-obstruent F0 dip as a ratio of the voiceless rise (Klatt-ish).
 pub const OBSTRUENT_DIP_RATIO: f32 = 0.6;
