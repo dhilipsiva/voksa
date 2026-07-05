@@ -9,6 +9,7 @@
 
 use dioxus::prelude::*;
 
+use super::help::HelpDot;
 use super::store::ParamStore;
 use crate::model;
 
@@ -39,6 +40,7 @@ pub fn nice(v: f32) -> String {
 struct CellView {
     value: f32,
     label: String,
+    help_key: String,
     unit: &'static str,
     min: f32,
     max: f32,
@@ -69,6 +71,7 @@ fn cell_view(store: &ParamStore, idx: usize) -> CellView {
     CellView {
         value: c.value,
         label: d.label.clone(),
+        help_key: d.help_key.clone(),
         unit: d.unit,
         min,
         max,
@@ -191,6 +194,7 @@ pub fn ParamRow(idx: usize, disabled: ReadSignal<bool>) -> Element {
                 if !v.unit.is_empty() {
                     span { class: "vx-unit", "{v.unit}" }
                 }
+                HelpDot { topic: v.help_key.clone(), title: v.label.clone() }
             }
             Slider {
                 idx,

@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 
 use super::Ui;
 use super::editors::{AttitudinalSection, VoiceTableSection};
+use super::help::HelpDot;
 use super::rows::ParamRow;
 use super::store::ParamStore;
 use crate::model::{PARAM_TOTAL, PRESETS, apply_preset, reset_plan};
@@ -29,6 +30,7 @@ pub fn TuningColumn() -> Element {
                 id: "prosody",
                 title: "prosody",
                 sub: "declination · stress · rate",
+                help: "prosody._section",
                 dirty: prosody_dirty,
                 flat,
                 for k in 0..7usize {
@@ -39,6 +41,7 @@ pub fn TuningColumn() -> Element {
                 id: "naturalness",
                 title: "naturalness",
                 sub: "the micro-variation that softens the robot",
+                help: "naturalness._section",
                 dirty: nat_dirty,
                 flat,
                 AbLatch {}
@@ -60,19 +63,22 @@ fn AbLatch() -> Element {
     let mut ab = ui.ab_off;
     rsx! {
         div { class: "vx-ab",
-            div { class: "vx-abseg",
-                button {
-                    class: "vx-abbtn vx-abbtn-a",
-                    class: if !ab() { "vx-abbtn-sel" },
-                    onclick: move |_| ab.set(false),
-                    "A · current"
+            div { class: "vx-abrow",
+                div { class: "vx-abseg",
+                    button {
+                        class: "vx-abbtn vx-abbtn-a",
+                        class: if !ab() { "vx-abbtn-sel" },
+                        onclick: move |_| ab.set(false),
+                        "A · current"
+                    }
+                    button {
+                        class: "vx-abbtn vx-abbtn-b",
+                        class: if ab() { "vx-abbtn-sel" },
+                        onclick: move |_| ab.set(true),
+                        "B · naturalness off"
+                    }
                 }
-                button {
-                    class: "vx-abbtn vx-abbtn-b",
-                    class: if ab() { "vx-abbtn-sel" },
-                    onclick: move |_| ab.set(true),
-                    "B · naturalness off"
-                }
+                HelpDot { topic: "naturalness.ab", title: "A/B latch" }
             }
             if ab() {
                 div { class: "vx-abbanner",
@@ -114,6 +120,7 @@ fn RackNav() -> Element {
                     option { value: "{p.name}", selected: *preset.read() == p.name, "{p.name}" }
                 }
             }
+            HelpDot { topic: "presets", title: "presets" }
             button {
                 class: "vx-resetall",
                 onclick: move |_| {
@@ -126,6 +133,7 @@ fn RackNav() -> Element {
                 },
                 "↺ reset all"
             }
+            HelpDot { topic: "reset.all", title: "reset all" }
         }
     }
 }
@@ -136,6 +144,7 @@ fn Rack(
     id: &'static str,
     title: &'static str,
     sub: &'static str,
+    help: &'static str,
     dirty: ReadSignal<usize>,
     flat: ReadSignal<bool>,
     children: Element,
@@ -154,6 +163,7 @@ fn Rack(
                 } else if dirty() > 0 {
                     span { class: "vx-chip vx-chip-ember", "Δ {dirty()}" }
                 }
+                HelpDot { topic: help.to_string(), title: title.to_string() }
             }
             div { class: "vx-rackbody", {children} }
         }

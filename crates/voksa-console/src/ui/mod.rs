@@ -2,8 +2,10 @@
 //! Look and structure follow the QUINE design handoff
 //! (`docs/design/tuning-console/`, Workbench = reference implementation).
 
+mod about;
 mod console;
 mod editors;
+mod help;
 mod racks;
 mod rows;
 mod source;
@@ -49,6 +51,10 @@ pub struct Ui {
     /// Naturalness A/B latch: `true` renders with the nine knobs at identity
     /// (the phase-10 voice) without touching stored values.
     pub ab_off: Signal<bool>,
+    /// The open help popover request (`None` = closed).
+    pub help: Signal<Option<help::Help>>,
+    /// Whether the "about voksa" modal is open.
+    pub about_open: Signal<bool>,
 }
 
 impl Ui {
@@ -66,6 +72,8 @@ impl Ui {
             sel_emotion: Signal::new(0),
             vt_changed_only: Signal::new(false),
             ab_off: Signal::new(false),
+            help: Signal::new(None),
+            about_open: Signal::new(false),
         }
     }
 }

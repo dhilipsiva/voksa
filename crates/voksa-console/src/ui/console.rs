@@ -7,6 +7,8 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::Ui;
+use super::about::AboutPanel;
+use super::help::HelpPopover;
 use super::racks::TuningColumn;
 use super::source::SourceColumn;
 use super::speak::{Audio, use_auto_speak};
@@ -71,6 +73,8 @@ pub fn TuningConsole(props: TuningConsoleProps) -> Element {
                 SourceColumn {}
                 TuningColumn {}
             }
+            HelpPopover {}
+            AboutPanel {}
         }
     }
 }

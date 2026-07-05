@@ -6,6 +6,7 @@
 use dioxus::prelude::*;
 
 use super::Ui;
+use super::help::HelpDot;
 use super::rows::{MatrixCell, ParamRow};
 use super::speak::{Audio, speak_now};
 use super::store::ParamStore;
@@ -51,6 +52,7 @@ pub fn AttitudinalSection() -> Element {
                 if att_dirty() > 0 {
                     span { class: "vx-chip vx-chip-ember", "Δ {att_dirty()}" }
                 }
+                HelpDot { topic: "att._section", title: "attitudinals" }
             }
             div { class: "vx-theorem",
                 "∴ invented, non-normative — the CLL defines what an attitudinal "
@@ -110,6 +112,7 @@ fn EmotionEditor(kind: usize) -> Element {
             div { class: "vx-scopehead",
                 span { class: "vx-scopelabel", "{a.label}" }
                 span { class: "vx-scopesub", "{a.sub}" }
+                HelpDot { topic: "att.emotion.{a.key}", title: a.label.to_string() }
                 span { class: "vx-scopespacer" }
                 button {
                     class: "vx-try",
@@ -160,6 +163,7 @@ pub fn VoiceTableSection() -> Element {
                 if voice_dirty() > 0 {
                     span { class: "vx-chip vx-chip-ember", "Δ {voice_dirty()}" }
                 }
+                HelpDot { topic: "vt._section", title: "voice table" }
             }
             div { class: "vx-vttools",
                 label { class: "vx-switch",
@@ -170,6 +174,7 @@ pub fn VoiceTableSection() -> Element {
                     }
                     span { "changed only" }
                 }
+                HelpDot { topic: "vt.changedonly", title: "changed only" }
                 span { class: "vx-scopespacer" }
                 button {
                     class: "vx-resetall",
@@ -252,11 +257,13 @@ fn PhonemeEditor(item: usize) -> Element {
     let base = store.desc().voice_item_range(item).start;
     let note = item_note(item);
     let label = disp(vi).to_string();
+    let class_key = format!("vt.class.{}", SECTIONS[vi.section as usize].id);
     rsx! {
         div { class: "vx-scopeeditor",
             div { class: "vx-scopehead",
                 span { class: "vx-scopelabel", "{label}" }
                 span { class: "vx-scopesub", "{vi.ipa}" }
+                HelpDot { topic: class_key, title: label.clone() }
                 span { class: "vx-scopespacer" }
                 button {
                     class: "vx-reset-scope",

@@ -3,15 +3,20 @@
 //! C2 ships the utterance panel live; transcript/transport/share arrive in
 //! C3/C5 (placeholders keep the layout honest).
 
+use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 use serde::Deserialize;
 
 use super::Ui;
+use super::about::{LINK_ISSUES, LINK_MAIL};
+use super::help::HelpDot;
 use super::speak::{Audio, Status, speak_now};
 use super::store::ParamStore;
 use crate::audio;
 use crate::engine;
-use crate::model::{Flags, TokKind, peaks, tokenize, wav_bytes};
+use crate::model::{
+    self, ExportInputs, Flags, PARAM_TOTAL, TokKind, WritePlan, peaks, tokenize, wav_bytes,
+};
 
 /// Waveform display columns.
 const WAVE_COLS: usize = 240;
@@ -80,7 +85,12 @@ fn UtterancePanel() -> Element {
 
     rsx! {
         section { class: "vx-card",
-            div { class: "vx-cardhead", span { class: "vx-slash", "// " } "utterance" }
+            div { class: "vx-cardhead",
+                span { class: "vx-slash", "// " }
+                "utterance"
+                span { class: "vx-scopespacer" }
+                HelpDot { topic: "input.text", title: "utterance" }
+            }
             input {
                 class: "vx-text",
                 r#type: "text",
@@ -234,6 +244,7 @@ fn TranscriptCard() -> Element {
                 span { class: "vx-slash", "// " }
                 "phonetic analysis"
                 span { class: "vx-legend", "CAPS stress · ‖ pause · (ɪ) buffer" }
+                HelpDot { topic: "transcript.line", title: "phonetic analysis" }
             }
             div { class: "vx-transcript",
                 match toks() {
@@ -289,6 +300,7 @@ fn TransportCard() -> Element {
                     onclick: move |_| speak_now(store, ui, audio_speak.clone()),
                     "▶ speak"
                 }
+                HelpDot { topic: "transport.speak", title: "speak" }
                 label { class: "vx-switch",
                     input {
                         r#type: "checkbox",
@@ -297,6 +309,7 @@ fn TransportCard() -> Element {
                     }
                     span { "speak on change" }
                 }
+                HelpDot { topic: "transport.autospeak", title: "speak on change" }
             }
             div { class: "vx-wave",
                 svg {
@@ -317,6 +330,7 @@ fn TransportCard() -> Element {
             }
             div { class: "vx-transportfoot",
                 div { class: "vx-status vx-status-{status_kind}", "{status_text}" }
+                span { class: "vx-scopespacer" }
                 button {
                     class: "vx-wav",
                     disabled: !has_pcm(),
@@ -328,26 +342,209 @@ fn TransportCard() -> Element {
                     },
                     "⤓ wav"
                 }
+                HelpDot { topic: "transport.wav", title: "wav download" }
             }
         }
     }
 }
 
-/// Share the tuning (export/load — wired in C5).
+/// A one-line share-card status (load confirmation or a bad-JSON error).
+#[derive(Clone, PartialEq)]
+struct ShareMsg {
+    text: String,
+    err: bool,
+}
+
+/// Apply a parsed config with REPLACE semantics (a clean slate, not a merge):
+/// overlay the full 449-value block, then adopt its text/flags/notes. Out-of-
+/// range values widen their sliders (the store recomputes widen per cell).
+/// Malformed JSON errors before any state changes.
+fn apply_loaded(
+    json: &str,
+    name: &str,
+    mut store: ParamStore,
+    mut ui: Ui,
+    mut loaded_name: Signal<Option<String>>,
+    mut msg: Signal<Option<ShareMsg>>,
+) {
+    let parsed = {
+        let desc = store.desc();
+        model::load(&desc, json)
+    };
+    match parsed {
+        Ok(plan) => {
+            let write = WritePlan(plan.values.iter().copied().enumerate().collect());
+            store.apply(&write);
+            if let Some(text) = plan.text {
+                ui.text.set(text);
+            }
+            ui.flags.set(plan.flags);
+            ui.notes.set(plan.notes);
+            ui.preset.set("Custom".to_string());
+            ui.sentence.set(String::new());
+            loaded_name.set(Some(name.to_string()));
+            msg.set(Some(ShareMsg {
+                text: format!("config loaded — {name}"),
+                err: false,
+            }));
+        }
+        Err(e) => msg.set(Some(ShareMsg {
+            text: format!("bad config JSON — {e}"),
+            err: true,
+        })),
+    }
+}
+
+/// Share the tuning: Δ summary, notes, export/load (+ drag-drop), and the
+/// "send it back" call to action. Load REPLACES all state.
 #[component]
 fn ShareCard() -> Element {
+    let store = use_context::<ParamStore>();
     let ui = use_context::<Ui>();
     let mut notes = ui.notes;
+    let dirty = use_memo(move || store.dirty_count(0..PARAM_TOTAL));
+    let mut drop_active = use_signal(|| false);
+    let loaded_name = use_signal(|| None::<String>);
+    let msg = use_signal(|| None::<ShareMsg>);
+
     rsx! {
-        section { class: "vx-card",
-            div { class: "vx-cardhead", span { class: "vx-slash", "// " } "share the tuning" }
+        section {
+            class: "vx-card vx-sharecard",
+            ondragover: move |e| {
+                e.prevent_default();
+                if !*drop_active.peek() {
+                    drop_active.set(true);
+                }
+            },
+            ondragleave: move |_| drop_active.set(false),
+            ondrop: move |e| {
+                e.prevent_default();
+                drop_active.set(false);
+                if let Some(file) = e.files().into_iter().next() {
+                    let name = file.name();
+                    spawn(async move {
+                        match file.read_string().await {
+                            Ok(json) => apply_loaded(&json, &name, store, ui, loaded_name, msg),
+                            Err(_) => {
+                                let mut msg = msg;
+                                msg.set(Some(ShareMsg { text: "couldn't read that file".into(), err: true }));
+                            }
+                        }
+                    });
+                }
+            },
+            div { class: "vx-cardhead",
+                span { class: "vx-slash", "// " }
+                "share the tuning"
+                span { class: "vx-scopespacer" }
+                HelpDot { topic: "share.cta", title: "share the tuning" }
+            }
+
+            if dirty() > 0 {
+                div { class: "vx-sharedelta vx-sharedelta-on", "Δ {dirty()} deviations from engine defaults" }
+            } else {
+                div { class: "vx-sharedelta", "at engine defaults — nothing to send yet" }
+            }
+
             textarea {
                 class: "vx-notes",
-                placeholder: "notes travel inside the exported JSON",
+                placeholder: "notes travel inside the exported JSON — say what you heard",
                 value: "{notes}",
                 oninput: move |e| notes.set(e.value()),
             }
-            div { class: "vx-status", "export / load land in C5" }
+
+            div { class: "vx-sharebtns",
+                button {
+                    class: "vx-sharebtn",
+                    r#type: "button",
+                    onclick: move |_| {
+                        let values = store.snapshot();
+                        let text = ui.text.peek().clone();
+                        let flags = *ui.flags.peek();
+                        let notes_s = ui.notes.peek().clone();
+                        let phonetics = engine::transcribe(&text, flags).unwrap_or_default();
+                        let json = {
+                            let desc = store.desc();
+                            model::export(
+                                &desc,
+                                &ExportInputs {
+                                    values: &values,
+                                    text: &text,
+                                    flags,
+                                    notes: &notes_s,
+                                    phonetics: &phonetics,
+                                    sample_rate: audio::SAMPLE_RATE,
+                                },
+                            )
+                        };
+                        audio::download("voksa-config.json", json.as_bytes(), "application/json");
+                    },
+                    "⤒ export config"
+                }
+                HelpDot { topic: "share.export", title: "export config" }
+                label { class: "vx-sharebtn", r#for: "vx-load-input", "⤓ load config" }
+                HelpDot { topic: "share.load", title: "load config" }
+                input {
+                    id: "vx-load-input",
+                    class: "vx-fileinput",
+                    r#type: "file",
+                    accept: ".json,application/json",
+                    onchange: move |e| {
+                        if let Some(file) = e.files().into_iter().next() {
+                            let name = file.name();
+                            spawn(async move {
+                                match file.read_string().await {
+                                    Ok(json) => apply_loaded(&json, &name, store, ui, loaded_name, msg),
+                                    Err(_) => {
+                                        let mut msg = msg;
+                                        msg.set(Some(ShareMsg { text: "couldn't read that file".into(), err: true }));
+                                    }
+                                }
+                            });
+                        }
+                    },
+                }
+            }
+
+            div { class: "vx-sharefoot",
+                if let Some(name) = loaded_name.read().as_ref() {
+                    span { class: "vx-loadchip", "◈ {name}" }
+                }
+                match msg.read().as_ref() {
+                    Some(m) => rsx! {
+                        span {
+                            class: if m.err { "vx-status vx-status-err" } else { "vx-status vx-status-load" },
+                            "{m.text}"
+                        }
+                    },
+                    None => rsx! {},
+                }
+            }
+
+            div { class: "vx-cta",
+                div { class: "vx-cta-head", "send it back" }
+                p { class: "vx-cta-body",
+                    "your ears are the ground truth — the JSON carries your notes and the phonetics you were reading. It replays bit-identically via "
+                    span { class: "vx-mono", "voksa --config" }
+                    "."
+                }
+                div { class: "vx-cta-links",
+                    a {
+                        class: "vx-cta-link",
+                        href: LINK_ISSUES,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        "open an issue"
+                    }
+                    a { class: "vx-cta-link", href: LINK_MAIL, "email a config" }
+                }
+            }
+
+            if drop_active() {
+                div { class: "vx-droplay",
+                    span { "drop config JSON — replaces all state" }
+                }
+            }
         }
     }
 }

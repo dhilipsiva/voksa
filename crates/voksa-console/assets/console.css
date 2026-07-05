@@ -691,6 +691,180 @@
   text-align: right;
 }
 
+/* ── help dot + popover ───────────────────────────────────────────── */
+.vx-help {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-faint);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 99px;
+  padding: 0;
+  cursor: help;
+  opacity: 0.3;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.vx-srow:hover .vx-help,
+.vx-help:hover,
+.vx-help:focus-visible { opacity: 1; }
+.vx-help:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-help:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.vx-pop-backdrop { position: fixed; inset: 0; z-index: 88; }
+.vx-pop {
+  position: fixed;
+  z-index: 90;
+  width: 284px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+  padding: 12px;
+}
+.vx-pop-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.vx-pop-title { font-size: 12px; font-weight: 600; color: var(--text-strong); }
+.vx-pop-spacer { flex: 1; }
+.vx-pop-x {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.vx-pop-x:hover { color: var(--ember-300); }
+.vx-pop-body { font-size: 12px; line-height: 1.55; color: var(--text-body); }
+.vx-pop-key { margin-top: 7px; font-family: var(--font-mono); font-size: 9px; color: var(--text-faint); word-break: break-all; }
+
+/* ── about (λ) ────────────────────────────────────────────────────── */
+.vx-titlespacer { flex: 1; }
+.vx-about-btn {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  width: 30px;
+  height: 26px;
+  cursor: pointer;
+}
+.vx-about-btn:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-about-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  overflow-y: auto;
+  background: color-mix(in oklab, #050706 72%, transparent);
+  backdrop-filter: var(--blur-glass);
+}
+.vx-about-card {
+  width: 620px;
+  max-width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+.vx-about-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.vx-about-mark { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--text-strong); }
+.vx-about-gloss { font-size: 10px; font-style: italic; color: var(--text-faint); }
+.vx-caps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vx-cap { display: flex; gap: 10px; font-size: 11.5px; line-height: 1.5; color: var(--text-body); }
+.vx-cap-g { flex: 0 0 auto; width: 16px; color: var(--accent); font-size: 14px; }
+.vx-cap-t { min-width: 0; }
+.vx-about-sec { margin: 16px 0 6px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); }
+.vx-sizes { width: 100%; border-collapse: collapse; font-size: 11px; }
+.vx-sizes td { padding: 3px 0; vertical-align: top; }
+.vx-size-k { font-family: var(--font-mono); color: var(--text-strong); white-space: nowrap; padding-right: 12px; }
+.vx-size-v { color: var(--ember-300); white-space: nowrap; padding-right: 12px; }
+.vx-size-n { color: var(--text-faint); }
+.vx-arch { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.vx-arch-row { display: flex; gap: 10px; font-size: 11px; }
+.vx-arch-c { flex: 0 0 auto; width: 170px; font-family: var(--font-mono); color: var(--text-body); }
+.vx-arch-d { min-width: 0; color: var(--text-muted); }
+.vx-about-links { display: flex; gap: 14px; margin-top: 16px; font-size: 11px; }
+.vx-about-links a { color: var(--accent); text-decoration: none; }
+.vx-about-links a:hover { color: var(--ember-300); text-decoration: underline; }
+.vx-about-foot { margin-top: 14px; font-family: var(--font-display); font-style: italic; font-size: 12px; color: var(--text-faint); }
+
+/* ── A/B row (segmented control + help dot) ───────────────────────── */
+.vx-abrow { display: flex; align-items: center; gap: 8px; }
+
+/* ── share card (export / load / drop / CTA) ──────────────────────── */
+.vx-sharecard { position: relative; }
+.vx-sharedelta { font-size: 10.5px; color: var(--text-faint); margin-bottom: 8px; }
+.vx-sharedelta-on { color: var(--ember-300); }
+.vx-sharebtns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.vx-sharebtn {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-body);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 30px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.vx-sharebtn:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-fileinput { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.vx-sharefoot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; min-height: 16px; }
+.vx-loadchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--phosphor-300);
+  border: 1px solid color-mix(in oklab, var(--phosphor-500) 32%, transparent);
+  border-radius: 99px;
+  padding: 1px 8px;
+}
+.vx-status-load { color: var(--phosphor-300); }
+.vx-droplay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--ember-500);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface-card) 82%, transparent);
+  font-size: 12px;
+  color: var(--ember-300);
+  pointer-events: none;
+}
+.vx-cta {
+  margin-top: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 15px, color-mix(in oklab, var(--accent) 5%, transparent) 15px 16px),
+    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklab, var(--accent) 5%, transparent) 23px 24px),
+    var(--surface-inset);
+}
+.vx-cta-head { font-size: 11px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; }
+.vx-cta-body { margin: 0; font-size: 10.5px; line-height: 1.55; color: var(--text-muted); }
+.vx-cta-links { display: flex; gap: 12px; margin-top: 8px; }
+.vx-cta-link { font-size: 10.5px; color: var(--accent); text-decoration: none; }
+.vx-cta-link:hover { color: var(--ember-300); text-decoration: underline; }
+
 @media (prefers-reduced-motion: reduce) {
-  .vx-thumb, .vx-phkey { transition: none; }
+  .vx-thumb, .vx-phkey, .vx-help { transition: none; }
 }
