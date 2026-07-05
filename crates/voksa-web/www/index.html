@@ -43,6 +43,10 @@
       <button id="sent-next" title="cycle through the phonetic coverage set">⏭ next</button>
       <span class="muted" id="sentence-en"></span>
     </div>
+    <p class="muted" id="phonetics-row" style="margin: 0.3rem 0 0;">
+      → <code id="phonetics">—</code>
+      <span style="float: right;">CAPS = stress · ‖ = pause · (ɪ) = buffer</span>
+    </p>
 
     <div class="tabs">
       <button id="tab-basic" class="active">Basic</button>
@@ -87,14 +91,17 @@
 
     <script type="module">
       // ?v= cache-busts the worklet (addModule caches aggressively).
-      const V = '6';
+      const V = '7';
 
       // Compile the wasm FIRST and read the canonical default param block from
       // it (a second, main-thread instance — zero imports make this a
       // one-liner), so every slider default below is the ENGINE's pinned
       // value, never a hand-copied literal. The literals below remain only as
       // a no-wasm fallback (in which case nothing can play anyway).
-      let wasmModule = null, wasmLoadError = null, DEFAULTS = null;
+      // mainWasm: a retained MAIN-thread instance (zero imports) used for the
+      // default-param block and live phonetic transcription; playback still
+      // instantiates its own copy inside the worklet.
+      let wasmModule = null, wasmLoadError = null, DEFAULTS = null, mainWasm = null;
       // Shortest decimal that round-trips to the same f32: the raw f64 image of
       // an f32 (0.30000001192...) would make readouts ugly and step-snapped
       // sliders diverge from their defs (spurious delta exports).
@@ -107,11 +114,11 @@
       }
       try {
         wasmModule = await WebAssembly.compileStreaming(fetch('../pkg/voksa_web_bg.wasm?v=' + V));
-        const probe = new WebAssembly.Instance(wasmModule, {}).exports;
-        const dptr = probe.voksa_default_params();
-        const dlen = probe.voksa_out_len();
-        DEFAULTS = Array.from(new Float32Array(probe.memory.buffer, dptr, dlen), f32nice);
-        probe.voksa_free_f32(dptr, dlen);
+        mainWasm = new WebAssembly.Instance(wasmModule, {}).exports;
+        const dptr = mainWasm.voksa_default_params();
+        const dlen = mainWasm.voksa_out_len();
+        DEFAULTS = Array.from(new Float32Array(mainWasm.memory.buffer, dptr, dlen), f32nice);
+        mainWasm.voksa_free_f32(dptr, dlen);
       } catch (e) { wasmLoadError = e; }
 
       // The 7 prosody knobs, IN THE ORDER of the wasm f32 layout + CLI keys.
@@ -481,6 +488,8 @@
           }
         }
         if (Object.keys(phon).length) c.phonemes = phon;
+        // The analysis the tuner was looking at — bug reports carry it.
+        c.phonetics = currentTranscription();
         c.notes = document.getElementById('notes').value;
         c.sampleRate = ctx ? ctx.sampleRate : 48000;
         c.voksaVersion = '0.0.1';
@@ -541,6 +550,7 @@
         resetDefaults();
         const over = PRESETS[presetSel.value] || {};
         for (const [k, v] of Object.entries(over)) { slideEl(k).value = v; outEl(k).textContent = v; }
+        updatePhonetics();
         autoSpeak();
       });
 
@@ -677,6 +687,7 @@
         flagEl('buffer').checked = !!f.buffer;
         sentEn.textContent = s.en;
         syncFlatState();
+        updatePhonetics();
         autoSpeak();
       }
       sentSel.addEventListener('change', () => {
@@ -691,18 +702,44 @@
         applySentence(next);
       });
 
-      document.getElementById('reset').addEventListener('click', () => { resetDefaults(); autoSpeak(); });
+      // ---- live phonetic transcription (D2c) ----
+      // voksa's own syllable/stress/pause analysis for the current text +
+      // flags, straight from the wasm — the community checks phonetics against
+      // what they hear (CAPS = stress, ‖ = pause, (ɪ) = buffer vowel).
+      const phonEl = document.getElementById('phonetics');
+      function currentTranscription() {
+        if (!mainWasm) return '';
+        const bytes = new TextEncoder().encode(document.getElementById('text').value);
+        const inPtr = mainWasm.voksa_alloc(bytes.length);
+        new Uint8Array(mainWasm.memory.buffer, inPtr, bytes.length).set(bytes);
+        const outPtr = mainWasm.voksa_transcribe(inPtr, bytes.length, readFlagsBits());
+        mainWasm.voksa_dealloc(inPtr, bytes.length);
+        if (outPtr === 0) return '';
+        const n = mainWasm.voksa_out_len();
+        // Copy out before freeing (memory growth detaches views).
+        const s = new TextDecoder().decode(new Uint8Array(mainWasm.memory.buffer, outPtr, n).slice());
+        mainWasm.voksa_dealloc(outPtr, n);
+        return s;
+      }
+      function updatePhonetics() {
+        phonEl.textContent = currentTranscription() || '—';
+      }
+      document.getElementById('text').addEventListener('input', updatePhonetics);
+      flagsBox.addEventListener('change', updatePhonetics);
+
+      document.getElementById('reset').addEventListener('click', () => { resetDefaults(); updatePhonetics(); autoSpeak(); });
       document.getElementById('dl-json').addEventListener('click', () => {
         download('voksa-config.json', new TextEncoder().encode(JSON.stringify(currentConfig(), null, 2)), 'application/json');
       });
       document.getElementById('ld-json').addEventListener('change', async (e) => {
         const file = e.target.files[0]; if (!file) return;
-        try { applyConfig(JSON.parse(await file.text())); status.textContent = 'config loaded'; autoSpeak(); }
+        try { applyConfig(JSON.parse(await file.text())); status.textContent = 'config loaded'; updatePhonetics(); autoSpeak(); }
         catch (err) { status.textContent = 'bad config JSON: ' + err; }
       });
       dlWav.addEventListener('click', () => { if (lastSamples) download('voksa.wav', wavBytes(lastSamples, lastRate), 'audio/wav'); });
 
       resetDefaults();
+      updatePhonetics();
     </script>
   </body>
 </html>
