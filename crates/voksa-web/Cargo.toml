@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "voksa TTS browser adapter: raw-C-ABI WASM synthesized inside an AudioWorklet"
+# crates.io publishing is post-v0.1 backlog (see PLAN.md).
+publish = false
 
 [lib]
 # cdylib: the .wasm artifact. rlib: lets `tests/` integration tests and native

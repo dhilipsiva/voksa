@@ -32,6 +32,8 @@ keywords = [
 ]
 categories = ["multimedia::audio"]
 license = "MIT"
+# VENDORED FORK - the package name collides with upstream; never publish.
+publish = false
 repository = "https://github.com/tgies/klattsch-rs"
 
 [features]

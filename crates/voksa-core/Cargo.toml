@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "voksa TTS core: no_std + alloc Lojban synthesis engine"
+# crates.io publishing is post-v0.1 backlog (see PLAN.md).
+publish = false
 
 [dependencies]
 

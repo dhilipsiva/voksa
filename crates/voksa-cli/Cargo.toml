@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "voksa TTS command-line interface"
+# crates.io publishing is post-v0.1 backlog (see PLAN.md).
+publish = false
 
 [lib]
 name = "voksa_cli"

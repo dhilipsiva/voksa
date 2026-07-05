@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 description = "voksa engine adapter: lowers schedules to klattsch-core (swappable at the Phase-2 gate)"
+# crates.io publishing is post-v0.1 backlog (see PLAN.md).
+publish = false
 
 # The ONLY crate allowed to depend on klattsch-core (std-only; may be replaced
 # by a hand-rolled engine at the end-of-Phase-2 decision gate).
