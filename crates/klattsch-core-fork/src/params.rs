@@ -47,6 +47,10 @@ pub struct Params {
     /// Voksa fork: diplophonia 0..1 — alternate-cycle amplitude dip that
     /// injects an F0/2 subharmonic (creak / vocal fry). 0 = off (upstream).
     pub diplophonia: f32,
+    /// Voksa fork: Klatt-style F0 flutter, FL percent 0..100 (Klatt & Klatt
+    /// 1990: ΔF0 = (FL/50)·(F0/100)·[sin 2π12.7t + sin 2π7.1t + sin 2π4.7t]) —
+    /// a deterministic slow quasi-random wobble. 0 = off (upstream).
+    pub flutter: f32,
 }
 
 impl Params {
@@ -72,6 +76,7 @@ impl Params {
         effort: 0.5,
         open_quotient: 1.0,
         diplophonia: 0.0,
+        flutter: 0.0,
     };
 }
 
@@ -107,6 +112,7 @@ pub struct ParamUpdate {
     pub effort: Option<f32>,
     pub open_quotient: Option<f32>,
     pub diplophonia: Option<f32>,
+    pub flutter: Option<f32>,
 }
 
 impl ParamUpdate {
@@ -140,6 +146,7 @@ impl ParamUpdate {
         set!(effort);
         set!(open_quotient);
         set!(diplophonia);
+        set!(flutter);
     }
 
     /// Build the per-sample increment that ramps `current` toward `target` over
@@ -174,6 +181,7 @@ impl ParamUpdate {
             effort: delta!(effort),
             open_quotient: delta!(open_quotient),
             diplophonia: delta!(diplophonia),
+            flutter: delta!(flutter),
         }
     }
 }
@@ -208,6 +216,7 @@ mod tests {
                 effort: 0.5,
                 open_quotient: 1.0,
                 diplophonia: 0.0,
+                flutter: 0.0,
             }
         );
     }

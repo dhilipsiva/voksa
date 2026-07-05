@@ -26,6 +26,7 @@ const ZERO_INCREMENTS: Params = Params {
     effort: 0.0,
     open_quotient: 0.0,
     diplophonia: 0.0,
+    flutter: 0.0,
 };
 
 macro_rules! for_each_param {
@@ -51,6 +52,7 @@ macro_rules! for_each_param {
         $action!(effort);
         $action!(open_quotient);
         $action!(diplophonia);
+        $action!(flutter);
     };
 }
 
@@ -308,6 +310,82 @@ mod tests {
         s.process(&mut buf);
         let peak = buf.iter().fold(0.0f32, |p, v| p.max(v.abs()));
         assert!(peak > 0.05, "expected audible output, peak {peak}");
+    }
+
+    #[test]
+    fn flutter_alters_voiced_output() {
+        // voksa fork (RED until the Klatt flutter term lands): a nonzero FL
+        // must wobble F0 and change the voiced waveform.
+        let mut base = vowel_target();
+        let mut wobbly = vowel_target();
+        base.flutter = Some(0.0);
+        wobbly.flutter = Some(50.0);
+
+        let mut s0 = FormantSynth::new(48_000);
+        s0.set_target(base, 1);
+        let mut buf0 = [0.0f32; 48_000];
+        s0.process(&mut buf0);
+
+        let mut s1 = FormantSynth::new(48_000);
+        s1.set_target(wobbly, 1);
+        let mut buf1 = [0.0f32; 48_000];
+        s1.process(&mut buf1);
+
+        let max_diff = buf0
+            .iter()
+            .zip(buf1.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff > 1e-4,
+            "flutter must change voiced output, max sample diff {max_diff}"
+        );
+    }
+
+    #[test]
+    fn flutter_zero_is_byte_identical_to_default() {
+        // Byte-identity guard: FL = 0 must reproduce the unmodulated render.
+        let mut explicit = vowel_target();
+        explicit.flutter = Some(0.0);
+
+        let mut s0 = FormantSynth::new(48_000);
+        s0.set_target(vowel_target(), 1);
+        let mut buf0 = [0.0f32; 9600];
+        s0.process(&mut buf0);
+
+        let mut s1 = FormantSynth::new(48_000);
+        s1.set_target(explicit, 1);
+        let mut buf1 = [0.0f32; 9600];
+        s1.process(&mut buf1);
+
+        assert_eq!(buf0, buf1);
+    }
+
+    #[test]
+    fn flutter_is_block_size_invariant_and_deterministic() {
+        // The flutter time base must be the absolute sample clock, so chunked
+        // rendering is sample-identical to one-shot rendering — and identical
+        // params must render identically twice.
+        let mut t = vowel_target();
+        t.flutter = Some(50.0);
+
+        let mut s_full = FormantSynth::new(48_000);
+        s_full.set_target(t, 1);
+        let mut full = [0.0f32; 2400];
+        s_full.process(&mut full);
+
+        let mut s_chunks = FormantSynth::new(48_000);
+        s_chunks.set_target(t, 1);
+        let mut chunked = [0.0f32; 2400];
+        for c in chunked.chunks_mut(100) {
+            s_chunks.process(c);
+        }
+        assert_eq!(full, chunked, "flutter must be block-size invariant");
+
+        let mut s_again = FormantSynth::new(48_000);
+        s_again.set_target(t, 1);
+        let mut again = [0.0f32; 2400];
+        s_again.process(&mut again);
+        assert_eq!(full, again, "flutter must be deterministic");
     }
 
     #[test]

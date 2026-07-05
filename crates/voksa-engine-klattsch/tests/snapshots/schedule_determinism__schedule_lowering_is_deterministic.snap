@@ -53,6 +53,7 @@ expression: schedule.events()
             effort: None,
             open_quotient: None,
             diplophonia: None,
+            flutter: None,
         },
         transition_samples: 1680,
     },

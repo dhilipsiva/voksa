@@ -554,6 +554,13 @@ pub fn track_band_peak(
 /// period — measured ~490 Hz for a 120 Hz pulse train through a 500 Hz
 /// resonator), while a restricted lag range structurally cannot.
 pub fn measure_f0_track(samples: &[f32], sample_rate: u32) -> Vec<(f32, f32)> {
+    median_filter_f0(measure_f0_track_raw(samples, sample_rate), 5)
+}
+
+/// Like [`measure_f0_track`] but WITHOUT the 5-point median filter — required
+/// when measuring fast F0 modulation (vibrato/flutter components up to ~13 Hz)
+/// that the median smoothing would attenuate. Same 10 ms hop.
+pub fn measure_f0_track_raw(samples: &[f32], sample_rate: u32) -> Vec<(f32, f32)> {
     const WIN: usize = 2048;
     const HOP: usize = 480;
     let mut raw: Vec<(f32, f32)> = Vec::new();
@@ -565,7 +572,41 @@ pub fn measure_f0_track(samples: &[f32], sample_rate: u32) -> Vec<(f32, f32)> {
         }
         start += HOP;
     }
-    median_filter_f0(raw, 5)
+    raw
+}
+
+/// RMS (Hz) of the F0 contour's modulation within `[lo_hz, hi_hz]`: detrend
+/// the track via [`fit_line`], then sum sinusoid power over the DFT bins in
+/// band (the track's 10 ms hop = a 100 Hz contour sampling rate). Flutter and
+/// vibrato raise it; a smooth declining contour reads ≈ 0. Use a RAW track
+/// ([`measure_f0_track_raw`]) — the median filter attenuates >5 Hz components.
+pub fn f0_band_rms(track: &[(f32, f32)], lo_hz: f32, hi_hz: f32) -> f32 {
+    if track.len() < 8 {
+        return 0.0;
+    }
+    let (slope, intercept) = fit_line(track);
+    let resid: Vec<f32> = track
+        .iter()
+        .map(|(t, f)| f - (slope * t + intercept))
+        .collect();
+    let n = resid.len();
+    const CONTOUR_FS_HZ: f32 = 100.0; // measure_f0_track's 10 ms hop
+    let mut power = 0.0f32;
+    for k in 1..n / 2 {
+        let fk = k as f32 * CONTOUR_FS_HZ / n as f32;
+        if fk < lo_hz || fk > hi_hz {
+            continue;
+        }
+        let (mut re, mut im) = (0.0f32, 0.0f32);
+        for (i, &r) in resid.iter().enumerate() {
+            let ph = std::f32::consts::TAU * k as f32 * i as f32 / n as f32;
+            re += r * ph.cos();
+            im -= r * ph.sin();
+        }
+        let amp = 2.0 * (re * re + im * im).sqrt() / n as f32;
+        power += amp * amp / 2.0; // a sinusoid's mean square is amp²/2
+    }
+    power.sqrt()
 }
 
 /// NSDF pitch of one frame, searching only lags for 70–200 Hz. `None` for
@@ -990,6 +1031,49 @@ mod tests {
         assert!(
             measure_f0_variance(&steady, SR) < 3.0,
             "a steady 120 Hz pulse train must have near-zero F0 variance"
+        );
+    }
+
+    /// Pulse train whose F0 is frequency-modulated: f(t) = f0 + depth·sin(2πft).
+    /// Built by phase accumulation through the resonators.
+    fn fm_pulse_vowel(sr: u32, f0: f32, mod_hz: f32, depth_hz: f32, len: usize) -> Vec<f32> {
+        let mut bps: Vec<Biquad> = [500.0, 1500.0, 2500.0]
+            .iter()
+            .map(|fc| Biquad::bandpass(sr as f32, *fc, 0.12 * fc))
+            .collect();
+        let amps = [1.0, 0.6, 0.3];
+        let mut phase = 0.0f32;
+        (0..len)
+            .map(|n| {
+                let t = n as f32 / sr as f32;
+                let inst = f0 + depth_hz * (TAU * mod_hz * t).sin();
+                phase += inst / sr as f32;
+                let x = if phase >= 1.0 {
+                    phase -= 1.0;
+                    1.0
+                } else {
+                    0.0
+                };
+                bps.iter_mut()
+                    .zip(amps)
+                    .map(|(bp, a)| a * bp.process(x))
+                    .sum::<f32>()
+                    * 4.0
+            })
+            .collect()
+    }
+
+    #[test]
+    fn f0_band_rms_detects_synthetic_wobble() {
+        // An 8 Hz ±2 Hz FM pulse train must read a clearly higher 3–15 Hz
+        // contour band RMS than the unmodulated train (the flutter detector).
+        let steady = pulse_vowel(SR, 120.0, [500.0, 1500.0, 2500.0], 96_000);
+        let wobbly = fm_pulse_vowel(SR, 120.0, 8.0, 2.0, 96_000);
+        let steady_rms = f0_band_rms(&measure_f0_track_raw(&steady, SR), 3.0, 15.0);
+        let wobbly_rms = f0_band_rms(&measure_f0_track_raw(&wobbly, SR), 3.0, 15.0);
+        assert!(
+            wobbly_rms > steady_rms * 3.0 && wobbly_rms > 0.5,
+            "band RMS must expose the wobble: steady={steady_rms:.3}, wobbly={wobbly_rms:.3}"
         );
     }
 
