@@ -2,7 +2,8 @@
 
 This is a self-contained brief for a design pass + a Claude Code session working
 in the `dhilipsiva/dhilipsiva.dev` repo. It documents everything the embed
-needs; the voksa repo is the source of truth (tag `demo-attitudinal`).
+needs; the voksa repo is the source of truth (current `main` — the v0.1.0
+release; the `v0.1.0` tag lands once CP3 is signed off).
 
 ## What you are embedding
 
@@ -20,8 +21,9 @@ in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
 
 1. `crates/voksa-web/pkg/voksa_web_bg.wasm` — built with
    `wasm-pack build --release --target web crates/voksa-web` (or take it from a
-   checkout at the `demo-attitudinal` tag after running
-   `cargo xtask wasm-size`, which builds + verifies it). ~35 KB gzipped.
+   checkout of current `main` (v0.1.0) after running
+   `cargo xtask wasm-size`, which builds + verifies it). ~42 KB gzipped
+   (the xtask gate asserts < 43 KB).
 2. `crates/voksa-web/www/voksa-processor.js` — the AudioWorkletProcessor.
    Copy VERBATIM; do not port it into a bundler module (worklets load via
    `audioWorklet.addModule(url)`).
@@ -61,7 +63,7 @@ in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
   programmatic ones — `.value =` fires no `input` event).
 - `flags` bits: `1` flat (no prosody), `2` xu rise, `4` dotside, `8` buffer.
 
-## The f32 param block (440 floats; shorter blocks default the rest)
+## The f32 param block (449 floats; shorter blocks default the rest)
 
 Indices 0–6 (prosody): `declination_start_hz, declination_end_hz,
 stress_duration_factor, stress_f0_excursion_hz, stress_amp_factor, xu_rise_hz,
@@ -78,6 +80,18 @@ aspiration, dur_ms) → 16 diphthong durations → stops p t k b d g (24 each:
 closure 11 + burst 11 + closure_ms + burst_ms) → fricatives f v s z c j x →
 nasals m n → liquids l r → [h] duration → buffer vowel.
 
+Indices 440–448 (naturalness, 9 floats — Phase 11, DEFAULT ON): `flutter,
+breath_aspiration, baseline_oq_delta, baseline_tilt_delta, micro_f0_hz,
+obstruent_f0_hz, final_lengthen, cluster_shorten, undershoot` (pinned defaults
+25 / 0.06 / +0.10 / −0.10 / 4 / 6 / 1.3 / 0.15 / 0.35; semantics in
+docs/phonology.md §9.2). These are Basic-tab sliders next to the prosody
+knobs, plus a "Naturalness off" preset that sets all nine to their identity
+values for A/B listening.
+
+The layout is frozen append-only, so shorter blocks stay valid forever: a
+7-float (demo-basic), 63-float (demo-attitudinal), or 440-float
+(demo-advanced) block defaults everything past its end.
+
 **Do not hand-copy defaults and do not reorder** — call the
 `voksa_default_params()` export (length via `voksa_out_len()`, free with
 `voksa_free_f32`) from a main-thread instance and seed every slider from it,
@@ -86,19 +100,27 @@ by construction.
 
 ## The config JSON (what users share back)
 
-Flat keys for text/flags/prosody (same names as the layout above), plus a
-delta-only `attitudinals` object:
+Flat keys for text/flags/prosody/naturalness (same names as the layout above),
+plus delta-only `attitudinals` and `phonemes` objects:
 
 ```json
 {
   "text": "coi munje .ui",
   "xu": false, "dotside": false, "buffer": false, "flat": false,
   "rate": 1.0,
+  "flutter": 25.0,
   "attitudinals": { "ui": { "f0_mean_hz": 22, "di": 0.1 } },
   "notes": "joy reads better with a small creak",
-  "voksaVersion": "0.0.1"
+  "voksaVersion": "0.1.0"
 }
 ```
+
+`phonemes` holds per-letter voice-table overrides (stops nest `closure`/`burst`
+objects) — copy the export shape from the reference page rather than inventing
+key names. The page also auto-stamps `phonetics` (the transcription line the
+tuner was looking at), `sampleRate`, and `voksaVersion` (must equal the version
+of the wasm you embed — 0.1.0 on current `main`; the voksa repo guards its own
+demo's stamp with a native test, `crates/voksa-web/tests/version.rs`).
 
 Missing keys = defaults, so minimal JSON is valid. Loading must NOT clamp
 out-of-range values to slider bounds (widen the slider instead) — the CLI
@@ -112,7 +134,8 @@ accepts any finite value and web/CLI replay must stay identical.
   A "try it" affordance per attitudinal (example phrases: `coi munje .ui`,
   `mi klama .uu`, `coi munje .oi`, `coi munje .ii`, `mi klama .o'o`,
   `mi djica .au`, `mi fengu .o'onai`).
-- Two tiers: Basic (7 prosody sliders + 4 flags) and Advanced (7 attitudinal
+- Two tiers: Basic (7 prosody + 9 naturalness sliders + 4 flags, with a
+  "Naturalness off" preset) and Advanced (7 attitudinal
   panels × 8 sliders, plus the per-phoneme voice table: six sections of
   collapsible panels, 377 sliders). Reset per panel + global.
 - A **phonetic sentence picker**: copy `www/sentences.json` (18 curated
