@@ -50,16 +50,19 @@ impl AudioGraph {
         Ok(ctx)
     }
 
-    /// Play `pcm`, replacing any currently-playing node. Must be called from
-    /// a user-gesture handler the first time (to unlock the context); returns
-    /// [`PlayOutcome::NeedsGesture`] while the context is still suspended.
-    /// `on_done` fires when playback drains (status → ready).
+    /// Play `pcm`, replacing any currently-playing node. `gesture` = the call
+    /// carries a user gesture (a ▶ speak / try-example click) that unlocks the
+    /// context; a gesture play reports [`PlayOutcome::Playing`] (the started
+    /// node plays once the gesture-driven `resume()` resolves), a non-gesture
+    /// play (debounced auto-speak) reports [`PlayOutcome::NeedsGesture`] while
+    /// the context is still suspended. `on_done` fires when playback drains.
     pub fn play(
         self_rc: &Rc<RefCell<AudioGraph>>,
         pcm: &[f32],
         on_done: impl FnMut() + 'static,
+        gesture: bool,
     ) -> PlayOutcome {
-        match Self::try_play(self_rc, pcm, on_done) {
+        match Self::try_play(self_rc, pcm, on_done, gesture) {
             Ok(outcome) => outcome,
             Err(_) => PlayOutcome::Unavailable,
         }
@@ -69,6 +72,7 @@ impl AudioGraph {
         self_rc: &Rc<RefCell<AudioGraph>>,
         pcm: &[f32],
         on_done: impl FnMut() + 'static,
+        gesture: bool,
     ) -> Result<PlayOutcome, JsValue> {
         let ctx = self_rc.borrow_mut().ensure_ctx()?;
 
@@ -99,12 +103,12 @@ impl AudioGraph {
                 };
                 let _ = Self::start(&self_rc2, &pcm_owned, cb);
             });
-            // The context may still be suspended (no gesture yet).
-            return Ok(Self::resume_state(&ctx));
+            // The node starts once the module resolves (in the spawn above).
+            return Ok(Self::outcome_for(gesture, &ctx));
         }
 
         Self::start(self_rc, pcm, on_done)?;
-        Ok(Self::resume_state(&ctx))
+        Ok(Self::outcome_for(gesture, &ctx))
     }
 
     /// Instantiate a fresh player node for `pcm`, disconnecting the previous
@@ -159,12 +163,16 @@ impl AudioGraph {
         Ok(())
     }
 
-    fn resume_state(ctx: &AudioContext) -> PlayOutcome {
+    /// The outcome to report. `resume()` is async, so `state()` still reads
+    /// `Suspended` synchronously right after it — a play carrying a user
+    /// gesture WILL unlock + play, so it reports `Playing` regardless; only a
+    /// non-gesture play on a still-suspended context reports `NeedsGesture`.
+    fn outcome_for(gesture: bool, ctx: &AudioContext) -> PlayOutcome {
         let _ = ctx.resume();
-        if ctx.state() == AudioContextState::Suspended {
-            PlayOutcome::NeedsGesture
-        } else {
+        if gesture || ctx.state() != AudioContextState::Suspended {
             PlayOutcome::Playing
+        } else {
+            PlayOutcome::NeedsGesture
         }
     }
 }

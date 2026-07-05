@@ -22,19 +22,22 @@ pub enum PlayOutcome {
 mod graph;
 
 /// Play `pcm`, replacing any currently-playing node; `on_done` fires when it
-/// drains. Must be reachable from a gesture handler the first time.
+/// drains. `gesture` = the call carries a user gesture that unlocks the audio
+/// context (a ▶ speak / try-example click); a non-gesture play (auto-speak)
+/// reports `NeedsGesture` while the context is still suspended.
 pub fn play(
     graph: &Rc<RefCell<AudioGraph>>,
     pcm: &[f32],
     on_done: impl FnMut() + 'static,
+    gesture: bool,
 ) -> PlayOutcome {
     #[cfg(target_arch = "wasm32")]
     {
-        AudioGraph::play(graph, pcm, on_done)
+        AudioGraph::play(graph, pcm, on_done, gesture)
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (graph, pcm, on_done);
+        let _ = (graph, pcm, on_done, gesture);
         PlayOutcome::Unavailable
     }
 }

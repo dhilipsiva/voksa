@@ -32,8 +32,10 @@ pub enum Status {
 pub struct Audio(pub Rc<RefCell<AudioGraph>>);
 
 /// Render the current utterance + params, update the waveform/WAV PCM, and
-/// play. Carries the gesture when called from a ▶ speak click.
-pub fn speak_now(store: ParamStore, ui: Ui, audio: Audio) {
+/// play. `gesture` = this call carries a user gesture (a ▶ speak / try-example
+/// click) that unlocks the audio context; the debounced auto-speak passes
+/// `false` (so a still-locked context correctly reports "tap ▶ speak").
+pub fn speak_now(store: ParamStore, ui: Ui, audio: Audio, gesture: bool) {
     let text = ui.text.peek().clone();
     let flags = *ui.flags.peek();
     // The A/B latch is a render-time override: when hearing B, the nine
@@ -46,7 +48,12 @@ pub fn speak_now(store: ParamStore, ui: Ui, audio: Audio) {
             let rc = Rc::new(pcm);
             pcm_sig.set(Some(rc.clone())); // waveform + WAV, no gesture needed
             let mut done_status = status;
-            let outcome = audio::play(&audio.0, &rc, move || done_status.set(Status::Ready));
+            let outcome = audio::play(
+                &audio.0,
+                &rc,
+                move || done_status.set(Status::Ready),
+                gesture,
+            );
             status.set(match outcome {
                 PlayOutcome::Playing => Status::Speaking,
                 PlayOutcome::NeedsGesture => Status::NeedsGesture,
@@ -78,7 +85,7 @@ pub fn use_auto_speak(store: ParamStore, ui: Ui, audio: Audio) {
             #[cfg(target_arch = "wasm32")]
             gloo_timers::future::TimeoutFuture::new(400).await;
             if *epoch.peek() == mine {
-                speak_now(store, ui, audio);
+                speak_now(store, ui, audio, false);
             }
         });
     });

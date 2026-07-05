@@ -294,31 +294,14 @@
 }
 .vx-notes:focus-visible { outline: none; box-shadow: var(--ring); }
 
-/* ── rack nav ─────────────────────────────────────────────────────── */
-.vx-racknav {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: color-mix(in oklab, var(--surface-card) 82%, transparent);
-  backdrop-filter: var(--blur-glass);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-}
-.vx-anchor {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-}
-.vx-anchor:hover { color: var(--text-strong); background: var(--surface-inset); }
-.vx-navspacer { flex: 1; }
-.vx-preset { flex: 0 0 auto; width: 140px; }
+/* ── config card + tuning-column layout (C7) ──────────────────────── */
+/* whole-config controls live in the left column now; there is no rack-nav. */
+.vx-configcard { position: relative; }
+.vx-configrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.vx-configrow .vx-preset { flex: 1; width: auto; min-width: 0; }
+.vx-preset { width: 140px; }
 .vx-resetall {
+  flex: 0 0 auto;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
@@ -330,6 +313,18 @@
   cursor: pointer;
 }
 .vx-resetall:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+
+/* prosody | naturalness side by side (stacks on mobile) */
+.vx-rackrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.vx-rackrow > .vx-rack { min-width: 0; }
+
+/* master-detail: the selector rail on the left, the editor on the right */
+.vx-md { display: grid; grid-template-columns: minmax(150px, 190px) 1fr; gap: 12px; align-items: start; }
+.vx-md-vt { grid-template-columns: minmax(190px, 230px) 1fr; }
+.vx-md > .vx-scopeeditor { min-width: 0; }
+.vx-md .vx-emochips { flex-direction: column; flex-wrap: nowrap; margin-bottom: 0; }
+.vx-md .vx-emochips .vx-emochip { width: 100%; }
+.vx-md .vx-phgrid { margin-bottom: 0; }
 
 /* ── racks ────────────────────────────────────────────────────────── */
 .vx-rack { scroll-margin-top: 120px; }
@@ -472,6 +467,7 @@
 }
 @media (max-width: 720px) {
   .vx-srow { grid-template-columns: 118px minmax(0, 1fr) 84px; }
+  .vx-rackrow, .vx-md, .vx-md-vt { grid-template-columns: 1fr; }
 }
 
 /* ── A/B latch (naturalness rack) ─────────────────────────────────── */

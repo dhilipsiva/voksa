@@ -15,7 +15,8 @@ use super::store::ParamStore;
 use crate::audio;
 use crate::engine;
 use crate::model::{
-    self, ExportInputs, Flags, PARAM_TOTAL, TokKind, WritePlan, peaks, tokenize, wav_bytes,
+    self, ExportInputs, Flags, PARAM_TOTAL, PRESETS, TokKind, WritePlan, apply_preset, peaks,
+    reset_plan, tokenize, wav_bytes,
 };
 
 /// Waveform display columns.
@@ -53,6 +54,7 @@ pub fn SourceColumn() -> Element {
     rsx! {
         div { class: "vx-left",
             UtterancePanel {}
+            ConfigCard {}
             TranscriptCard {}
             TransportCard {}
             ShareCard {}
@@ -297,7 +299,7 @@ fn TransportCard() -> Element {
             div { class: "vx-transportrow",
                 button {
                     class: "vx-speak",
-                    onclick: move |_| speak_now(store, ui, audio_speak.clone()),
+                    onclick: move |_| speak_now(store, ui, audio_speak.clone(), true),
                     "▶ speak"
                 }
                 HelpDot { topic: "transport.speak", title: "speak" }
@@ -395,21 +397,21 @@ fn apply_loaded(
     }
 }
 
-/// Share the tuning: Δ summary, notes, export/load (+ drag-drop), and the
-/// "send it back" call to action. Load REPLACES all state.
+/// Whole-config controls in the left column (C7): preset, reset-all, and
+/// import/export config with drag-drop onto the card. Load/import REPLACES all
+/// state (widen-never-clamp); a malformed file errors without touching state.
 #[component]
-fn ShareCard() -> Element {
-    let store = use_context::<ParamStore>();
+fn ConfigCard() -> Element {
+    let mut store = use_context::<ParamStore>();
     let ui = use_context::<Ui>();
-    let mut notes = ui.notes;
-    let dirty = use_memo(move || store.dirty_count(0..PARAM_TOTAL));
+    let mut preset = ui.preset;
     let mut drop_active = use_signal(|| false);
     let loaded_name = use_signal(|| None::<String>);
     let msg = use_signal(|| None::<ShareMsg>);
 
     rsx! {
         section {
-            class: "vx-card vx-sharecard",
+            class: "vx-card vx-configcard",
             ondragover: move |e| {
                 e.prevent_default();
                 if !*drop_active.peek() {
@@ -435,22 +437,44 @@ fn ShareCard() -> Element {
             },
             div { class: "vx-cardhead",
                 span { class: "vx-slash", "// " }
-                "share the tuning"
+                "config"
                 span { class: "vx-scopespacer" }
-                HelpDot { topic: "share.cta", title: "share the tuning" }
+                HelpDot { topic: "presets", title: "config" }
             }
 
-            if dirty() > 0 {
-                div { class: "vx-sharedelta vx-sharedelta-on", "Δ {dirty()} deviations from engine defaults" }
-            } else {
-                div { class: "vx-sharedelta", "at engine defaults — nothing to send yet" }
-            }
-
-            textarea {
-                class: "vx-notes",
-                placeholder: "notes travel inside the exported JSON — say what you heard",
-                value: "{notes}",
-                oninput: move |e| notes.set(e.value()),
+            div { class: "vx-configrow",
+                select {
+                    class: "vx-select vx-preset",
+                    aria_label: "preset",
+                    onchange: move |e| {
+                        let name = e.value();
+                        let plan = {
+                            let desc = store.desc();
+                            apply_preset(&desc, &name)
+                        };
+                        if let Some(plan) = plan {
+                            store.apply(&plan);
+                            preset.set(name);
+                        }
+                    },
+                    for p in PRESETS.iter() {
+                        option { value: "{p.name}", selected: *preset.read() == p.name, "{p.name}" }
+                    }
+                }
+                button {
+                    class: "vx-resetall",
+                    r#type: "button",
+                    onclick: move |_| {
+                        let plan = {
+                            let desc = store.desc();
+                            reset_plan(&desc, 0..PARAM_TOTAL)
+                        };
+                        store.apply(&plan);
+                        preset.set("Default".to_string());
+                    },
+                    "↺ reset all"
+                }
+                HelpDot { topic: "reset.all", title: "reset all" }
             }
 
             div { class: "vx-sharebtns",
@@ -482,8 +506,8 @@ fn ShareCard() -> Element {
                     "⤒ export config"
                 }
                 HelpDot { topic: "share.export", title: "export config" }
-                label { class: "vx-sharebtn", r#for: "vx-load-input", "⤓ load config" }
-                HelpDot { topic: "share.load", title: "load config" }
+                label { class: "vx-sharebtn", r#for: "vx-load-input", "⤓ import config" }
+                HelpDot { topic: "share.load", title: "import config" }
                 input {
                     id: "vx-load-input",
                     class: "vx-fileinput",
@@ -521,6 +545,47 @@ fn ShareCard() -> Element {
                 }
             }
 
+            if drop_active() {
+                div { class: "vx-droplay",
+                    span { "drop config JSON — replaces all state" }
+                }
+            }
+        }
+    }
+}
+
+/// Share the tuning: the deviation summary, the notes that travel inside the
+/// export, and the "send it back" call to action. (Import/export moved to the
+/// ConfigCard in C7.)
+#[component]
+fn ShareCard() -> Element {
+    let store = use_context::<ParamStore>();
+    let ui = use_context::<Ui>();
+    let mut notes = ui.notes;
+    let dirty = use_memo(move || store.dirty_count(0..PARAM_TOTAL));
+
+    rsx! {
+        section { class: "vx-card",
+            div { class: "vx-cardhead",
+                span { class: "vx-slash", "// " }
+                "share the tuning"
+                span { class: "vx-scopespacer" }
+                HelpDot { topic: "share.cta", title: "share the tuning" }
+            }
+
+            if dirty() > 0 {
+                div { class: "vx-sharedelta vx-sharedelta-on", "Δ {dirty()} deviations from engine defaults" }
+            } else {
+                div { class: "vx-sharedelta", "at engine defaults — nothing to send yet" }
+            }
+
+            textarea {
+                class: "vx-notes",
+                placeholder: "notes travel inside the exported JSON — say what you heard",
+                value: "{notes}",
+                oninput: move |e| notes.set(e.value()),
+            }
+
             div { class: "vx-cta",
                 div { class: "vx-cta-head", "send it back" }
                 p { class: "vx-cta-body",
@@ -537,12 +602,6 @@ fn ShareCard() -> Element {
                         "open an issue"
                     }
                     a { class: "vx-cta-link", href: LINK_MAIL, "email a config" }
-                }
-            }
-
-            if drop_active() {
-                div { class: "vx-droplay",
-                    span { "drop config JSON — replaces all state" }
                 }
             }
         }

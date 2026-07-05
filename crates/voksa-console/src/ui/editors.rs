@@ -63,12 +63,14 @@ pub fn AttitudinalSection() -> Element {
                 span { class: "vx-mono", "nai" }
                 " flips it."
             }
-            div { class: "vx-emochips",
-                for (k, a) in ATT_KINDS.iter().enumerate() {
-                    EmotionChip { key: "{a.key}", kind: k }
+            div { class: "vx-md",
+                div { class: "vx-emochips vx-mdrail",
+                    for (k, a) in ATT_KINDS.iter().enumerate() {
+                        EmotionChip { key: "{a.key}", kind: k }
+                    }
                 }
+                EmotionEditor { key: "{sel}", kind: sel() }
             }
-            EmotionEditor { key: "{sel}", kind: sel() }
         }
     }
 }
@@ -120,12 +122,14 @@ fn EmotionEditor(kind: usize) -> Element {
                     onclick: move |_| {
                         ui.text.set(example.clone());
                         ui.sentence.set(String::new());
-                        speak_now(store, ui, audio.clone());
+                        speak_now(store, ui, audio.clone(), true);
                     },
                     "▶ try example"
                 }
                 button {
                     class: "vx-reset-scope",
+                    r#type: "button",
+                    aria_label: "reset {a.label}",
                     onclick: move |_| {
                         let plan = {
                             let d = store.desc();
@@ -188,8 +192,10 @@ pub fn VoiceTableSection() -> Element {
                     "↺ reset table"
                 }
             }
-            PhonemeGrid {}
-            PhonemeEditor { key: "{sel}", item: sel() }
+            div { class: "vx-md vx-md-vt",
+                PhonemeGrid {}
+                PhonemeEditor { key: "{sel}", item: sel() }
+            }
         }
     }
 }
