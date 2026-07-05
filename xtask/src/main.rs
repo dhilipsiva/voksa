@@ -15,9 +15,10 @@ fn main() -> ExitCode {
         Some("attitudinal-battery") => attitudinal_battery(),
         Some("fuzz") => fuzz(&rest),
         Some("component") => component(),
+        Some("final-battery") => final_battery(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz|component> [args]"
+                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz|component|final-battery> [args]"
             );
             ExitCode::FAILURE
         }
@@ -264,6 +265,224 @@ function collect() {{
     }
     println!(
         "attitudinal-battery: wrote {} items x3 WAVs + index.html to {}",
+        ATTITUDINAL_BATTERY.len(),
+        dir.display()
+    );
+    ExitCode::SUCCESS
+}
+
+/// The normalized spoken-word string for an utterance ("li 3.14" →
+/// "li ci pi pa vo"): the PA-cmavo expansion falls straight out of
+/// [`voksa_core::compiler::tokenize`]. Used to feed eSpeak a comparable
+/// oracle for number items (CP1 finding 8: raw digits make the oracle column
+/// incomparable — eSpeak reads them its own way).
+fn normalized_words(text: &str) -> Result<String, String> {
+    use voksa_core::compiler::RawToken;
+    let tokens = voksa_core::compiler::tokenize(text).map_err(|e| format!("{e:?}"))?;
+    Ok(tokens
+        .iter()
+        .filter_map(|t| match t {
+            RawToken::Word(w) => Some(w.to_ascii_lowercase()),
+            RawToken::ExplicitPause => None,
+        })
+        .collect::<Vec<_>>()
+        .join(" "))
+}
+
+/// Render the CP3 final battery to artifacts/listening/phase11/: the 10 CP1
+/// items × {default (naturalness ON), naturalness-off (the frozen Phase-10
+/// voice), flat, eSpeak oracle (+ a normalized-text oracle for digit items)}
+/// plus the 7 attitudinal pairs × {affect, base, oracle}, with one merged
+/// scoring page. Then STOP — the human scores and tags v0.1.0 (never the
+/// agent).
+fn final_battery() -> ExitCode {
+    use voksa_core::compiler::CompileOptions;
+    use voksa_core::prosody::ProsodyOptions;
+    use voksa_engine_klattsch::{SAMPLE_RATE, render_utterance, render_utterance_prosodic};
+
+    let dir = workspace_root().join("artifacts/listening/phase11");
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("error: cannot create {}: {e}", dir.display());
+        return ExitCode::FAILURE;
+    }
+    let sr = SAMPLE_RATE;
+    let write_checked = |name: String, samples: &[f32]| -> Result<(), String> {
+        let peak = samples.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        if peak >= 1.0 {
+            return Err(format!("{name} clips (peak {peak:.3})"));
+        }
+        voksa_testkit::write_wav(dir.join(&name), samples, sr);
+        Ok(())
+    };
+    let espeak = |name: String, text: &str| -> Result<(), String> {
+        let path = dir.join(&name);
+        match Command::new("espeak-ng")
+            .args(["-v", "jbo", "-w"])
+            .arg(&path)
+            .arg(text)
+            .status()
+        {
+            Ok(s) if s.success() => Ok(()),
+            other => Err(format!("espeak-ng for {name}: {other:?}")),
+        }
+    };
+
+    let mut rows = String::new();
+    for (i, entry) in BATTERY.iter().enumerate() {
+        let copts = CompileOptions {
+            dotside: entry.dotside,
+            buffer: entry.buffer,
+        };
+        let on_opts = ProsodyOptions {
+            xu_rise: entry.xu,
+            ..Default::default()
+        };
+        let off_opts = ProsodyOptions {
+            xu_rise: entry.xu,
+            ..ProsodyOptions::naturalness_off()
+        };
+        let render = |p: &ProsodyOptions| render_utterance_prosodic(entry.text, &copts, p, sr);
+        let result = (|| -> Result<bool, String> {
+            let on = render(&on_opts).map_err(|e| format!("{}: {e:?}", entry.slug))?;
+            let off = render(&off_opts).map_err(|e| format!("{}: {e:?}", entry.slug))?;
+            let flat = render_utterance(entry.text, &copts, sr)
+                .map_err(|e| format!("{}: {e:?}", entry.slug))?;
+            write_checked(format!("default_{}.wav", entry.slug), &on)?;
+            write_checked(format!("off_{}.wav", entry.slug), &off)?;
+            write_checked(format!("flat_{}.wav", entry.slug), &flat)?;
+            espeak(
+                format!("oracle_{}.wav", entry.slug),
+                &entry.text.to_ascii_lowercase(),
+            )?;
+            // CP1 finding 8: for digit items, ALSO give eSpeak the normalized
+            // PA-cmavo string so the oracle column stays comparable.
+            let has_digits = entry.text.chars().any(|c| c.is_ascii_digit());
+            if has_digits {
+                let norm = normalized_words(entry.text)?;
+                espeak(format!("oracle_norm_{}.wav", entry.slug), &norm)?;
+            }
+            Ok(has_digits)
+        })();
+        let has_digits = match result {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        };
+        let oracle_norm_cell = if has_digits {
+            format!(
+                r#"<audio controls src="oracle_norm_{}.wav"></audio>"#,
+                entry.slug
+            )
+        } else {
+            String::from("—")
+        };
+        rows.push_str(&format!(
+            r#"<tr><td>{n}</td><td><code>{text}</code>{flags}</td>
+<td><audio controls src="default_{slug}.wav"></audio></td>
+<td><audio controls src="off_{slug}.wav"></audio></td>
+<td><audio controls src="flat_{slug}.wav"></audio></td>
+<td><audio controls src="oracle_{slug}.wav"></audio></td>
+<td>{oracle_norm_cell}</td>
+<td><input type="number" min="1" max="5" class="mos-i" data-slug="{slug}"></td>
+<td><input type="number" min="1" max="5" class="mos-n" data-slug="{slug}"></td>
+<td><select class="abx" data-slug="{slug}"><option value=""></option><option>default</option><option>off</option><option>tie</option></select></td>
+<td><input type="text" class="notes" data-slug="{slug}" size="20"></td></tr>
+"#,
+            n = i + 1,
+            text = entry.text,
+            flags = {
+                let mut f = String::new();
+                if entry.dotside {
+                    f.push_str(" <b>[dotside]</b>");
+                }
+                if entry.buffer {
+                    f.push_str(" <b>[buffer]</b>");
+                }
+                if entry.xu {
+                    f.push_str(" <b>[xu rise]</b>");
+                }
+                f
+            },
+            slug = entry.slug,
+        ));
+    }
+
+    let copts = CompileOptions::default();
+    let popts = ProsodyOptions::default();
+    let mut att_rows = String::new();
+    for (i, e) in ATTITUDINAL_BATTERY.iter().enumerate() {
+        let result = (|| -> Result<(), String> {
+            let affect = render_utterance_prosodic(e.text, &copts, &popts, sr)
+                .map_err(|err| format!("{}: {err:?}", e.slug))?;
+            let neutral = render_utterance_prosodic(e.base, &copts, &popts, sr)
+                .map_err(|err| format!("{} (base): {err:?}", e.slug))?;
+            write_checked(format!("affect_{}.wav", e.slug), &affect)?;
+            write_checked(format!("neutral_{}.wav", e.slug), &neutral)?;
+            espeak(
+                format!("oracle_att_{}.wav", e.slug),
+                &e.text.to_ascii_lowercase(),
+            )
+        })();
+        if let Err(err) = result {
+            eprintln!("error: {err}");
+            return ExitCode::FAILURE;
+        }
+        att_rows.push_str(&format!(
+            r#"<tr><td>{n}</td><td>{emotion}</td><td><code>{text}</code></td>
+<td><audio controls src="affect_{slug}.wav"></audio></td>
+<td><audio controls src="neutral_{slug}.wav"></audio></td>
+<td><audio controls src="oracle_att_{slug}.wav"></audio></td>
+<td><input type="text" class="heard" data-slug="att-{slug}" size="12" placeholder="emotion?"></td>
+<td><input type="number" min="1" max="5" class="mos-n" data-slug="att-{slug}"></td>
+<td><input type="text" class="notes" data-slug="att-{slug}" size="20"></td></tr>
+"#,
+            n = i + 1,
+            emotion = e.emotion,
+            text = e.text,
+            slug = e.slug,
+        ));
+    }
+
+    let html = format!(
+        r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>voksa CP3 final battery (phase 11 / v0.1.0)</title>
+<style>body{{font-family:sans-serif;margin:2em}}table{{border-collapse:collapse}}td,th{{border:1px solid #ccc;padding:6px}}textarea{{width:100%;height:12em}}</style></head><body>
+<h1>voksa — Listening Checkpoint 3 (Phase 11 → v0.1.0)</h1>
+<p><b>default</b> is the release voice (naturalness ON); <b>naturalness off</b> is the frozen Phase-10 voice;
+<b>flat</b> has no prosody at all. Rate MOS 1–5 for intelligibility + naturalness of the DEFAULT column;
+ABX = default vs off. For number items the extra oracle column feeds eSpeak the normalized PA-cmavo words
+(the raw-digit oracle reads figures its own way). When done, press the button and paste the markdown into
+<code>docs/listening/phase11.md</code>. The human tags v0.1.0 — never the agent.</p>
+<table><tr><th>#</th><th>text</th><th>default (release)</th><th>naturalness off</th><th>flat</th><th>eSpeak oracle</th><th>oracle (normalized)</th><th>MOS int.</th><th>MOS nat.</th><th>ABX</th><th>notes</th></tr>
+{rows}</table>
+<h2>Attitudinals (invented / non-normative)</h2>
+<p>Write the emotion you actually hear (blind if you can), rate MOS naturalness of the affect render.</p>
+<table><tr><th>#</th><th>intended emotion</th><th>text</th><th>voksa (affect)</th><th>neutral (base)</th><th>eSpeak oracle</th><th>heard emotion</th><th>MOS nat.</th><th>notes</th></tr>
+{att_rows}</table>
+<p><button onclick="collect()">Build markdown results</button></p>
+<textarea id="out" readonly placeholder="results appear here — copy into docs/listening/phase11.md"></textarea>
+<script>
+function collect() {{
+  const items = [...new Set([...document.querySelectorAll('.mos-i')].map(e => e.dataset.slug))];
+  let md = '| slug | MOS intelligibility | MOS naturalness | ABX (default vs off) | notes |\n|---|---|---|---|---|\n';
+  const v = (c, s) => (document.querySelector(`.${{c}}[data-slug="${{s}}"]`) || {{}}).value || '';
+  for (const s of items) md += `| ${{s}} | ${{v('mos-i', s)}} | ${{v('mos-n', s)}} | ${{v('abx', s)}} | ${{v('notes', s)}} |\n`;
+  md += '\n| attitudinal | heard emotion | MOS naturalness | notes |\n|---|---|---|---|\n';
+  const atts = [...new Set([...document.querySelectorAll('.heard')].map(e => e.dataset.slug))];
+  for (const s of atts) md += `| ${{s}} | ${{v('heard', s)}} | ${{v('mos-n', s)}} | ${{v('notes', s)}} |\n`;
+  document.getElementById('out').value = md;
+}}
+</script></body></html>
+"#
+    );
+    if let Err(e) = fs::write(dir.join("index.html"), html) {
+        eprintln!("error: writing index.html: {e}");
+        return ExitCode::FAILURE;
+    }
+    println!(
+        "final-battery: wrote {} items x4(+norm) + {} attitudinal x3 WAVs + index.html to {}",
+        BATTERY.len(),
         ATTITUDINAL_BATTERY.len(),
         dir.display()
     );
@@ -724,11 +943,24 @@ fn validate_riff(bytes: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{slugify, validate_riff};
+    use super::{normalized_words, slugify, validate_riff};
 
     #[test]
     fn slugify_basic() {
         assert_eq!(slugify("coi munje"), "coi-munje");
+    }
+
+    #[test]
+    fn normalized_words_expands_digits_to_pa_cmavo() {
+        // CP1 finding 8: the oracle for number items gets the normalized
+        // spoken words, exactly as voksa speaks them.
+        assert_eq!(normalized_words("li 3.14").unwrap(), "li ci pi pa vo");
+        assert_eq!(normalized_words("coi munje").unwrap(), "coi munje");
+        assert_eq!(
+            normalized_words("coi la DJAN. cu klama").unwrap(),
+            "coi la djan cu klama",
+            "case folds, writer pauses drop out of the word join"
+        );
     }
 
     #[test]
