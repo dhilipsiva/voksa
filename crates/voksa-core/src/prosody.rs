@@ -349,10 +349,17 @@ fn apply_final_lengthening(s: UtteranceSchedule, factor: f32) -> UtteranceSchedu
 /// Global tempo: scale every timing by `1/rate` (rate 1.0 = exact identity, so
 /// default schedules are byte-identical). rate > 1 speeds up.
 fn scale_rate(mut s: UtteranceSchedule, rate: f32) -> UtteranceSchedule {
-    if rate == 1.0 || rate <= 0.0 {
+    // Non-realizable rates behave as identity (P11 W1 fuzz finding): NaN
+    // passes both comparisons below, and a subnormal-positive rate overflows
+    // `k` to inf — either would poison every time in the schedule. The final
+    // product guard covers huge-but-normal `k` overflowing the total.
+    if rate == 1.0 || rate <= 0.0 || !rate.is_finite() {
         return s;
     }
     let k = 1.0 / rate;
+    if !k.is_finite() || !(s.total_ms * k).is_finite() {
+        return s;
+    }
     for e in &mut s.events {
         e.at_ms *= k;
         e.transition_ms *= k;

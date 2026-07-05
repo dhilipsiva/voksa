@@ -41,5 +41,17 @@ pub fn render_schedule(schedule: Schedule, sample_rate: u32, duration_ms: u32) -
     for chunk in out.chunks_mut(128) {
         synth.process(chunk);
     }
+    // Hostile-but-finite tuning params (P11 W1 deep fuzz: e.g. a 1e27 formant
+    // amplitude times a 1e26 aspiration) overflow the engine's float math to
+    // inf/NaN, and a poisoned filter state stays NaN to the end of the render.
+    // Degrade those samples to silence — same philosophy as the D2b duration
+    // caps (community configs degrade, never crash or emit non-finite PCM).
+    // Finite samples pass through untouched, so every sane render is
+    // byte-identical with or without this pass.
+    for s in &mut out {
+        if !s.is_finite() {
+            *s = 0.0;
+        }
+    }
     out
 }

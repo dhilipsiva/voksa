@@ -13,9 +13,10 @@ fn main() -> ExitCode {
         Some("wasm-size") => wasm_size(),
         Some("listening-battery") => listening_battery(),
         Some("attitudinal-battery") => attitudinal_battery(),
+        Some("fuzz") => fuzz(&rest),
         _ => {
             eprintln!(
-                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery> [args]"
+                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz> [args]"
             );
             ExitCode::FAILURE
         }
@@ -384,6 +385,50 @@ function collect() {{
         dir.display()
     );
     ExitCode::SUCCESS
+}
+
+/// Deep fuzz run (Phase-11 W1): the proptest suites (`tests/fuzz.rs` in
+/// voksa-core + voksa-web) at PROPTEST_CASES=65536 (override: `--cases N`).
+/// The normal CI `test` job already runs them at the proptest default (256);
+/// this is the weekly `fuzz-deep` CI job + local soak. Note: the render-bound
+/// voksa-web suite self-caps at 1024 cases (documented in its source).
+fn fuzz(args: &[String]) -> ExitCode {
+    let mut cases = 65_536u32;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--cases" {
+            match it.next().and_then(|v| v.parse().ok()) {
+                Some(n) => cases = n,
+                None => {
+                    eprintln!("usage: cargo xtask fuzz [--cases N]");
+                    return ExitCode::FAILURE;
+                }
+            }
+        }
+    }
+    println!("fuzz: PROPTEST_CASES={cases} (voksa-web suite self-caps at 1024)");
+    let status = Command::new("cargo")
+        .args([
+            "nextest",
+            "run",
+            "--workspace",
+            "-E",
+            "binary(fuzz)",
+            "--no-fail-fast",
+        ])
+        .env("PROPTEST_CASES", cases.to_string())
+        .current_dir(workspace_root())
+        .status();
+    match status {
+        Ok(s) if s.success() => {
+            println!("fuzz: all suites green at {cases} cases");
+            ExitCode::SUCCESS
+        }
+        other => {
+            eprintln!("error: fuzz run failed: {other:?} (commit any new proptest-regressions)");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Build the web crate for the browser (wasm-pack runs wasm-opt -Oz per

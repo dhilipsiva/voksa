@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly deep-fuzz soak (fuzz-deep job below); manual trigger for on-demand runs.
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -42,6 +46,22 @@ jobs:
         with:
           tool: cargo-nextest
       - run: cargo nextest run --workspace
+
+  # Phase-11 W1: the proptest fuzz suites at 65536 cases (the `test` job above
+  # already runs them at the 256-case default on every push). Weekly cron +
+  # manual dispatch only — skipped on push/PR events.
+  fuzz-deep:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - run: cargo xtask fuzz
 
   wasm-build:
     runs-on: ubuntu-latest
