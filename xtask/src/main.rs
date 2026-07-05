@@ -15,10 +15,11 @@ fn main() -> ExitCode {
         Some("attitudinal-battery") => attitudinal_battery(),
         Some("fuzz") => fuzz(&rest),
         Some("component") => component(),
+        Some("console-size") => console_size(),
         Some("final-battery") => final_battery(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz|component|final-battery> [args]"
+                "usage: cargo xtask <oracle|wasm-size|console-size|listening-battery|attitudinal-battery|fuzz|component|final-battery> [args]"
             );
             ExitCode::FAILURE
         }
@@ -836,6 +837,88 @@ fn wasm_import_count(path: &Path) -> Result<usize, String> {
         .lines()
         .filter(|l| l.trim_start().starts_with("(import "))
         .count())
+}
+
+/// Build + gate the release Dioxus console bundle (ADR 0003, C6). Unlike the
+/// voksa-web module, this is a full wasm-bindgen app (dioxus + web-sys), so it
+/// legitimately declares imports — ONLY the gzip size is gated, as a bloat
+/// canary against accidental dependency growth. The output dir is wiped first
+/// so the measured artifact is unambiguously this build's (dx keeps old
+/// hash-named wasm around otherwise).
+fn console_size() -> ExitCode {
+    // Measured 2026-07-05 (dioxus 0.7 + wasm-bindgen runtime + the console):
+    // 356_993 B gzip. Budget = ~1.3× that, headroom for UI/engine growth.
+    const CONSOLE_GZIP_BUDGET: u64 = 465_000;
+    let root = workspace_root();
+    let demo = root.join("crates/voksa-console-demo");
+    let public = root.join("target/dx/voksa-console-demo/release/web/public");
+
+    // Wipe stale hash-named artifacts so `largest_wasm` sees only this build.
+    let _ = fs::remove_dir_all(&public);
+
+    let built = Command::new("dx")
+        .args(["build", "--release", "-p", "voksa-console-demo"])
+        .current_dir(&demo)
+        .status();
+    match built {
+        Ok(s) if s.success() => {}
+        other => {
+            eprintln!(
+                "error: `dx build --release` failed (is dioxus-cli on PATH? use `nix develop`): {other:?}"
+            );
+            return ExitCode::FAILURE;
+        }
+    }
+
+    let wasm = match largest_wasm(&public) {
+        Some(p) => p,
+        None => {
+            eprintln!("error: no .wasm produced under {}", public.display());
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let gzip = match gzip_size(&wasm) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("error: gzipping {}: {e}", wasm.display());
+            return ExitCode::FAILURE;
+        }
+    };
+    let name = wasm.file_name().and_then(|n| n.to_str()).unwrap_or("?");
+    println!(
+        "console bundle {name} size (gzip): {gzip} bytes (budget: {CONSOLE_GZIP_BUDGET} bytes)"
+    );
+    if gzip > CONSOLE_GZIP_BUDGET {
+        eprintln!("error: over budget by {} bytes", gzip - CONSOLE_GZIP_BUDGET);
+        return ExitCode::FAILURE;
+    }
+    ExitCode::SUCCESS
+}
+
+/// The largest `.wasm` under `dir` (recursive). dx hashes the bundle filename
+/// and the layout varies (assets/ vs wasm/), so pick by size rather than a
+/// fixed path.
+fn largest_wasm(dir: &Path) -> Option<PathBuf> {
+    let mut best: Option<(u64, PathBuf)> = None;
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(entries) = fs::read_dir(&d) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("wasm") {
+                let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                if best.as_ref().is_none_or(|(b, _)| size > *b) {
+                    best = Some((size, path));
+                }
+            }
+        }
+    }
+    best.map(|(_, p)| p)
 }
 
 /// Render `text` with the eSpeak NG Lojban voice into fixtures/oracle/<slug>.wav

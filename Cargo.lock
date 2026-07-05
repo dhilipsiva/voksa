@@ -3571,8 +3571,6 @@ name = "voksa-web"
 version = "0.1.0"
 dependencies = [
  "proptest",
- "serde",
- "serde_json",
  "voksa-core",
  "voksa-engine-klattsch",
  "wasm-bindgen-test",

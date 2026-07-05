@@ -109,6 +109,25 @@ jobs:
           tool: wasm-tools
       - run: cargo xtask component
 
+  # C6 (ADR 0003): the release Dioxus tuning-console bundle must build and stay
+  # under its gzip size canary. dioxus-cli is pinned to the workspace `dioxus`
+  # version so dx's bundled wasm-bindgen matches the crate's.
+  console:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: dioxus-cli@0.7.9
+      - run: cargo check --target wasm32-unknown-unknown -p voksa-console
+      # Builds the demo (dx build --release), then hard-fails if the gzipped
+      # bundle wasm is over budget.
+      - run: cargo xtask console-size
+
   # Advisory (CLAUDE.md decision gate: "browser CI flaky? → browser test
   # becomes advisory, native tests remain required"). The synth logic these
   # exercise is identical to the required native voksa-web unit tests, and the
