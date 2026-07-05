@@ -93,6 +93,22 @@ jobs:
       # wasm is over budget or declares any imports.
       - run: cargo xtask wasm-size
 
+  # Phase-11 W3 (ADR 0002): the wasm32-wasip2 WIT component must build, be a
+  # valid component, export the checked-in WIT surface, and stay under its
+  # size canary.
+  component:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-tools
+      - run: cargo xtask component
+
   # Advisory (CLAUDE.md decision gate: "browser CI flaky? → browser test
   # becomes advisory, native tests remain required"). The synth logic these
   # exercise is identical to the required native voksa-web unit tests, and the

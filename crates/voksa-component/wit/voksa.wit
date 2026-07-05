@@ -1,0 +1,19 @@
+package voksa:synth@0.1.0;
+
+/// Rule-based Lojban speech synthesis (voksa) as a typed component surface.
+/// `flag-bits` uses the C-ABI bit layout: 0x1 flat (no prosody), 0x2 xu
+/// terminal rise, 0x4 dotside, 0x8 buffer vowels. (`flags` itself is a WIT
+/// keyword.)
+world voksa {
+    /// Render Lojban text to mono f32 PCM in [-1, 1] at `sample-rate` Hz.
+    /// Errors are the compiler's typed messages (invalid letters, misplaced
+    /// stress, ...) rendered as strings.
+    export synthesize: func(text: string, flag-bits: u32, sample-rate: u32) -> result<list<f32>, string>;
+
+    /// The phonetic transcription line the demo shows (syllable dots,
+    /// CAPITALS = stress, pauses); errors match synthesize exactly.
+    export transcribe: func(text: string, flag-bits: u32) -> result<string, string>;
+
+    /// The voksa crate version (CARGO_PKG_VERSION).
+    export version: func() -> string;
+}

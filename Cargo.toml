@@ -4,6 +4,7 @@ members = [
     "crates/voksa-core",
     "crates/voksa-cli",
     "crates/voksa-web",
+    "crates/voksa-component",
     "crates/voksa-engine-klattsch",
     "crates/klattsch-core-fork",
     "crates/voksa-testkit",
@@ -19,7 +20,11 @@ rust-version = "1.85"
 [workspace.dependencies]
 voksa-core = { path = "crates/voksa-core" }
 voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
+voksa-web = { path = "crates/voksa-web" }
 voksa-testkit = { path = "crates/voksa-testkit" }
+# WIT component guest bindings (voksa-component ONLY). License is
+# `Apache-2.0 WITH LLVM-exception` — approved + recorded in ADR 0002.
+wit-bindgen = "0.46"
 # wasm-bindgen-test drives the headless browser tests (voksa-web dev-dep only);
 # voksa-web itself has NO wasm-bindgen runtime dep (raw C-ABI, zero imports).
 wasm-bindgen-test = "0.3"

@@ -20,6 +20,9 @@
         toolchain = fenix.packages.${system}.combine [
           fenix.packages.${system}.stable.toolchain
           fenix.packages.${system}.targets.wasm32-unknown-unknown.stable.rust-std
+          # Rust >= 1.82 emits a WebAssembly COMPONENT directly for wasip2
+          # (crates/voksa-component; ADR 0002).
+          fenix.packages.${system}.targets.wasm32-wasip2.stable.rust-std
         ];
       in
       {
@@ -28,6 +31,7 @@
             toolchain
             pkgs.wasm-pack
             pkgs.binaryen # wasm-opt
+            pkgs.wasm-tools # component validate + WIT drift check (ADR 0002)
             pkgs.cargo-nextest
             pkgs.cargo-insta
             pkgs.twiggy

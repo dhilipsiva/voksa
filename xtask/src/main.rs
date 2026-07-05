@@ -14,9 +14,10 @@ fn main() -> ExitCode {
         Some("listening-battery") => listening_battery(),
         Some("attitudinal-battery") => attitudinal_battery(),
         Some("fuzz") => fuzz(&rest),
+        Some("component") => component(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz> [args]"
+                "usage: cargo xtask <oracle|wasm-size|listening-battery|attitudinal-battery|fuzz|component> [args]"
             );
             ExitCode::FAILURE
         }
@@ -384,6 +385,101 @@ function collect() {{
         BATTERY.len(),
         dir.display()
     );
+    ExitCode::SUCCESS
+}
+
+/// Build + gate the wasm32-wasip2 component (Phase-11 W3, ADR 0002):
+/// release build (Rust ≥1.82 emits a component directly) → `wasm-tools
+/// validate` → WIT drift check against the checked-in `wit/voksa.wit` →
+/// gzip size canary. Separate artifact from the 43 KB voksa-web gate.
+fn component() -> ExitCode {
+    // Bloat canary, not a shipping budget: wasip2 pulls std + wit glue, so it
+    // is far heavier than the no_std browser module. Measured at introduction:
+    // well under half this.
+    const COMPONENT_GZIP_BUDGET: u64 = 200_000;
+    let root = workspace_root();
+
+    let built = Command::new("cargo")
+        .args([
+            "build",
+            "--release",
+            "--target",
+            "wasm32-wasip2",
+            "-p",
+            "voksa-component",
+        ])
+        .current_dir(&root)
+        .status();
+    match built {
+        Ok(s) if s.success() => {}
+        other => {
+            eprintln!("error: component build failed: {other:?}");
+            return ExitCode::FAILURE;
+        }
+    }
+    let wasm = root.join("target/wasm32-wasip2/release/voksa_component.wasm");
+    if !wasm.exists() {
+        eprintln!("error: {} not found", wasm.display());
+        return ExitCode::FAILURE;
+    }
+
+    // A syntactically valid COMPONENT (not a core module): validate fails on
+    // core modules, so this also proves rustc emitted component metadata.
+    let valid = Command::new("wasm-tools")
+        .args(["validate", "--features", "component-model"])
+        .arg(&wasm)
+        .status();
+    match valid {
+        Ok(s) if s.success() => {}
+        other => {
+            eprintln!("error: wasm-tools validate failed: {other:?}");
+            return ExitCode::FAILURE;
+        }
+    }
+
+    // WIT drift: the world the binary EXPORTS must contain every export the
+    // checked-in wit/voksa.wit declares (a rename/removal breaks consumers).
+    let wit_out = Command::new("wasm-tools")
+        .args(["component", "wit"])
+        .arg(&wasm)
+        .output();
+    let printed = match wit_out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
+        other => {
+            eprintln!("error: wasm-tools component wit failed: {other:?}");
+            return ExitCode::FAILURE;
+        }
+    };
+    for needle in [
+        "synthesize: func(text: string, flag-bits: u32, sample-rate: u32) -> result<list<f32>, string>",
+        "transcribe: func(text: string, flag-bits: u32) -> result<string, string>",
+        "version: func() -> string",
+    ] {
+        if !printed.contains(needle) {
+            eprintln!(
+                "error: WIT drift — the built component does not export `{needle}`\n\
+                 (checked-in wit/voksa.wit no longer matches; printed WIT:\n{printed})"
+            );
+            return ExitCode::FAILURE;
+        }
+    }
+
+    let gzip = match gzip_size(&wasm) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("error: gzipping {}: {e}", wasm.display());
+            return ExitCode::FAILURE;
+        }
+    };
+    println!("component size (gzip): {gzip} bytes (budget: {COMPONENT_GZIP_BUDGET} bytes)");
+    if gzip > COMPONENT_GZIP_BUDGET {
+        eprintln!(
+            "error: over budget by {} bytes",
+            gzip - COMPONENT_GZIP_BUDGET
+        );
+        return ExitCode::FAILURE;
+    }
+    println!("component: valid, WIT-stable, under budget");
     ExitCode::SUCCESS
 }
 
