@@ -12,6 +12,9 @@ publish = false
 # The engine, linked as a plain rlib (ADR 0003): synth/transcription/
 # default_params are direct calls — no second wasm, no C-ABI marshalling.
 voksa-web.workspace = true
+# no_std front-end — the CompileError type the engine facade surfaces (already
+# linked transitively via voksa-web; direct dep just names the type).
+voksa-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 dioxus.workspace = true
@@ -21,5 +24,3 @@ dioxus.workspace = true
 # CLI's REAL Config (so `voksa --config` replays exactly what the console
 # played). Dev-only — cpal/alsa never enter the wasm build.
 voksa-cli.workspace = true
-# Round-trip assertions compare against the core option structs/tables.
-voksa-core.workspace = true

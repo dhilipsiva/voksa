@@ -11,6 +11,9 @@ mod descriptor;
 mod logic;
 mod path;
 mod presets;
+mod transcript;
+mod wav;
+mod waveform;
 
 pub use config::{ExportInputs, Flags, LoadPlan, export, load};
 pub use descriptor::{
@@ -20,6 +23,9 @@ pub use descriptor::{
 pub use logic::{Widen, WritePlan, filter_plan, is_dirty, reset_plan, widen_for};
 pub use path::{ATT_FIELD_COUNT, ATT_KIND_COUNT, KNOB_COUNT, Path, PathError, VOICE_ITEM_COUNT};
 pub use presets::{PRESETS, Preset, apply_preset};
+pub use transcript::{Tok, TokKind, tokenize};
+pub use wav::wav_bytes;
+pub use waveform::peaks;
 
 /// The full parameter count — re-exported from the engine crate so the model
 /// can never drift from the frozen layout.
