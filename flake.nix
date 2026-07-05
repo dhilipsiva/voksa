@@ -32,6 +32,7 @@
             pkgs.wasm-pack
             pkgs.binaryen # wasm-opt
             pkgs.wasm-tools # component validate + WIT drift check (ADR 0002)
+            pkgs.dioxus-cli # dx serve/build for the console demo (ADR 0003)
             pkgs.cargo-nextest
             pkgs.cargo-insta
             pkgs.twiggy

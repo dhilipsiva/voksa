@@ -1,0 +1,8 @@
+[application]
+name = "voksa-console-demo"
+
+[web.app]
+title = "voksa · tuning console"
+
+[web.watcher]
+watch_path = ["src", "assets", "../voksa-console/src", "../voksa-console/assets"]

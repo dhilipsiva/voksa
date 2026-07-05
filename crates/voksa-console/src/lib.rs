@@ -15,3 +15,6 @@
 
 pub mod assets;
 pub mod model;
+pub mod ui;
+
+pub use ui::{TuningConsole, TuningConsoleProps};

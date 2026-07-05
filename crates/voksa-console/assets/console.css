@@ -1,0 +1,405 @@
+/* voksa tuning console — component styles (QUINE semantic tokens only).
+   The HOST provides the token sheets (var(--*)); the standalone demo vendors
+   them. No url() references — the inline-styles fallback must be exact.
+   Reference: docs/design/tuning-console/ (Workbench + Component Spec). */
+
+.vx-root {
+  font-family: var(--font-mono);
+  color: var(--text-body);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.vx-root *,
+.vx-root *::before,
+.vx-root *::after { box-sizing: border-box; }
+
+/* ── title row (non-sticky; the host owns the navbar) ─────────────── */
+.vx-titlerow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 4px 10px;
+}
+.vx-wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+.vx-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+}
+.vx-chip {
+  font-size: 10px;
+  padding: 1px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 99px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.vx-chip-ember { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-chip-amber { color: var(--amber-500); border-color: color-mix(in oklab, var(--amber-500) 45%, transparent); }
+
+/* ── layout ───────────────────────────────────────────────────────── */
+.vx-main {
+  display: grid;
+  grid-template-columns: 392px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.vx-left {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+.vx-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ── cards ────────────────────────────────────────────────────────── */
+.vx-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.vx-cardhead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-strong);
+  margin-bottom: 10px;
+}
+.vx-slash { color: var(--accent); }
+.vx-racksub {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--text-faint);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── utterance ────────────────────────────────────────────────────── */
+.vx-text {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--text-strong);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 11px;
+}
+.vx-text:focus-visible { outline: none; box-shadow: var(--ring); }
+.vx-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.vx-select {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-body);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 28px;
+  padding: 0 8px;
+}
+.vx-select:focus-visible { outline: none; box-shadow: var(--ring); }
+.vx-next {
+  width: 36px;
+  height: 28px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-body);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.vx-next:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+.vx-counter { font-size: 10px; color: var(--text-faint); min-width: 40px; }
+.vx-gloss { margin: 6px 0 0; font-size: 10.5px; color: var(--text-faint); }
+
+/* ── flag chips ───────────────────────────────────────────────────── */
+.vx-flagrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.vx-flag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  position: relative;
+  padding: 5px 9px 5px 20px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  text-align: left;
+}
+.vx-flagdot {
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--border-strong);
+}
+.vx-flagname { font-size: 12px; font-weight: 500; color: var(--text-body); }
+.vx-flagsub { font-size: 9px; color: var(--text-faint); }
+.vx-flag-on {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--ember-500) 45%, transparent);
+}
+.vx-flag-on .vx-flagdot { background: var(--ember-500); box-shadow: var(--glow-ember); }
+.vx-flag-on .vx-flagname { color: var(--text-strong); }
+.vx-flag:disabled { opacity: 0.45; cursor: default; }
+.vx-flag:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* ── transcript / transport / share (fleshed out in C3/C5) ────────── */
+.vx-transcript {
+  font-size: 15px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  min-height: 40px;
+}
+.vx-tfaint { color: var(--text-faint); font-size: 11px; }
+.vx-speak {
+  width: 100%;
+  height: 44px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  background: var(--ember-600);
+  border: 1px solid var(--ember-500);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.vx-speak:hover:not(:disabled) { background: var(--ember-500); box-shadow: var(--glow-ember); }
+.vx-speak:disabled { opacity: 0.45; cursor: default; }
+.vx-status { margin-top: 8px; font-size: 10.5px; color: var(--text-faint); }
+.vx-notes {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-body);
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+.vx-notes:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* ── rack nav ─────────────────────────────────────────────────────── */
+.vx-racknav {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: color-mix(in oklab, var(--surface-card) 82%, transparent);
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.vx-anchor {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+.vx-anchor:hover { color: var(--text-strong); background: var(--surface-inset); }
+.vx-navspacer { flex: 1; }
+.vx-preset { flex: 0 0 auto; width: 140px; }
+.vx-resetall {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  height: 28px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.vx-resetall:hover { color: var(--ember-300); border-color: color-mix(in oklab, var(--ember-500) 45%, transparent); }
+
+/* ── racks ────────────────────────────────────────────────────────── */
+.vx-rack { scroll-margin-top: 120px; }
+.vx-rack-flat .vx-rackbody { opacity: 0.75; }
+.vx-rackbody { display: flex; flex-direction: column; gap: 2px; }
+
+/* ── ParamRow (the ×465 primitive) ────────────────────────────────── */
+.vx-srow {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) 96px;
+  gap: 9px;
+  align-items: center;
+  padding: 4px 0;
+}
+.vx-srow.vx-off { opacity: 0.45; }
+.vx-slabel { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.vx-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: transparent;
+  flex: 0 0 auto;
+}
+.vx-mod .vx-dot { background: var(--ember-500); }
+.vx-name {
+  font-size: 12px;
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vx-unit { font-size: 9.5px; color: var(--text-faint); flex: 0 0 auto; }
+
+.vx-slider { position: relative; height: 26px; }
+.vx-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 11.5px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-inset);
+}
+.vx-fill {
+  position: absolute;
+  top: 11.5px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ember-500);
+  left: var(--vx-fill-lo);
+  width: calc(var(--vx-fill-hi) - var(--vx-fill-lo));
+}
+.vx-tickmark {
+  position: absolute;
+  top: 8px;
+  width: 1px;
+  height: 10px;
+  background: var(--fg-ghost);
+  left: var(--vx-tick);
+}
+.vx-thumb {
+  position: absolute;
+  top: 6.5px;
+  left: var(--vx-thumb);
+  width: 13px;
+  height: 13px;
+  margin-left: -6px;
+  border-radius: var(--radius-sm);
+  background: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.vx-mod .vx-thumb { background: var(--ember-500); border-color: var(--ember-300); }
+.vx-slider:hover .vx-thumb { transform: scale(1.2); }
+.vx-slider:focus-within .vx-thumb {
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--ember-500);
+}
+.vx-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.vx-range:disabled { cursor: default; }
+.vx-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 26px; }
+.vx-range::-moz-range-thumb { width: 22px; height: 26px; opacity: 0; border: 0; }
+.vx-range:focus { outline: none; }
+
+.vx-readout {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.vx-reset {
+  visibility: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.vx-srow:hover .vx-reset,
+.vx-reset:focus-visible { visibility: visible; }
+.vx-reset:hover { color: var(--ember-300); }
+.vx-widened { color: var(--amber-500); font-size: 10px; }
+.vx-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  cursor: text;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vx-mod .vx-value { color: var(--ember-300); }
+.vx-value-edit {
+  width: 76px;
+  color: var(--text-strong);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+}
+.vx-value:focus-visible,
+.vx-value-edit:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* ── responsive (design: 1100 stack, 720 single column) ───────────── */
+@media (max-width: 1100px) {
+  .vx-main { grid-template-columns: 1fr; }
+  .vx-left { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 720px) {
+  .vx-srow { grid-template-columns: 118px minmax(0, 1fr) 84px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-thumb { transition: none; }
+}

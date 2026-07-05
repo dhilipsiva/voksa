@@ -9,3 +9,7 @@ pub const SENTENCES_JSON: &str = include_str!("../assets/sentences.json");
 /// The help-copy registry the `?` popovers resolve by key. Empty string =
 /// the console shows `// help pending — <key>`.
 pub const HELP_TEXT_JSON: &str = include_str!("../assets/help-text.json");
+
+/// The component stylesheet source — the inline fallback for consumers that
+/// don't build with dx (the manganis asset covers those that do).
+pub const CONSOLE_CSS_SOURCE: &str = include_str!("../assets/console.css");

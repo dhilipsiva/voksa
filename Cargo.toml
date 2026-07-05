@@ -5,6 +5,7 @@ members = [
     "crates/voksa-cli",
     "crates/voksa-web",
     "crates/voksa-console",
+    "crates/voksa-console-demo",
     "crates/voksa-component",
     "crates/voksa-engine-klattsch",
     "crates/klattsch-core-fork",
@@ -22,6 +23,7 @@ rust-version = "1.85"
 voksa-core = { path = "crates/voksa-core" }
 voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
 voksa-web = { path = "crates/voksa-web" }
+voksa-console = { path = "crates/voksa-console" }
 # Console dev-dep ONLY (the config round-trip contract test); pulls cpal/alsa,
 # so it must never appear in a non-dev dependency list of a wasm crate.
 voksa-cli = { path = "crates/voksa-cli" }
@@ -29,6 +31,9 @@ voksa-testkit = { path = "crates/voksa-testkit" }
 # WIT component guest bindings (voksa-component ONLY). License is
 # `Apache-2.0 WITH LLVM-exception` — approved + recorded in ADR 0002.
 wit-bindgen = "0.46"
+# The tuning console (ADR 0003): Dioxus component library + demo. MIT/Apache.
+# Default features carry no renderer; the demo enables the `web` renderer.
+dioxus = "0.7"
 # wasm-bindgen-test drives the headless browser tests (voksa-web dev-dep only);
 # voksa-web itself has NO wasm-bindgen runtime dep (raw C-ABI, zero imports).
 wasm-bindgen-test = "0.3"

@@ -1,0 +1,13 @@
+[package]
+name = "voksa-console-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Standalone dx-serve runner for the voksa tuning console (vendored QUINE tokens)"
+# Dev/demo target only — never published.
+publish = false
+
+[dependencies]
+voksa-console.workspace = true
+dioxus = { workspace = true, features = ["web"] }
