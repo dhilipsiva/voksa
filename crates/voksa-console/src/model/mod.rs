@@ -17,7 +17,7 @@ pub use descriptor::{
     ATT_FIELDS, ATT_KINDS, AttKind, Descriptor, Descriptors, FieldSpec, ItemKind, KNOBS, SECTIONS,
     Section, VOICE_ITEMS, VT_BURST_MS, VT_CLOSURE_MS, VT_DUR, VT_FIELDS, VoiceItem,
 };
-pub use logic::{Widen, WritePlan, is_dirty, widen_for};
+pub use logic::{Widen, WritePlan, filter_plan, is_dirty, reset_plan, widen_for};
 pub use path::{ATT_FIELD_COUNT, ATT_KIND_COUNT, KNOB_COUNT, Path, PathError, VOICE_ITEM_COUNT};
 pub use presets::{PRESETS, Preset, apply_preset};
 

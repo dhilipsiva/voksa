@@ -36,3 +36,24 @@ pub fn is_dirty(d: &Descriptor, v: f32) -> bool {
 /// (skip-if-equal per cell).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct WritePlan(pub Vec<(usize, f32)>);
+
+/// Drop plan entries whose target already holds the value — the store's
+/// skip-if-equal pass, so applying a plan invalidates only cells that change.
+pub fn filter_plan(current: &[f32], plan: &WritePlan) -> WritePlan {
+    WritePlan(
+        plan.0
+            .iter()
+            .copied()
+            .filter(|&(idx, v)| current.get(idx).copied() != Some(v))
+            .collect(),
+    )
+}
+
+/// A reset plan: every index in `range` back to its engine default (single
+/// rows, emotions, phonemes, the whole table — callers pick the range).
+pub fn reset_plan(
+    desc: &super::descriptor::Descriptors,
+    range: core::ops::Range<usize>,
+) -> WritePlan {
+    WritePlan(range.map(|i| (i, desc.get(i).default)).collect())
+}
