@@ -251,6 +251,39 @@ Remaining v1 caveats:
   carry it); Lojban questions ending in vowels — the normal case — are fine.
 - Attitudinal overlay: see §10 below (Phase-10 implementation).
 
+### 9.2 Naturalness levers (Phase 11 — INVENTED / non-normative)
+
+The CLL mandates none of this; these are rules-only micro-variation
+conventions (playbook "Naturalness backlog" levers 1–5) that soften the
+robotic baseline. All nine are runtime knobs on `ProsodyOptions` (demo Basic
+tab, CLI config JSON, wasm f32 block indices 440–448) and DEFAULT ON since
+Phase-11 N-D; `ProsodyOptions::naturalness_off()` reproduces the Phase-10
+voice byte-exactly (the CP3 A/B "off" arm, guarded by a frozen snapshot).
+
+- `FLUTTER_FL = 25` — Klatt-1990 F0 flutter, a deterministic sum of
+  incommensurate sinusoids: ΔF0 = (FL/50)(F0/100)[sin 2π12.7t + sin 2π7.1t +
+  sin 2π4.7t], clocked off the sample clock (block-size invariant, no PRNG).
+- `BREATH_ASPIRATION = 0.06` — baseline aspiration mixed into voiced frames.
+- `BASELINE_OQ_DELTA = +0.10`, `BASELINE_TILT_DELTA = −0.10` — softer, darker
+  glottal source on every frame (attitudinal deviations still add on top).
+- `MICRO_F0_HZ = 4` — intrinsic vowel F0: high vowels (i u) +4 Hz, low (a)
+  −4 Hz, mid (e o y) 0.
+- `OBSTRUENT_F0_HZ = 6` — a vowel onset right after a voiceless obstruent
+  starts +6 Hz (voiced obstruent: −0.6×6 = −3.6 Hz dip), settling to the
+  baseline over `MICRO_DECAY_MS = 50`; pauses block the perturbation.
+- `FINAL_LENGTHEN = 1.3` — the utterance-final syllable's rhyme stretches
+  ×1.3 (composes with stress: a stressed final rhyme gets ×1.5·1.3).
+- `CLUSTER_SHORTEN = 0.15` — a k-consonant onset cluster compresses to
+  ×max(1 − 0.15(k−1), 0.6); buffer vowels break clusters (post-buffering
+  counts). Addresses the CP1 "clusters feel long" note.
+- `UNDERSHOOT = 0.35`, `UNDERSHOOT_REF_MS = 200` — a monophthong lasting
+  d ms migrates its formant frequencies toward the schwa center
+  (500, 1500, 2500) by 0.35·max(0, 1 − d/200): buffers reduce strongly,
+  short unstressed vowels subtly, stressed/lengthened nuclei not at all.
+- Pipeline order: cluster shortening → microprosody → rhyme stretch →
+  declination → stress excursion → final lengthening → undershoot → xu rise
+  → voice-quality baselines (flutter/breath/OQ/tilt) → rate.
+
 ## 10. Attitudinal layer (Phase 10 — INVENTED / non-normative)
 
 The CLL specifies **no** acoustic realization for the UI-class attitudinal
