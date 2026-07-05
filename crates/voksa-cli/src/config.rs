@@ -141,6 +141,9 @@ impl Config {
             stress_amp_factor: self.stress_amp_factor,
             xu_rise_hz: self.xu_rise_hz,
             rate: self.rate,
+            // The Phase-11 naturalness keys join the config in N-C; until
+            // then they ride the defaults.
+            ..Default::default()
         }
     }
 

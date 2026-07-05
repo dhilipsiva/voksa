@@ -16,7 +16,9 @@
 
 use crate::alloc::vec::Vec;
 use crate::attitudinal::AttitudinalScope;
-use crate::phonemes::{Formant, Phoneme, SegmentKind, SegmentSpec, Targets, specs};
+use crate::phonemes::{
+    Consonant, Formant, Phoneme, SegmentKind, SegmentSpec, Targets, Vowel, specs,
+};
 
 /// Flat robotic baseline F0 until the prosody layer (Phase 7) transforms it.
 pub const BASE_F0_HZ: f32 = 120.0;
@@ -34,6 +36,71 @@ pub const NEUTRAL_TILT: f32 = 0.0;
 pub const NEUTRAL_DI: f32 = 0.0;
 /// Modal vibrato depth in Hz (0.0 = off).
 pub const NEUTRAL_VIBRATO_HZ: f32 = 0.0;
+/// Modal Klatt flutter (0.0 = off; FL percent, Phase 11).
+pub const NEUTRAL_FLUTTER: f32 = 0.0;
+
+/// Intrinsic-F0 vowel height class (Phase-11 microprosody: high vowels carry
+/// slightly higher F0 than low vowels — Whalen & Levitt).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VowelHeight {
+    /// i, u — intrinsic F0 raised.
+    High,
+    /// e, o, y, and the epenthetic buffer — no shift.
+    Mid,
+    /// a — intrinsic F0 lowered.
+    Low,
+}
+
+/// The segment class an event was emitted from — the metadata the Phase-11
+/// microprosody/coarticulation transforms need after compile (events otherwise
+/// lose their phoneme identity). Travels WITH the event through every insert/
+/// re-time (a parallel table would desync when transforms insert events).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MicroClass {
+    /// Monophthong nucleus (incl. the buffer vowel).
+    Vowel(VowelHeight),
+    /// Diphthong nucleus: dynamic — no intrinsic F0, no undershoot (MVP).
+    Diphthong,
+    /// b d g v z j (both events of a voiced stop carry it).
+    VoicedObstruent,
+    /// p t k f s c x.
+    VoicelessObstruent,
+    /// l m n r, including syllabic nuclei.
+    Sonorant,
+    /// ' ([h]) — carries no perturbation of its own (MVP).
+    Aspirate,
+    /// Pause events — blocks obstruent perturbation across pauses.
+    Silence,
+}
+
+/// The [`MicroClass`] a phoneme's events carry.
+pub fn micro_class(p: Phoneme) -> MicroClass {
+    match p {
+        Phoneme::Vowel(v) => MicroClass::Vowel(match v {
+            Vowel::I | Vowel::U => VowelHeight::High,
+            Vowel::A => VowelHeight::Low,
+            Vowel::E | Vowel::O | Vowel::Y => VowelHeight::Mid,
+        }),
+        Phoneme::Diphthong(..) => MicroClass::Diphthong,
+        Phoneme::Consonant(c) => match c {
+            Consonant::B
+            | Consonant::D
+            | Consonant::G
+            | Consonant::V
+            | Consonant::Z
+            | Consonant::J => MicroClass::VoicedObstruent,
+            Consonant::P
+            | Consonant::T
+            | Consonant::K
+            | Consonant::F
+            | Consonant::S
+            | Consonant::C
+            | Consonant::X => MicroClass::VoicelessObstruent,
+            Consonant::L | Consonant::M | Consonant::N | Consonant::R => MicroClass::Sonorant,
+        },
+        Phoneme::H => MicroClass::Aspirate,
+    }
+}
 
 /// One parameter frame: what the voice should be doing from an event onward.
 ///
@@ -53,10 +120,12 @@ pub struct Frame {
     pub di: f32,
     /// Vibrato depth in Hz (NEUTRAL_VIBRATO_HZ = off).
     pub vibrato_hz: f32,
+    /// Klatt flutter, FL percent (NEUTRAL_FLUTTER = off; Phase 11).
+    pub flutter: f32,
 }
 
 impl Frame {
-    /// A modal frame: neutral voice quality across all Phase-10 lanes.
+    /// A modal frame: neutral voice quality across all Phase-10/11 lanes.
     pub const fn modal(f0_hz: f32, targets: Targets) -> Self {
         Self {
             f0_hz,
@@ -65,6 +134,7 @@ impl Frame {
             tilt: NEUTRAL_TILT,
             di: NEUTRAL_DI,
             vibrato_hz: NEUTRAL_VIBRATO_HZ,
+            flutter: NEUTRAL_FLUTTER,
         }
     }
 }
@@ -76,6 +146,9 @@ pub struct Event {
     pub at_ms: f32,
     pub transition_ms: f32,
     pub frame: Frame,
+    /// The segment class this event was emitted from (Phase-11 microprosody /
+    /// coarticulation metadata; the 1:1 lowering ignores it).
+    pub micro: MicroClass,
 }
 
 /// One syllable's time span, with the metadata prosody needs.
@@ -93,6 +166,11 @@ pub struct SyllableSpan {
     pub stressed: bool,
     /// False for y-nucleus / iy-uy / syllabic-consonant / buffer syllables.
     pub countable: bool,
+    /// Cluster consonants before the nucleus, POST-buffering (a buffered
+    /// cluster reports 1 — the buffer broke it). Phase-11 duration rules.
+    pub onset_count: u8,
+    /// Cluster consonants after the nucleus, post-buffering.
+    pub coda_count: u8,
 }
 
 /// A compiled utterance: the deterministic parameter schedule.
@@ -168,10 +246,12 @@ fn aspirate_targets(next: Option<Targets>) -> Targets {
 }
 
 /// Schedule one segment starting at `at_ms`; push its events, return its end
-/// time. `next` is the following segment's leading targets ([h] lookahead).
+/// time. `next` is the following segment's leading targets ([h] lookahead);
+/// `micro` is the segment class its events carry (Phase-11 metadata).
 pub fn schedule_segment(
     seg: &SegmentSpec,
     next: Option<Targets>,
+    micro: MicroClass,
     f0_hz: f32,
     at_ms: f32,
     out: &mut Vec<Event>,
@@ -180,6 +260,7 @@ pub fn schedule_segment(
         at_ms,
         transition_ms,
         frame: Frame::modal(f0_hz, targets),
+        micro,
     };
     match seg.kind {
         SegmentKind::Steady(t) => {
@@ -219,7 +300,14 @@ pub fn schedule_phonemes(phonemes: &[Phoneme], f0_hz: f32) -> (Vec<Event>, f32) 
     let mut t_ms = 0.0;
     for (i, seg) in segs.iter().enumerate() {
         let next = segs.get(i + 1).and_then(SegmentSpec::leading_targets);
-        t_ms = schedule_segment(seg, next, f0_hz, t_ms, &mut events);
+        t_ms = schedule_segment(
+            seg,
+            next,
+            micro_class(phonemes[i]),
+            f0_hz,
+            t_ms,
+            &mut events,
+        );
     }
     (events, t_ms)
 }
@@ -238,9 +326,16 @@ mod tests {
         assert_eq!(f.tilt, NEUTRAL_TILT);
         assert_eq!(f.di, NEUTRAL_DI);
         assert_eq!(f.vibrato_hz, NEUTRAL_VIBRATO_HZ);
+        assert_eq!(f.flutter, NEUTRAL_FLUTTER);
         assert_eq!(
-            (NEUTRAL_OQ, NEUTRAL_TILT, NEUTRAL_DI, NEUTRAL_VIBRATO_HZ),
-            (1.0, 0.0, 0.0, 0.0)
+            (
+                NEUTRAL_OQ,
+                NEUTRAL_TILT,
+                NEUTRAL_DI,
+                NEUTRAL_VIBRATO_HZ,
+                NEUTRAL_FLUTTER
+            ),
+            (1.0, 0.0, 0.0, 0.0, 0.0)
         );
     }
 }

@@ -34,7 +34,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 125.99999,
@@ -66,7 +68,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Diphthong,
         },
         Event {
             at_ms: 178.49998,
@@ -98,7 +102,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Diphthong,
         },
         Event {
             at_ms: 336.0,
@@ -130,7 +136,9 @@ UtteranceSchedule {
                 tilt: -0.05,
                 di: 0.1,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 419.99997,
@@ -162,7 +170,11 @@ UtteranceSchedule {
                 tilt: -0.05,
                 di: 0.1,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                High,
+            ),
         },
         Event {
             at_ms: 656.25,
@@ -194,7 +206,9 @@ UtteranceSchedule {
                 tilt: -0.05,
                 di: 0.1,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 782.24994,
@@ -226,7 +240,9 @@ UtteranceSchedule {
                 tilt: -0.05,
                 di: 0.1,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicedObstruent,
         },
         Event {
             at_ms: 908.24994,
@@ -258,7 +274,11 @@ UtteranceSchedule {
                 tilt: -0.05,
                 di: 0.1,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Mid,
+            ),
         },
         Event {
             at_ms: 1065.75,
@@ -290,7 +310,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Silence,
         },
         Event {
             at_ms: 1170.75,
@@ -322,7 +344,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Diphthong,
         },
         Event {
             at_ms: 1223.25,
@@ -354,7 +378,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Diphthong,
         },
     ],
     spans: [
@@ -365,6 +391,8 @@ UtteranceSchedule {
             word_index: 0,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 336.0,
@@ -373,6 +401,8 @@ UtteranceSchedule {
             word_index: 1,
             stressed: true,
             countable: true,
+            onset_count: 1,
+            coda_count: 1,
         },
         SyllableSpan {
             start_ms: 782.24994,
@@ -381,6 +411,8 @@ UtteranceSchedule {
             word_index: 1,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 1170.75,
@@ -389,6 +421,8 @@ UtteranceSchedule {
             word_index: 2,
             stressed: false,
             countable: true,
+            onset_count: 0,
+            coda_count: 0,
         },
     ],
     total_ms: 1380.7499,

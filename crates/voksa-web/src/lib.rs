@@ -63,6 +63,9 @@ fn prosody_from(flags: u32, params: &[f32]) -> ProsodyOptions {
         stress_amp_factor: g(4, d.stress_amp_factor),
         xu_rise_hz: g(5, d.xu_rise_hz),
         rate: g(6, d.rate),
+        // The Phase-11 naturalness knobs cross at [NATURALNESS_PARAM_OFF..)
+        // (appended in N-C); until then they ride the defaults.
+        ..d
     }
 }
 

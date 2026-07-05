@@ -34,7 +34,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 120.0,
@@ -66,7 +68,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                High,
+            ),
         },
         Event {
             at_ms: 270.0,
@@ -98,7 +104,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicedObstruent,
         },
         Event {
             at_ms: 330.0,
@@ -130,7 +138,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicedObstruent,
         },
         Event {
             at_ms: 355.0,
@@ -162,7 +172,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Mid,
+            ),
         },
         Event {
             at_ms: 505.0,
@@ -194,7 +208,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 565.0,
@@ -226,7 +242,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 590.0,
@@ -258,7 +276,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 670.0,
@@ -290,7 +310,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Low,
+            ),
         },
         Event {
             at_ms: 910.0,
@@ -322,7 +346,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 970.0,
@@ -354,7 +380,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 990.0,
@@ -386,7 +414,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Low,
+            ),
         },
     ],
     spans: [
@@ -397,6 +429,8 @@ UtteranceSchedule {
             word_index: 0,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 270.0,
@@ -405,6 +439,8 @@ UtteranceSchedule {
             word_index: 1,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 505.0,
@@ -413,6 +449,8 @@ UtteranceSchedule {
             word_index: 2,
             stressed: true,
             countable: true,
+            onset_count: 2,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 910.0,
@@ -421,6 +459,8 @@ UtteranceSchedule {
             word_index: 2,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
     ],
     total_ms: 1150.0,

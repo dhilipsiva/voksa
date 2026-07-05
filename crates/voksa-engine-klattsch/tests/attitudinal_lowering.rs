@@ -22,6 +22,7 @@ fn ev(at_ms: f32, frame: Frame) -> Event {
         at_ms,
         transition_ms: 10.0,
         frame,
+        micro: voksa_core::schedule::MicroClass::Vowel(voksa_core::schedule::VowelHeight::Low),
     }
 }
 

@@ -15,8 +15,8 @@ use crate::normalize::{NumberError, number_words};
 use crate::pause::{Segment, Token, insert_pauses};
 use crate::phonemes::{Phoneme, SegmentSpec, buffer_spec_with, spec_with};
 use crate::schedule::{
-    BASE_F0_HZ, Event, Frame, PAUSE_MS, SyllableSpan, UtteranceSchedule, schedule_segment,
-    silence_targets,
+    BASE_F0_HZ, Event, Frame, MicroClass, PAUSE_MS, SyllableSpan, UtteranceSchedule, VowelHeight,
+    micro_class, schedule_segment, silence_targets,
 };
 use crate::stress::is_countable;
 use crate::syllable::Nucleus;
@@ -209,6 +209,7 @@ pub fn compile_with(
                     at_ms: t_ms,
                     transition_ms: 5.0,
                     frame: Frame::modal(BASE_F0_HZ, silence_targets()),
+                    micro: MicroClass::Silence,
                 });
                 t_ms += PAUSE_MS;
             }
@@ -289,6 +290,8 @@ struct Entry {
     /// buffer span's single entry). The stress stretch anchors here so onset
     /// consonants stay at unit rate (CP1 fix).
     is_nucleus: bool,
+    /// The segment class this entry's events carry (Phase-11 metadata).
+    micro: MicroClass,
 }
 
 /// Expand one analyzed word into timed events and syllable spans.
@@ -308,55 +311,30 @@ fn schedule_word(
     for (si, syl) in w.syllables.iter().enumerate() {
         let span = metas.len();
         metas.push((w.stress == Some(si), is_countable(syl)));
-        let push =
-            |entries: &mut Vec<Entry>, seg: SegmentSpec, is_consonant: bool, is_nucleus: bool| {
-                entries.push(Entry {
-                    seg,
-                    span,
-                    is_consonant,
-                    is_nucleus,
-                });
-            };
+        let push = |entries: &mut Vec<Entry>, p: Phoneme, is_consonant: bool, is_nucleus: bool| {
+            entries.push(Entry {
+                seg: spec_with(p, voice),
+                span,
+                is_consonant,
+                is_nucleus,
+                micro: micro_class(p),
+            });
+        };
         if syl.aspirated {
-            push(&mut entries, spec_with(Phoneme::H, voice), false, false);
+            push(&mut entries, Phoneme::H, false, false);
         }
         for c in &syl.onset {
-            push(
-                &mut entries,
-                spec_with(Phoneme::Consonant(*c), voice),
-                true,
-                false,
-            );
+            push(&mut entries, Phoneme::Consonant(*c), true, false);
         }
         match syl.nucleus {
-            Nucleus::Vowel(v) => push(
-                &mut entries,
-                spec_with(Phoneme::Vowel(v), voice),
-                false,
-                true,
-            ),
-            Nucleus::Diphthong(a, b) => push(
-                &mut entries,
-                spec_with(Phoneme::Diphthong(a, b), voice),
-                false,
-                true,
-            ),
+            Nucleus::Vowel(v) => push(&mut entries, Phoneme::Vowel(v), false, true),
+            Nucleus::Diphthong(a, b) => push(&mut entries, Phoneme::Diphthong(a, b), false, true),
             // Syllabic sonorant: the consonant's steady targets serve as the
             // nucleus (vocalic envelope refinement deferred to CP1 listening).
-            Nucleus::Syllabic(c) => push(
-                &mut entries,
-                spec_with(Phoneme::Consonant(c), voice),
-                false,
-                true,
-            ),
+            Nucleus::Syllabic(c) => push(&mut entries, Phoneme::Consonant(c), false, true),
         }
         for c in &syl.coda {
-            push(
-                &mut entries,
-                spec_with(Phoneme::Consonant(*c), voice),
-                true,
-                false,
-            );
+            push(&mut entries, Phoneme::Consonant(*c), true, false);
         }
     }
 
@@ -372,6 +350,8 @@ fn schedule_word(
                     is_consonant: false,
                     // A buffer syllable is its own nucleus (offset 0).
                     is_nucleus: true,
+                    // The buffer [ɪ] behaves as a mid monophthong.
+                    micro: MicroClass::Vowel(VowelHeight::Mid),
                 });
             }
             buffered.push(*e);
@@ -389,7 +369,14 @@ fn schedule_word(
     for i in 0..entries.len() {
         let next = entries.get(i + 1).and_then(|e| e.seg.leading_targets());
         let seg_start = t_ms;
-        t_ms = schedule_segment(&entries[i].seg, next, BASE_F0_HZ, t_ms, events);
+        t_ms = schedule_segment(
+            &entries[i].seg,
+            next,
+            entries[i].micro,
+            BASE_F0_HZ,
+            t_ms,
+            events,
+        );
         match &mut bounds[entries[i].span] {
             slot @ None => *slot = Some((seg_start, t_ms)),
             Some((_, end)) => *end = t_ms,
@@ -399,11 +386,45 @@ fn schedule_word(
         }
     }
 
+    // Per-span cluster sizes, POST-buffering (Phase-11 duration rules): the
+    // count is the longest CONSECUTIVE consonant run in the span's onset/coda
+    // region — an inserted buffer entry (its own span, not a consonant) breaks
+    // the run, so buffered clusters correctly report 1.
+    let mut onset_counts = crate::alloc::vec![0u8; metas.len()];
+    let mut coda_counts = crate::alloc::vec![0u8; metas.len()];
+    let mut seen_nucleus = crate::alloc::vec![false; metas.len()];
+    let mut run_span: Option<(usize, bool)> = None; // (span, is_coda)
+    let mut run_len = 0u8;
+    for e in &entries {
+        if e.is_nucleus {
+            seen_nucleus[e.span] = true;
+        }
+        if e.is_consonant {
+            let key = (e.span, seen_nucleus[e.span]);
+            if run_span == Some(key) {
+                run_len = run_len.saturating_add(1);
+            } else {
+                run_span = Some(key);
+                run_len = 1;
+            }
+            let counts = if key.1 {
+                &mut coda_counts
+            } else {
+                &mut onset_counts
+            };
+            counts[e.span] = counts[e.span].max(run_len);
+        } else {
+            run_span = None;
+            run_len = 0;
+        }
+    }
+
     let mut word_spans: Vec<SyllableSpan> = bounds
         .iter()
         .zip(&metas)
         .zip(&nucleus_at)
-        .filter_map(|((b, (stressed, countable)), nucleus)| {
+        .enumerate()
+        .filter_map(|(si, ((b, (stressed, countable)), nucleus))| {
             b.map(|(start_ms, end_ms)| SyllableSpan {
                 start_ms,
                 dur_ms: end_ms - start_ms,
@@ -411,6 +432,8 @@ fn schedule_word(
                 word_index,
                 stressed: *stressed,
                 countable: *countable,
+                onset_count: onset_counts[si],
+                coda_count: coda_counts[si],
             })
         })
         .collect();

@@ -34,7 +34,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 60.0,
@@ -66,7 +68,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: VoicelessObstruent,
         },
         Event {
             at_ms: 85.0,
@@ -98,7 +102,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Mid,
+            ),
         },
         Event {
             at_ms: 120.0,
@@ -130,7 +138,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 200.0,
@@ -162,7 +172,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Low,
+            ),
         },
         Event {
             at_ms: 360.0,
@@ -194,7 +208,9 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Sonorant,
         },
         Event {
             at_ms: 440.0,
@@ -226,7 +242,11 @@ UtteranceSchedule {
                 tilt: 0.0,
                 di: 0.0,
                 vibrato_hz: 0.0,
+                flutter: 0.0,
             },
+            micro: Vowel(
+                Low,
+            ),
         },
     ],
     spans: [
@@ -237,6 +257,8 @@ UtteranceSchedule {
             word_index: 0,
             stressed: true,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 85.0,
@@ -245,6 +267,8 @@ UtteranceSchedule {
             word_index: 0,
             stressed: false,
             countable: false,
+            onset_count: 0,
+            coda_count: 0,
         },
         SyllableSpan {
             start_ms: 360.0,
@@ -253,6 +277,8 @@ UtteranceSchedule {
             word_index: 0,
             stressed: false,
             countable: true,
+            onset_count: 1,
+            coda_count: 0,
         },
     ],
     total_ms: 600.0,
