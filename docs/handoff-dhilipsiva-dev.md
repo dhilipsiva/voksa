@@ -23,7 +23,7 @@ in the voksa repo. Port its LOGIC; redesign its LOOK to fit dhilipsiva.dev.
    `wasm-pack build --release --target web crates/voksa-web` (or take it from a
    checkout of current `main` (v0.1.0) after running
    `cargo xtask wasm-size`, which builds + verifies it). ~42 KB gzipped
-   (41 854 B; the xtask gate asserts < 43 KB).
+   (the xtask gate asserts < 43 KB).
 2. `crates/voksa-web/www/voksa-processor.js` — the AudioWorkletProcessor.
    Copy VERBATIM; do not port it into a bundler module (worklets load via
    `audioWorklet.addModule(url)`).
