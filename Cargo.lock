@@ -1188,6 +1188,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "voksa-console"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "voksa-cli",
+ "voksa-core",
+ "voksa-web",
+]
+
+[[package]]
 name = "voksa-core"
 version = "0.1.0"
 dependencies = [

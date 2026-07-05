@@ -4,6 +4,7 @@ members = [
     "crates/voksa-core",
     "crates/voksa-cli",
     "crates/voksa-web",
+    "crates/voksa-console",
     "crates/voksa-component",
     "crates/voksa-engine-klattsch",
     "crates/klattsch-core-fork",
@@ -21,6 +22,9 @@ rust-version = "1.85"
 voksa-core = { path = "crates/voksa-core" }
 voksa-engine-klattsch = { path = "crates/voksa-engine-klattsch" }
 voksa-web = { path = "crates/voksa-web" }
+# Console dev-dep ONLY (the config round-trip contract test); pulls cpal/alsa,
+# so it must never appear in a non-dev dependency list of a wasm crate.
+voksa-cli = { path = "crates/voksa-cli" }
 voksa-testkit = { path = "crates/voksa-testkit" }
 # WIT component guest bindings (voksa-component ONLY). License is
 # `Apache-2.0 WITH LLVM-exception` — approved + recorded in ADR 0002.
