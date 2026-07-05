@@ -247,6 +247,85 @@ fn final_lengthening_composes_with_stressed_final() {
     );
 }
 
+// ---- lever 5: undershoot -------------------------------------------------------
+
+#[test]
+fn undershoot_centralizes_short_vowels_exactly() {
+    // The buffered [ɪ] (35 ms) reduces strongly: u = 0.35·(1 − 35/200) =
+    // 0.28875 → F2 = 1900 + (1500 − 1900)·u = 1784.5.
+    let mut opts = isolating();
+    opts.undershoot = 0.35;
+    let s = apply_prosody(compiled_buffered("le zdani"), &opts);
+    let buffer_ev = s
+        .events
+        .iter()
+        .find(|e| {
+            e.micro == MicroClass::Vowel(VowelHeight::Mid)
+                && (e.frame.targets.formants[0].freq_hz - 400.0).abs() < 60.0
+        })
+        .expect("buffered zdani has the [ɪ] event");
+    assert!(
+        (buffer_ev.frame.targets.formants[1].freq_hz - 1784.5).abs() < 1e-2,
+        "buffer F2 must centralize to 1784.5, got {}",
+        buffer_ev.frame.targets.formants[1].freq_hz
+    );
+}
+
+#[test]
+fn undershoot_spares_long_stressed_vowels_and_diphthongs() {
+    let mut opts = isolating();
+    opts.stress_duration_factor = 1.5;
+    opts.undershoot = 0.35;
+    let s = apply_prosody(compiled("klama"), &opts);
+    // KLA's /a/ rhyme post-stretch is 240 ms ≥ 200 → full quality.
+    let a = s
+        .events
+        .iter()
+        .find(|e| e.micro == MicroClass::Vowel(VowelHeight::Low))
+        .expect("klama has /a/");
+    assert_eq!(
+        a.frame.targets.formants[0].freq_hz, 730.0,
+        "stressed /a/ keeps F1"
+    );
+    // Diphthongs untouched (already dynamic).
+    let d = apply_prosody(compiled("coi"), &opts);
+    for e in d.events.iter().filter(|e| e.micro == MicroClass::Diphthong) {
+        assert!(
+            [570.0, 270.0].contains(&e.frame.targets.formants[0].freq_hz),
+            "diphthong endpoints stay pinned"
+        );
+    }
+}
+
+// ---- levers 1–2: baseline voice quality ----------------------------------------
+
+#[test]
+fn naturalness_stage_sets_vq_lanes_and_breath() {
+    let mut opts = isolating();
+    opts.flutter = 25.0;
+    opts.breath_aspiration = 0.06;
+    opts.baseline_oq_delta = 0.10;
+    opts.baseline_tilt_delta = -0.10;
+    let s = apply_prosody(compiled("coi munje"), &opts);
+    for e in &s.events {
+        assert_eq!(e.frame.flutter, 25.0, "flutter set on every frame");
+        assert!((e.frame.oq - 1.10).abs() < 1e-6, "oq delta on every frame");
+        assert!(
+            (e.frame.tilt - (-0.10)).abs() < 1e-6,
+            "tilt delta on every frame"
+        );
+        if e.frame.targets.voicing > 0.0 {
+            assert!(
+                (e.frame.targets.aspiration - 0.06).abs() < 1e-6
+                    || e.frame.targets.aspiration > 0.06,
+                "breath lands on voiced frames"
+            );
+        } else if e.micro == MicroClass::Silence {
+            assert_eq!(e.frame.targets.aspiration, 0.0, "silence stays breath-free");
+        }
+    }
+}
+
 // ---- the frozen contract ------------------------------------------------------
 
 #[test]

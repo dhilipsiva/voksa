@@ -37,10 +37,21 @@ pub const VOICE_PARAM_OFF: usize = PARAM_COUNT + ATTITUDINAL_PARAM_COUNT;
 /// `to_array` doc comment is the normative ordering).
 pub const VOICE_PARAM_COUNT: usize = VoiceTable::FIELDS;
 
+/// Offset of the Phase-11 naturalness section (appended AFTER the voice table
+/// — the layout is frozen append-only).
+pub const NATURALNESS_PARAM_OFF: usize = VOICE_PARAM_OFF + VOICE_PARAM_COUNT;
+
+/// Count of f32 naturalness knobs (P11): `[flutter, breath_aspiration,
+/// baseline_oq_delta, baseline_tilt_delta, micro_f0_hz, obstruent_f0_hz,
+/// final_lengthen, cluster_shorten, undershoot]` — the ProsodyOptions
+/// naturalness block, in declaration order.
+pub const NATURALNESS_PARAM_COUNT: usize = 9;
+
 /// Full f32 block: prosody, then attitudinals, then the per-phoneme voice
-/// table. Shorter blocks default the rest, so 7-float (demo-basic), 63-float
-/// (demo-attitudinal), and empty blocks stay valid forever.
-pub const FULL_PARAM_COUNT: usize = VOICE_PARAM_OFF + VOICE_PARAM_COUNT;
+/// table, then the naturalness knobs. Shorter blocks default the rest, so
+/// 7-float (demo-basic), 63-float (demo-attitudinal), and 440-float
+/// (demo-advanced) blocks stay valid forever.
+pub const FULL_PARAM_COUNT: usize = NATURALNESS_PARAM_OFF + NATURALNESS_PARAM_COUNT;
 
 /// Build [`ProsodyOptions`] from the flag bits + the f32 param block (fixed
 /// order). Missing or non-finite entries fall back to the defaults, so an empty
@@ -166,6 +177,17 @@ pub fn default_params() -> Vec<f32> {
         out.extend_from_slice(&atts.get(k).to_array());
     }
     out.extend_from_slice(&VoiceTable::default().to_array());
+    out.extend_from_slice(&[
+        p.flutter,
+        p.breath_aspiration,
+        p.baseline_oq_delta,
+        p.baseline_tilt_delta,
+        p.micro_f0_hz,
+        p.obstruent_f0_hz,
+        p.final_lengthen,
+        p.cluster_shorten,
+        p.undershoot,
+    ]);
     debug_assert_eq!(out.len(), FULL_PARAM_COUNT);
     out
 }
@@ -403,16 +425,11 @@ mod tests {
         );
     }
 
-    /// The full 440-float block at its default values (prosody + pinned
-    /// attitudinal vectors + pinned voice table, in the canonical layout).
+    /// The full 449-float block at its default values (prosody + pinned
+    /// attitudinal vectors + pinned voice table + naturalness knobs, in the
+    /// canonical layout).
     fn default_full_block() -> Vec<f32> {
-        let mut full = vec![120.0, 95.0, 1.5, 20.0, 1.2, 25.0, 1.0];
-        for k in voksa_core::attitudinal::AttitudinalKind::ALL {
-            full.extend(k.deviation().to_array());
-        }
-        full.extend(VoiceTable::default().to_array());
-        assert_eq!(full.len(), FULL_PARAM_COUNT);
-        full
+        default_params()
     }
 
     #[test]
@@ -499,6 +516,34 @@ mod tests {
         assert_eq!(
             transcription("le zdani", FLAG_BUFFER).unwrap(),
             "le Z(ɪ)DA.ni"
+        );
+    }
+
+    #[test]
+    fn naturalness_params_at_440_change_output() {
+        // The Phase-11 knobs cross at [NATURALNESS_PARAM_OFF..): bumping
+        // final_lengthen (index 440+6) must lengthen the render.
+        let base = synth("coi munje", 0, SR, &[]).unwrap();
+        let mut tuned = default_full_block();
+        tuned[NATURALNESS_PARAM_OFF + 6] = 2.0;
+        let long = synth("coi munje", 0, SR, &tuned).unwrap();
+        assert!(
+            long.len() > base.len() + SR as usize / 100,
+            "final_lengthen 2.0 must lengthen the render: {} vs {}",
+            long.len(),
+            base.len()
+        );
+    }
+
+    #[test]
+    fn voice_440_block_stays_valid() {
+        // demo-advanced clients send exactly 440 floats; the naturalness
+        // section must default for them.
+        let block: Vec<f32> = default_full_block()[..NATURALNESS_PARAM_OFF].to_vec();
+        assert_eq!(block.len(), 440);
+        assert_eq!(
+            synth("coi munje .ui", 0, SR, &[]).unwrap(),
+            synth("coi munje .ui", 0, SR, &block).unwrap(),
         );
     }
 

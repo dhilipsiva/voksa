@@ -376,6 +376,27 @@ mod tests {
     }
 
     #[test]
+    fn naturalness_keys_map_onto_prosody_options() {
+        // The nine Phase-11 knobs round-trip through the config JSON.
+        let json = r#"{
+            "flutter": 30.0, "breath_aspiration": 0.08,
+            "baseline_oq_delta": 0.12, "baseline_tilt_delta": -0.2,
+            "micro_f0_hz": 5.0, "obstruent_f0_hz": 7.0,
+            "final_lengthen": 1.4, "cluster_shorten": 0.2, "undershoot": 0.4
+        }"#;
+        let p = Config::from_json(json).unwrap().prosody_options();
+        assert_eq!(p.flutter, 30.0);
+        assert_eq!(p.breath_aspiration, 0.08);
+        assert_eq!(p.baseline_oq_delta, 0.12);
+        assert_eq!(p.baseline_tilt_delta, -0.2);
+        assert_eq!(p.micro_f0_hz, 5.0);
+        assert_eq!(p.obstruent_f0_hz, 7.0);
+        assert_eq!(p.final_lengthen, 1.4);
+        assert_eq!(p.cluster_shorten, 0.2);
+        assert_eq!(p.undershoot, 0.4);
+    }
+
+    #[test]
     fn config_without_phonemes_is_default_table() {
         assert_eq!(
             Config::from_json("{}").unwrap().voice_table(),

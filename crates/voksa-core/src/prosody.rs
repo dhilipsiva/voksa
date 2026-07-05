@@ -161,12 +161,45 @@ pub fn apply_prosody(schedule: UtteranceSchedule, opts: &ProsodyOptions) -> Utte
     let s = apply_declination(s, opts.declination_start_hz, opts.declination_end_hz);
     let s = apply_stress_excursion(s, opts.stress_f0_excursion_hz, opts.stress_amp_factor);
     let s = apply_final_lengthening(s, opts.final_lengthen);
+    let s = apply_undershoot(s, opts.undershoot);
     let s = if opts.xu_rise {
         apply_xu_rise(s, opts.xu_rise_hz)
     } else {
         s
     };
+    let s = apply_naturalness(s, opts);
     scale_rate(s, opts.rate)
+}
+
+/// Duration-dependent formant undershoot (Phase-11 lever 5): a monophthong
+/// event lasting `d` ms migrates its formant FREQUENCIES toward the canonical
+/// schwa center (500, 1500, 2500) by `u = undershoot·max(0, 1 − d/UNDERSHOOT_REF_MS)`
+/// — buffers reduce strongly, plain unstressed vowels subtly, stressed/final
+/// lengthened nuclei not at all. Runs AFTER the duration transforms (it needs
+/// final linguistic durations) and BEFORE the xu insert (which would fake a
+/// short final vowel). Bandwidths/amps unchanged; diphthongs skipped.
+fn apply_undershoot(s: UtteranceSchedule, undershoot: f32) -> UtteranceSchedule {
+    if undershoot == 0.0 {
+        return s;
+    }
+    // RED stub (P11 N-C): implementation lands with the failing tests.
+    s
+}
+
+/// Baseline voice quality (Phase-11 levers 1–2): flutter + open-quotient/tilt
+/// deltas on every frame, breath (aspiration) on voiced frames — the default
+/// voice's source realism, composed BEFORE the attitudinal overlay (which
+/// nudges the same lanes per word). Identity when all four knobs are 0.
+fn apply_naturalness(s: UtteranceSchedule, opts: &ProsodyOptions) -> UtteranceSchedule {
+    if opts.flutter == 0.0
+        && opts.breath_aspiration == 0.0
+        && opts.baseline_oq_delta == 0.0
+        && opts.baseline_tilt_delta == 0.0
+    {
+        return s;
+    }
+    // RED stub (P11 N-C): implementation lands with the failing tests.
+    s
 }
 
 /// Compress onset-cluster windows (Phase-11 lever 4a; Klatt-1976-ish): a span

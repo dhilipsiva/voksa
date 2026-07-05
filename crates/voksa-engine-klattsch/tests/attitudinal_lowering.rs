@@ -40,6 +40,7 @@ fn modal_events_lower_without_vq_overrides() {
         assert_eq!(m.target.tilt, None);
         assert_eq!(m.target.diplophonia, None);
         assert_eq!(m.target.vibrato_depth, None);
+        assert_eq!(m.target.flutter, None);
     }
 }
 
@@ -51,12 +52,14 @@ fn vq_frames_lower_to_param_updates() {
     f.tilt = 0.2;
     f.di = 0.5;
     f.vibrato_hz = 6.0;
+    f.flutter = 25.0;
     let lowered = lower_events(&[ev(0.0, f)]);
     let u = lowered[0].target;
     assert_eq!(u.open_quotient, Some(0.7));
     assert_eq!(u.tilt, Some(0.2));
     assert_eq!(u.diplophonia, Some(0.5));
     assert_eq!(u.vibrato_depth, Some(6.0));
+    assert_eq!(u.flutter, Some(25.0), "the P11 flutter lane must lower");
     assert!(
         u.vibrato_rate.is_some(),
         "a vibrato depth must carry a rate so the engine actually oscillates"
