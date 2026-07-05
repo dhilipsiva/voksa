@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/base.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/styles.css">
+  <script src="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/_ds_bundle.js"></script>
+  <style>body { margin: 0; background: var(--bg-base); }</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg-base);color:var(--text-body);font-family:var(--font-sans);padding:28px 24px 64px">
+  <div style="max-width:1180px;margin:0 auto">
+
+    <header style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:var(--text-strong)">voksa</span>
+      <span class="q-label">component spec — dioxus handoff</span>
+      <span style="flex:1"></span>
+      <a href="Voksa Workbench.dc.html" style="font-family:var(--font-mono);font-size:12px">workbench →</a>
+      <a href="Voksa IA & Flows.dc.html" style="font-family:var(--font-mono);font-size:12px">IA &amp; flows →</a>
+      <a href="Voksa Phone Preview.dc.html" style="font-family:var(--font-mono);font-size:12px">phone →</a>
+    </header>
+    <p style="margin:0 0 24px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)">deliverable 4 of 4 · the workbench DC is the reference implementation — inspect it for any value not listed here. every visual token is a QUINE var(--*).</p>
+
+    <section style="background:var(--surface-card);border:1px solid color-mix(in oklab, var(--ember-500) 40%, transparent);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:8px"><span style="color:var(--accent)">// </span>embed contract — read first</div>
+      <div style="font-family:var(--font-mono);font-size:11.5px;line-height:1.85;color:var(--text-body)">
+        <div><span style="color:var(--ember-300)">⊢</span> dhilipsiva.dev owns the navbar. The console ships <span style="color:var(--text-strong)">NO site chrome</span>: no logo, no nav, nothing sticky at top:0.</div>
+        <div><span style="color:var(--ember-300)">⊢</span> Top element is a non-sticky page-title row: display-font <span style="color:var(--text-strong)">voksa</span> (22px) + q-label "tuning console" + version chip + Δ chip + λ about + ◐ theme.</div>
+        <div><span style="color:var(--ember-300)">⊢</span> Theme follows the host site (data-theme inherit / <span style="color:var(--text-strong)">initialTheme</span> prop); the in-console ◐ toggle is a preview convenience — droppable in the port.</div>
+        <div><span style="color:var(--ember-300)">⊢</span> Sticky offsets are page-relative (source column top:12px, rack-nav top:8px) so they clear whatever height the host navbar has.</div>
+        <div><span style="color:var(--ember-300)">⊢</span> Load/export live ONLY in the share card. The ⎇ demo-states menu is design-review tooling — do not ship (or gate behind a dev flag).</div>
+      </div>
+    </section>
+
+    <section style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:4px"><span style="color:var(--accent)">// </span>ParamSlider — the core primitive (×465)</div>
+      <p style="margin:0 0 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-faint)">grid 148px | 1fr | 96px · row pad 4px 0 (2px compact) · track 3px · thumb 13×13 radius-sm · native input[type=range] overlaid transparent for drag/keyboard/a11y</p>
+      <div style="display:flex;flex-direction:column;gap:2px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-raised);padding:12px 14px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:4px 0">
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:99px;background:transparent"></span><span style="font-family:var(--font-mono);font-size:12px">pitch start</span><span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">Hz</span><span style="width:15px;height:15px;border:1px solid var(--border-subtle);border-radius:99px;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;text-align:center;line-height:14px;opacity:0.28">?</span></div>
+          <div style="position:relative;height:26px;display:flex;align-items:center"><div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div><div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:37.5%"></div><div style="position:absolute;left:37.5%;width:13px;height:13px;border-radius:4px;background:var(--text-muted);border:1px solid var(--border-strong);margin-left:-6px"></div></div>
+          <div style="display:flex;justify-content:flex-end"><span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);padding:2px 4px">120</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:4px 0">
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:99px;background:var(--ember-500)"></span><span style="font-family:var(--font-mono);font-size:12px">pitch start</span><span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">Hz</span></div>
+          <div style="position:relative;height:26px;display:flex;align-items:center"><div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div><div style="position:absolute;height:3px;border-radius:2px;background:var(--ember-500);left:37.5%;width:18.75%"></div><div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:37.5%"></div><div style="position:absolute;left:56.25%;width:13px;height:13px;border-radius:4px;background:var(--ember-500);border:1px solid var(--ember-300);margin-left:-6px"></div></div>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:2px"><span style="color:var(--text-faint);font-family:var(--font-mono);font-size:11px">↺</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--ember-300);padding:2px 4px">150</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:4px 0">
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:99px;background:var(--ember-500)"></span><span style="font-family:var(--font-mono);font-size:12px">F1</span><span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">Hz</span></div>
+          <div style="position:relative;height:26px;display:flex;align-items:center"><div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div><div style="position:absolute;height:3px;border-radius:2px;background:var(--ember-500);left:27%;width:63%"></div><div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:27%"></div><div style="position:absolute;left:90%;width:13px;height:13px;border-radius:4px;background:var(--ember-500);border:1px solid var(--ember-300);margin-left:-6px"></div></div>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:2px"><span style="color:var(--text-faint);font-family:var(--font-mono);font-size:11px">↺</span><span title="range widened" style="color:var(--amber-500);font-family:var(--font-mono);font-size:10px">⤢</span><span style="font-family:var(--font-mono);font-size:12px;color:var(--ember-300);padding:2px 4px">2400</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:4px 0;opacity:0.45">
+          <div style="display:flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:99px;background:transparent"></span><span style="font-family:var(--font-mono);font-size:12px">xu rise</span><span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">Hz</span></div>
+          <div style="position:relative;height:26px;display:flex;align-items:center"><div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div><div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:31%"></div><div style="position:absolute;left:31%;width:13px;height:13px;border-radius:4px;background:var(--text-muted);border:1px solid var(--border-strong);margin-left:-6px"></div></div>
+          <div style="display:flex;justify-content:flex-end"><span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);padding:2px 4px">25</span></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);margin-top:6px">top→bottom: default · modified (ember delta-fill from default tick) · modified + widened ⤢ · disabled (flat, 0.45)</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:6px 28px;font-family:var(--font-mono);font-size:11.5px;line-height:1.8">
+        <div><span style="color:var(--text-strong)">props:</span> path, desc{min,max,step,def,label,unit}, widened{min,max,step}?, disabled, onInput, onReset, helpKey</div>
+        <div><span style="color:var(--text-strong)">modified</span> = fround(v) ≠ fround(def) → ember dot + fill + value; ↺ appears on hover row</div>
+        <div><span style="color:var(--text-strong)">readout</span> = tap-to-type input (inputMode=decimal); Enter/blur commits via setSliderExact; Esc reverts; typed values may exceed range → widen, never clamp</div>
+        <div><span style="color:var(--text-strong)">interactions:</span> drag; arrows step (native); dblclick = reset; focus ring = 2px ember offset (--ring); hover thumb ×1.2</div>
+        <div><span style="color:var(--text-strong)">MatrixCell</span> variant: label-above compact cell for the 3×3 formant matrix; thumb 11px; cell border ember-mix when modified</div>
+        <div><span style="color:var(--text-strong)">a11y:</span> native range keeps keyboard + screen-reader semantics; aria-label = label; disabled attr real, not just visual</div>
+      </div>
+    </section>
+
+    <section style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:10px"><span style="color:var(--accent)">// </span>component inventory → dioxus mapping</div>
+      <div style="display:flex;flex-direction:column;border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden;font-family:var(--font-mono);font-size:11px;line-height:1.6">
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:7px 12px;background:var(--surface-inset);color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;font-size:9.5px"><span>component</span><span>anatomy / tokens</span><span>states + behavior</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">FlagChip</span><span style="color:var(--text-muted)">label 12/500 mono + sub 9 faint; 6px dot; radius-md; on = accent-soft bg + ember 45% border + dot glow</span><span style="color:var(--text-muted)">on / off / disabled (xu greyed while flat; flat forces xu=false)</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">TranscriptLine</span><span style="color:var(--text-muted)">mono 15 on bg-raised inset; tokens: stress=text-strong 600 · ‖=accent · (ɪ)=phosphor-300 (700 in light) · dots=text-faint · else text-body; q-cursor blink at end</span><span style="color:var(--text-muted)">re-read voksa_transcribe on EVERY text/flag mutation incl. programmatic (.value= fires no event); string is stamped into export as phonetics; legend popover on ?</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">SentencePicker</span><span style="color:var(--text-muted)">QUINE Select ("— free text —" + 18 entries) + ⟳ 36px next button + NN/18 counter + gloss line 10.5 faint</span><span style="color:var(--text-muted)">applies text + xu/dotside/buffer flags, then auto-speaks; manual typing clears selection to free text</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">TransportBar</span><span style="color:var(--text-muted)">QUINE Button primary lg block "▶ speak" + Switch "on change"; WaveformDisplay: canvas peak-columns #38E3A6 shadowBlur 4 on void-800 + blueprint grid 0.45 (deliberately dark in BOTH themes — instrument screen); StatusLine + Spinner(alive) while speaking; ghost "⤓ wav"</span><span style="color:var(--text-muted)">states: boot(amber) / ready / speaking(phosphor) / config loaded(phosphor) / error(crimson) / wasm-fail (error Callout + retry; sliders stay live, speak disabled); first play = user gesture; re-speak replaces the live node</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">ShareCard</span><span style="color:var(--text-muted)">Δ summary line (ember when dirty); notes textarea (surface-inset, travels in JSON); Buttons export/load; hidden file input; drop overlay = 2px dashed ember + scrim; loaded chip = phosphor ◈ filename; CTA panel on blueprint grid with issue/mail links</span><span style="color:var(--text-muted)">whole card is a drop target; bad JSON → crimson status, state untouched</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">Rack + RackNav</span><span style="color:var(--text-muted)">card radius-lg pad 14/16; header "// name" (accent slashes) + sub 10 faint italic + Δ chip + actions; scroll-margin-top 120; RackNav sticky top:8 glass, anchor chips + live counts + preset Select + ↺ reset all</span><span style="color:var(--text-muted)">flat: rack opacity .75 + amber "flat — disabled" chip + every control disabled</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">EmotionChip</span><span style="color:var(--text-muted)">cmavo 13.5/600 + gloss 9 faint; selected = 2px ember top-rule + accent-soft; Δ dot 5px top-right</span><span style="color:var(--text-muted)">editor: 8 ParamSliders + "▶ try example" (secondary sm, sets text + speaks) + ↺ per emotion</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">PhonemeCell + editor</span><span style="color:var(--text-muted)">34px keycap mono 13/500 radius-md on blueprint panel, grouped by class w/ Lojban subs (karsna/zunsna); sel = ember border + accent-soft; Δ dot; editor header 40px keycap + class/IPA + Δn + ↺; steady = 3×3 matrix + voicing/aspiration/duration; stop = closure matrix + burst matrix + closure-voicing/burst-aspiration/closure_ms/burst_ms; dur-kind = one slider + amber ∴ note</span><span style="color:var(--text-muted)">changed-only Switch dims (0.25) never hides; per-phoneme ↺ + table ↺; flat disables cells (0.45)</span></div>
+        <div style="display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;padding:8px 12px;border-top:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent)"><span style="color:var(--text-strong)">HelpDot</span><span style="color:var(--text-muted)">15px ? ring, opacity .28 → .95 on row hover/focus; popover 284px fixed near trigger, shows title + body + key path</span><span style="color:var(--text-muted)">body = voksa-help-text.json[key], fallback "// help pending — key"; field keys shared across phonemes/emotions (vt.fields.*, att.fields.*)</span></div>
+      </div>
+    </section>
+
+    <section style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:10px"><span style="color:var(--accent)">// </span>state model + engineering contracts</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:6px 28px;font-family:var(--font-mono);font-size:11.5px;line-height:1.85">
+        <div><span style="color:var(--text-strong)">paths:</span> k.&lt;knob&gt; (16) · a.&lt;cmavo&gt;.&lt;i&gt; (7×8) · v.&lt;phoneme&gt;.&lt;i&gt; (377, flat per-item arrays in VoiceTable::to_array order)</div>
+        <div><span style="color:var(--text-strong)">ranges map:</span> path → {min,max,step:'any'} exists ONLY while widened; reset/apply-descriptor removes it (setSliderExact port)</div>
+        <div><span style="color:var(--text-strong)">diffing:</span> f32 space — fround(v) ≠ fround(def); drives dots, Δ counts, delta export</div>
+        <div><span style="color:var(--text-strong)">export:</span> flat text/flags/16 knobs always; attitudinals + phonemes delta-only (stops nest closure/burst objects); + phonetics, notes, sampleRate, voksaVersion</div>
+        <div><span style="color:var(--text-strong)">load = REPLACE:</span> rebuild from engine defaults, then apply config keys, widening as needed; preset → custom; filename chip; never merge over dirty state</div>
+        <div><span style="color:var(--text-strong)">presets:</span> reset-to-defaults + knob overrides. Deviation from reference: FLAGS ARE PRESERVED (old page cleared them) — keep, it is deliberate</div>
+        <div><span style="color:var(--text-strong)">auto-speak:</span> every mutator kicks a 400 ms debounce when enabled + engine ready; new render replaces live AudioWorkletNode</div>
+        <div><span style="color:var(--text-strong)">defaults:</span> seed from voksa_default_params() at runtime; voksa-engine-data.json here mirrors it for design only</div>
+      </div>
+      <div style="margin-top:12px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">files: voksa-engine-data.json (descriptors/ranges — regenerate from wasm) · voksa-help-text.json (fill copy, keys stable) · assets/voksa-mark.svg · reference logic: Voksa Workbench.dc.html</div>
+    </section>
+
+    <footer style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding-top:14px;border-top:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">
+      <a href="Voksa Workbench.dc.html">1 · workbench</a>
+      <a href="Voksa IA & Flows.dc.html">2 · IA &amp; flows</a>
+      <a href="Voksa Phone Preview.dc.html">3 · phone preview</a>
+      <span>4 · component spec — this doc</span>
+      <span style="flex:1"></span>
+      <span>eval(config) = voice</span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/base.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/styles.css">
+  <script src="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--bg-base); }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--void-500); border-radius: 5px; border: 2px solid var(--bg-base); }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .vx-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 26px; background: transparent; border: 0; }
+    .vx-range::-moz-range-thumb { width: 22px; height: 26px; background: transparent; border: 0; opacity: 0; }
+    .vx-range:focus { outline: none; }
+    .vx-slider:focus-within .vx-thumb { box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--ember-500); }
+    .vx-slider:hover .vx-thumb { transform: scale(1.2); }
+    .vx-help { opacity: 0.28; transition: opacity 120ms var(--ease-out); }
+    .vx-srow:hover .vx-help, .vx-help:focus-visible, .vx-help:hover { opacity: 0.95; }
+    .vx-dock { display: none; }
+    @media (max-width: 1100px) {
+      .vx-main { grid-template-columns: 1fr !important; }
+      .vx-left { position: static !important; max-height: none !important; overflow: visible !important; }
+    }
+    @media (max-width: 720px) {
+      .vx-main { padding: 12px 12px 40px !important; }
+      .vx-dock { display: flex; }
+      .vx-hide-sm { display: none !important; }
+      .vx-vt { grid-template-columns: 1fr !important; }
+      body { padding-bottom: 72px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .vx-slider .vx-thumb, .vx-help { transition: none; } }
+  </style>
+</helmet>
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg-base);color:var(--text-body);font-family:var(--font-sans)">
+
+  <header data-screen-label="console toolbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:40px;padding:12px 20px 0;max-width:1560px;margin:0 auto;box-sizing:border-box">
+    <span style="font-family:var(--font-display);font-weight:600;font-size:22px;letter-spacing:-0.02em;color:var(--text-strong)">voksa</span>
+    <span class="q-label" style="font-size:10px">tuning console</span>
+    <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;color:var(--text-faint);border:1px solid var(--border-subtle);border-radius:4px;padding:2px 7px;background:var(--surface-inset)">v0.1.0 · wasm 42 kB · 0 imports</span>
+    <span style="flex:1"></span>
+    <span style="display:{{ dirtyDisp }};font-family:var(--font-mono);font-size:10.5px;color:var(--ember-300);border:1px solid color-mix(in oklab, var(--ember-500) 35%, transparent);background:color-mix(in oklab, var(--ember-500) 14%, transparent);border-radius:4px;padding:2px 7px">Δ {{ dirtyTotal }}</span>
+    <div data-pop="1" style="position:relative">
+      <button onClick="{{ onDemoToggle }}" style="border:1px solid transparent;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;padding:5px 8px;border-radius:6px;cursor:pointer" style-hover="color:var(--text-strong);background:var(--surface-hover)">⎇ demo states</button>
+      <sc-if value="{{ demoOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;right:0;top:calc(100% + 6px);width:250px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:8px;box-shadow:var(--shadow-2);padding:6px;z-index:70">
+          <div class="q-label" style="padding:5px 8px 7px;font-size:9.5px">design-review states — not product ui</div>
+          <button data-demo="fresh" onClick="{{ onDemoPick }}" style="display:block;width:100%;text-align:left;border:0;background:none;color:var(--text-body);font-family:var(--font-mono);font-size:12px;padding:7px 8px;border-radius:5px;cursor:pointer" style-hover="background:var(--surface-hover);color:var(--text-strong)">fresh defaults</button>
+          <button data-demo="dirty" onClick="{{ onDemoPick }}" style="display:block;width:100%;text-align:left;border:0;background:none;color:var(--text-body);font-family:var(--font-mono);font-size:12px;padding:7px 8px;border-radius:5px;cursor:pointer" style-hover="background:var(--surface-hover);color:var(--text-strong)">dirty session (Δ badges)</button>
+          <button data-demo="loaded" onClick="{{ onDemoPick }}" style="display:block;width:100%;text-align:left;border:0;background:none;color:var(--text-body);font-family:var(--font-mono);font-size:12px;padding:7px 8px;border-radius:5px;cursor:pointer" style-hover="background:var(--surface-hover);color:var(--text-strong)">config loaded (widened range)</button>
+          <button data-demo="flat" onClick="{{ onDemoPick }}" style="display:block;width:100%;text-align:left;border:0;background:none;color:var(--text-body);font-family:var(--font-mono);font-size:12px;padding:7px 8px;border-radius:5px;cursor:pointer" style-hover="background:var(--surface-hover);color:var(--text-strong)">flat mode (all disabled)</button>
+          <button data-demo="fail" onClick="{{ onDemoPick }}" style="display:block;width:100%;text-align:left;border:0;background:none;color:var(--crimson-500);font-family:var(--font-mono);font-size:12px;padding:7px 8px;border-radius:5px;cursor:pointer" style-hover="background:color-mix(in oklab, var(--crimson-500) 12%, transparent)">wasm load failure</button>
+        </div>
+      </sc-if>
+    </div>
+    <button onClick="{{ onAboutOpen }}" title="about voksa — capabilities and sizes" aria-label="about" style="width:30px;height:30px;border:1px solid var(--border-subtle);background:var(--surface-inset);color:var(--text-muted);font-family:var(--font-mono);font-size:14px;border-radius:6px;cursor:pointer" style-hover="color:var(--ember-300);border-color:var(--border-strong)">λ</button>
+    <button onClick="{{ onTheme }}" title="toggle daylight nihilism" aria-label="toggle theme" style="width:30px;height:30px;border:1px solid var(--border-subtle);background:var(--surface-inset);color:var(--text-muted);font-family:var(--font-mono);font-size:14px;border-radius:6px;cursor:pointer" style-hover="color:var(--ember-300);border-color:var(--border-strong)">◐</button>
+  </header>
+
+  <div class="vx-main" style="display:grid;grid-template-columns:392px minmax(0,1fr);gap:16px;padding:16px 20px 40px;max-width:1560px;margin:0 auto;align-items:start">
+
+    <div class="vx-left" data-screen-label="source column" style="display:flex;flex-direction:column;gap:12px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding-right:2px;min-width:0">
+
+      <section data-screen-label="utterance" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="q-label">utterance</span>
+          <button class="vx-help" data-help="input.text" data-title="Lojban text" onClick="{{ onHelp }}" aria-label="help" style="width:16px;height:16px;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+          <span style="flex:1"></span>
+          <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">{{ sentenceCounter }}</span>
+        </div>
+        <input value="{{ text }}" onChange="{{ onText }}" spellCheck="false" autoComplete="off" aria-label="Lojban text" style="width:100%;box-sizing:border-box;background:var(--surface-inset);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-strong);font-family:var(--font-mono);font-size:16px;padding:10px 12px" style-focus="border-color:var(--ember-500);box-shadow:0 0 0 3px var(--accent-soft);outline:none">
+        <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+          <div style="flex:1;min-width:0">
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Select" options="{{ sentenceOptions }}" value="{{ sentenceSlug }}" on-change="{{ onSentence }}" aria-label="test sentences" hint-size="100%,36px"></x-import>
+          </div>
+          <button onClick="{{ onSentenceNext }}" title="next coverage sentence" aria-label="next sentence" style="flex:none;width:36px;height:36px;border:1px solid var(--border-strong);background:transparent;color:var(--text-strong);font-family:var(--font-mono);font-size:15px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--ember-500);color:var(--ember-300)" style-active="transform:translateY(1px)">⟳</button>
+        </div>
+        <p style="margin:6px 0 0;font-family:var(--font-mono);font-size:10.5px;line-height:1.5;color:var(--text-faint)">{{ sentenceEn }}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+          <sc-for list="{{ flagChips }}" as="f" hint-placeholder-count="4">
+            <button data-flag="{{ f.key }}" onClick="{{ onFlag }}" disabled="{{ f.dis }}" title="{{ f.sub }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:5px 9px;border-radius:6px;cursor:pointer;text-align:left;background:{{ f.bg }};border:1px solid {{ f.bd }};opacity:{{ f.op }}" style-hover="border-color:var(--border-strong)">
+              <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12px;font-weight:500;color:{{ f.fg }}">
+                <span style="width:6px;height:6px;border-radius:99px;background:{{ f.dot }};box-shadow:{{ f.glow }}"></span>{{ f.label }}
+              </span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-faint)">{{ f.sub }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section data-screen-label="transcript" style="position:relative;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="q-label">phonetic analysis</span>
+          <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">voksa_transcribe</span>
+          <span style="flex:1"></span>
+          <span data-pop="1" style="position:relative;display:inline-flex">
+            <button onClick="{{ onLegend }}" aria-label="notation legend" style="width:16px;height:16px;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1" style-hover="color:var(--ember-300);border-color:var(--border-strong)">?</button>
+            <sc-if value="{{ legendOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;right:0;top:22px;width:262px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:8px;box-shadow:var(--shadow-2);padding:12px;z-index:60;font-family:var(--font-mono);font-size:11px;line-height:2;color:var(--text-body)">
+                <div class="q-label" style="font-size:9.5px;margin-bottom:6px">notation</div>
+                <div><span style="color:var(--text-strong);font-weight:600">CAPS</span> — stressed syllable (penultimate rule)</div>
+                <div><span style="color:var(--fg-faint)">.</span> — syllable boundary</div>
+                <div><span style="color:var(--ember-300)">‖</span> — mandatory pause</div>
+                <div><span style="color:var(--phosphor-300)">(ɪ)</span> — inserted buffer vowel</div>
+                <div><span style="color:var(--text-strong)">'</span> — [h], intervocalic aspiration</div>
+                <div style="margin-top:6px;font-size:9.5px;line-height:1.6;color:var(--text-faint)">this prototype approximates the transcriber; the port reads the wasm export on every text or flag change.</div>
+              </div>
+            </sc-if>
+          </span>
+        </div>
+        <div style="background:var(--bg-raised);border:1px solid var(--border-subtle);border-radius:6px;padding:10px 12px;min-height:26px;overflow-wrap:anywhere">
+          <sc-for list="{{ toks }}" as="tk" hint-placeholder-count="3"><span style="color:{{ tk.c }};font-weight:{{ tk.w }};font-family:var(--font-mono);font-size:15px;white-space:pre-wrap">{{ tk.t }}</span></sc-for><span class="q-cursor"></span>
+        </div>
+        <div style="margin-top:7px;font-family:var(--font-mono);font-size:10px;color:var(--text-faint)">{{ flagsEcho }}</div>
+      </section>
+
+      <section data-screen-label="transport" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px">
+        <sc-if value="{{ failed }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:12px">
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Callout" kind="error" title="failed to compile voksa_web_bg.wasm" hint-size="100%,110px">
+              <div style="font-family:var(--font-mono);font-size:12px;line-height:1.6">{{ failMsg }}</div>
+              <div style="margin-top:6px;font-size:12px">Serve over http(s), not file:// — tuning still works; playback is disabled.</div>
+              <div style="margin-top:10px"><x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="secondary" size="sm" on-click="{{ onRetry }}" hint-size="110px,28px">retry compile</x-import></div>
+            </x-import>
+          </div>
+        </sc-if>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="flex:1">
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="primary" size="lg" block="{{ true }}" disabled="{{ speakDis }}" on-click="{{ onSpeakClick }}" hint-size="100%,44px">▶ speak</x-import>
+          </div>
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Switch" label="on change" checked="{{ autoOn }}" on-change="{{ onAuto }}" hint-size="120px,24px"></x-import>
+        </div>
+        <div style="position:relative;background:var(--void-800);border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden;margin-top:12px">
+          <div style="position:absolute;inset:0;background-image:var(--bg-grid);opacity:0.45"></div>
+          <canvas ref="{{ waveRef }}" aria-label="waveform of the last render" style="position:relative;width:100%;height:76px;display:block"></canvas>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:9px;min-height:28px">
+          <sc-if value="{{ speaking }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Spinner" tone="alive" hint-size="18px,18px"></x-import>
+          </sc-if>
+          <span style="font-family:var(--font-mono);font-size:11.5px;color:{{ statusC }}">{{ status }}</span>
+          <span style="flex:1"></span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint)">{{ waveMeta }}</span>
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" disabled="{{ wavDis }}" on-click="{{ onDlWav }}" hint-size="80px,28px">⤓ wav</x-import>
+        </div>
+      </section>
+
+      <section data-screen-label="share" onDragOver="{{ onDragOver }}" onDragLeave="{{ onDragLeave }}" onDrop="{{ onDrop }}" style="position:relative;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="q-label">share the tuning</span>
+          <button class="vx-help" data-help="share.export" data-title="share loop" onClick="{{ onHelp }}" aria-label="help" style="width:16px;height:16px;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+          <span style="flex:1"></span>
+          <span style="display:{{ loadedDisp }};align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;color:var(--phosphor-300);border:1px solid color-mix(in oklab, var(--phosphor-500) 32%, transparent);background:color-mix(in oklab, var(--phosphor-500) 12%, transparent);border-radius:4px;padding:2px 7px">◈ {{ loadedName }}</span>
+        </div>
+        <p style="margin:0 0 10px;font-family:var(--font-mono);font-size:11px;line-height:1.6;color:{{ deltaC }}">{{ deltaLine }}</p>
+        <textarea value="{{ notes }}" onChange="{{ onNotes }}" rows="3" placeholder="notes / rating — e.g. 4/5, stress feels natural, pitch a touch high" aria-label="notes" style="width:100%;box-sizing:border-box;resize:vertical;background:var(--surface-inset);border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-body);font-family:var(--font-mono);font-size:12px;line-height:1.6;padding:8px 10px" style-focus="border-color:var(--ember-500);box-shadow:0 0 0 3px var(--accent-soft);outline:none"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="secondary" size="sm" on-click="{{ onExport }}" hint-size="130px,28px">⤒ export config</x-import>
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" on-click="{{ onPickFile }}" hint-size="120px,28px">⤓ load config</x-import>
+          <input type="file" accept="application/json" ref="{{ fileRef }}" onChange="{{ onFileChange }}" aria-label="load config file" style="display:none">
+        </div>
+        <div style="margin-top:12px;border:1px solid var(--border-subtle);border-radius:6px;padding:10px 12px;background-image:var(--bg-grid);background-color:var(--bg-raised)">
+          <span class="q-comment" style="font-size:11px">send it back</span>
+          <p style="margin:4px 0 6px;font-family:var(--font-mono);font-size:11px;line-height:1.6;color:var(--text-muted)">your ears are the ground truth — the JSON carries your notes and the phonetics you were reading. It replays bit-identically via <span style="color:var(--text-strong)">voksa --config</span>.</p>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-mono);font-size:11.5px">
+            <a href="{{ issuesUrl }}" target="_blank" rel="noopener">open a github issue →</a>
+            <a href="{{ mailUrl }}">mail dhilipsiva →</a>
+          </div>
+        </div>
+        <div style="position:absolute;inset:0;display:{{ dropDisp }};align-items:center;justify-content:center;background:color-mix(in oklab, var(--bg-base) 82%, transparent);border:2px dashed var(--ember-500);border-radius:10px;z-index:5;pointer-events:none">
+          <span style="font-family:var(--font-mono);font-size:13px;color:var(--ember-300)">drop config JSON — replaces all state</span>
+        </div>
+      </section>
+    </div>
+
+    <div data-screen-label="tuning column" style="display:flex;flex-direction:column;gap:12px;min-width:0">
+
+      <div data-screen-label="rack nav" style="position:sticky;top:8px;z-index:30;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 9px;background:color-mix(in oklab, var(--bg-base) 86%, transparent);backdrop-filter:saturate(1.1) blur(14px);border:1px solid var(--border-subtle);border-radius:8px">
+        <sc-for list="{{ navChips }}" as="nc" hint-placeholder-count="4">
+          <a href="{{ nc.href }}" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-muted);text-decoration:none;border:1px solid transparent;border-radius:5px;padding:4px 8px" style-hover="color:var(--text-strong);background:var(--surface-hover)">{{ nc.label }}<span style="font-size:9.5px;color:{{ nc.chipC }}">{{ nc.chip }}</span></a>
+        </sc-for>
+        <span style="flex:1"></span>
+        <span class="vx-hide-sm" style="display:inline-flex;align-items:center;gap:6px">
+          <span class="q-label" style="font-size:9.5px">preset</span>
+          <span style="width:150px;display:inline-block">
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Select" options="{{ presetOptions }}" value="{{ preset }}" on-change="{{ onPreset }}" aria-label="preset" hint-size="150px,36px"></x-import>
+          </span>
+        </span>
+        <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" on-click="{{ onResetAllClick }}" hint-size="90px,28px">↺ reset all</x-import>
+      </div>
+
+      <sc-if value="{{ bootPending }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px dashed var(--border-subtle);border-radius:10px;padding:22px;font-family:var(--font-mono);font-size:12px;color:var(--amber-500)">▮ compiling voksa_web_bg.wasm… seeding sliders from voksa_default_params()</div>
+      </sc-if>
+
+      <section id="vx-prosody" data-screen-label="prosody rack" style="scroll-margin-top:120px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px 16px;opacity:{{ rackOp }}">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>prosody</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint)">sentence melody — declination, stress, the xu rise</span>
+          <span style="flex:1"></span>
+          <span style="display:{{ flatChipDisp }};font-family:var(--font-mono);font-size:9.5px;color:var(--amber-500)">flat — voice shaping disabled</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));column-gap:26px">
+          <sc-for list="{{ prosodyRows }}" as="r" hint-placeholder-count="7">
+            <div class="vx-srow" style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:{{ r.pad }};opacity:{{ r.op }}">
+              <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                <span style="width:5px;height:5px;border-radius:99px;flex:none;background:{{ r.dot }}"></span>
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+                <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);flex:none">{{ r.unit }}</span>
+                <button class="vx-help" data-help="{{ r.helpKey }}" data-title="{{ r.label }}" onClick="{{ onHelp }}" aria-label="help" style="width:15px;height:15px;flex:none;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+              </div>
+              <div class="vx-slider" style="position:relative;height:26px;display:flex;align-items:center">
+                <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                <div style="position:absolute;height:3px;border-radius:2px;background:{{ r.fill }};left:{{ r.fillL }}%;width:{{ r.fillW }}%"></div>
+                <div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:{{ r.defPct }}%"></div>
+                <div class="vx-thumb" style="position:absolute;left:{{ r.pct }}%;width:13px;height:13px;border-radius:4px;background:{{ r.thumbBg }};border:1px solid {{ r.thumbBd }};margin-left:-6px;transition:transform 80ms var(--ease-out)"></div>
+                <input class="vx-range" type="range" min="{{ r.min }}" max="{{ r.max }}" step="{{ r.step }}" value="{{ r.v }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" aria-label="{{ r.label }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+              </div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">
+                <button data-path="{{ r.path }}" onClick="{{ onRowReset }}" title="reset to engine default" style="display:{{ r.rst }};border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;cursor:pointer;padding:1px 2px" style-hover="color:var(--ember-300)">↺</button>
+                <span title="range widened by a loaded config" style="display:{{ r.wid }};color:var(--amber-500);font-family:var(--font-mono);font-size:10px">⤢</span>
+                <input class="vx-val" type="text" inputMode="decimal" value="{{ r.vd }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:54px;background:none;border:1px solid transparent;border-radius:4px;color:{{ r.valC }};font-family:var(--font-mono);font-size:12px;text-align:right;padding:2px 4px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section id="vx-naturalness" data-screen-label="naturalness rack" style="scroll-margin-top:120px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px 16px;opacity:{{ rackOp }}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>naturalness</span>
+          <button class="vx-help" data-help="naturalness._section" data-title="naturalness" onClick="{{ onHelp }}" aria-label="help" style="width:15px;height:15px;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+          <span style="flex:1"></span>
+          <div style="display:inline-flex;border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden">
+            <button onClick="{{ onAbCur }}" title="your current tuning" style="border:0;cursor:pointer;font-family:var(--font-mono);font-size:11px;padding:5px 10px;background:{{ abABg }};color:{{ abAC }}">A · current</button>
+            <button onClick="{{ onAbOff }}" title="the frozen phase-10 voice — every naturalness knob at identity" style="border:0;border-left:1px solid var(--border-subtle);cursor:pointer;font-family:var(--font-mono);font-size:11px;padding:5px 10px;background:{{ abBBg }};color:{{ abBC }}">B · naturalness off</button>
+          </div>
+        </div>
+        <p style="margin:0 0 8px;font-family:var(--font-mono);font-size:10.5px;line-height:1.6;color:var(--text-faint)">the micro-variation that softens the robot — flutter, breath, intrinsic vowel pitch, consonant pitch kicks, duration rules, undershoot. A/B against the previous release's voice; this is the #1 listening task.</p>
+        <sc-if value="{{ abOff }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 0 8px;font-family:var(--font-mono);font-size:11px;color:var(--phosphor-300);border:1px solid color-mix(in oklab, var(--phosphor-500) 32%, transparent);background:color-mix(in oklab, var(--phosphor-500) 10%, transparent);border-radius:6px;padding:6px 10px">▶ hearing B — phase-10 voice (all nine at identity). sliders paused; your values are kept.</div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));column-gap:26px">
+          <sc-for list="{{ natRows }}" as="r" hint-placeholder-count="9">
+            <div class="vx-srow" style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:{{ r.pad }};opacity:{{ r.op }}">
+              <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                <span style="width:5px;height:5px;border-radius:99px;flex:none;background:{{ r.dot }}"></span>
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+                <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);flex:none">{{ r.unit }}</span>
+                <button class="vx-help" data-help="{{ r.helpKey }}" data-title="{{ r.label }}" onClick="{{ onHelp }}" aria-label="help" style="width:15px;height:15px;flex:none;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+              </div>
+              <div class="vx-slider" style="position:relative;height:26px;display:flex;align-items:center">
+                <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                <div style="position:absolute;height:3px;border-radius:2px;background:{{ r.fill }};left:{{ r.fillL }}%;width:{{ r.fillW }}%"></div>
+                <div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:{{ r.defPct }}%"></div>
+                <div class="vx-thumb" style="position:absolute;left:{{ r.pct }}%;width:13px;height:13px;border-radius:4px;background:{{ r.thumbBg }};border:1px solid {{ r.thumbBd }};margin-left:-6px;transition:transform 80ms var(--ease-out)"></div>
+                <input class="vx-range" type="range" min="{{ r.min }}" max="{{ r.max }}" step="{{ r.step }}" value="{{ r.v }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" aria-label="{{ r.label }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+              </div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">
+                <button data-path="{{ r.path }}" onClick="{{ onRowReset }}" title="reset to engine default" style="display:{{ r.rst }};border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;cursor:pointer;padding:1px 2px" style-hover="color:var(--ember-300)">↺</button>
+                <span title="range widened by a loaded config" style="display:{{ r.wid }};color:var(--amber-500);font-family:var(--font-mono);font-size:10px">⤢</span>
+                <input class="vx-val" type="text" inputMode="decimal" value="{{ r.vd }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:54px;background:none;border:1px solid transparent;border-radius:4px;color:{{ r.valC }};font-family:var(--font-mono);font-size:12px;text-align:right;padding:2px 4px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section id="vx-attitudinals" data-screen-label="attitudinals rack" style="scroll-margin-top:120px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px 16px;opacity:{{ rackOp }}">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>attitudinals</span>
+          <span style="font-family:var(--font-mono);font-size:10px;font-style:italic;color:var(--text-faint)">{{ attSub }}</span>
+          <span style="flex:1"></span>
+        </div>
+        <div style="margin-bottom:10px">
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Callout" kind="theorem" title="invented, non-normative" hint-size="100%,84px">
+            <span style="font-size:12.5px">The CLL defines what an attitudinal <em>means</em>, never how it sounds. These vectors are voksa's own convention — which is exactly why your tuning matters. <span style="font-family:var(--font-mono)">cai / sai / ru'e</span> scale a vector; <span style="font-family:var(--font-mono)">nai</span> flips it.</span>
+          </x-import>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+          <sc-for list="{{ emotions }}" as="em" hint-placeholder-count="7">
+            <button data-key="{{ em.key }}" onClick="{{ onEmotion }}" style="position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:76px;padding:7px 10px 6px;border-radius:6px;cursor:pointer;text-align:left;background:{{ em.bg }};border:1px solid {{ em.bd }};border-top:2px solid {{ em.bt }}" style-hover="border-color:var(--border-strong)">
+              <span style="font-family:var(--font-mono);font-size:13.5px;font-weight:600;color:var(--text-strong)">{{ em.label }}</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-faint)">{{ em.sub }}</span>
+              <span style="position:absolute;top:5px;right:5px;width:5px;height:5px;border-radius:99px;background:var(--ember-500);opacity:{{ em.dotOp }}"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="border:1px solid var(--border-subtle);border-radius:8px;padding:12px 14px;background:var(--bg-raised)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+            <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text-strong)">{{ selAttLabel }}</span>
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">{{ selAttSub }}</span>
+            <span style="display:{{ attModDisp }};font-family:var(--font-mono);font-size:9.5px;color:var(--ember-300)">Δ {{ attModN }}</span>
+            <span style="flex:1"></span>
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="secondary" size="sm" on-click="{{ onTry }}" hint-size="170px,28px">▶ {{ selAttExample }}</x-import>
+            <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" on-click="{{ onResetEmotionClick }}" hint-size="70px,28px">↺ reset</x-import>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));column-gap:26px">
+            <sc-for list="{{ attRows }}" as="r" hint-placeholder-count="8">
+              <div class="vx-srow" style="display:grid;grid-template-columns:148px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:{{ r.pad }};opacity:{{ r.op }}">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                  <span style="width:5px;height:5px;border-radius:99px;flex:none;background:{{ r.dot }}"></span>
+                  <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+                  <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);flex:none">{{ r.unit }}</span>
+                  <button class="vx-help" data-help="{{ r.helpKey }}" data-title="{{ r.label }}" onClick="{{ onHelp }}" aria-label="help" style="width:15px;height:15px;flex:none;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+                </div>
+                <div class="vx-slider" style="position:relative;height:26px;display:flex;align-items:center">
+                  <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                  <div style="position:absolute;height:3px;border-radius:2px;background:{{ r.fill }};left:{{ r.fillL }}%;width:{{ r.fillW }}%"></div>
+                  <div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:{{ r.defPct }}%"></div>
+                  <div class="vx-thumb" style="position:absolute;left:{{ r.pct }}%;width:13px;height:13px;border-radius:4px;background:{{ r.thumbBg }};border:1px solid {{ r.thumbBd }};margin-left:-6px;transition:transform 80ms var(--ease-out)"></div>
+                  <input class="vx-range" type="range" min="{{ r.min }}" max="{{ r.max }}" step="{{ r.step }}" value="{{ r.v }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" aria-label="{{ r.label }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+                </div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">
+                  <button data-path="{{ r.path }}" onClick="{{ onRowReset }}" title="reset to engine default" style="display:{{ r.rst }};border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;cursor:pointer;padding:1px 2px" style-hover="color:var(--ember-300)">↺</button>
+                  <span title="range widened by a loaded config" style="display:{{ r.wid }};color:var(--amber-500);font-family:var(--font-mono);font-size:10px">⤢</span>
+                  <input class="vx-val" type="text" inputMode="decimal" value="{{ r.vd }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:54px;background:none;border:1px solid transparent;border-radius:4px;color:{{ r.valC }};font-family:var(--font-mono);font-size:12px;text-align:right;padding:2px 4px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section id="vx-voicetable" data-screen-label="voice table rack" style="scroll-margin-top:120px;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:14px 16px;opacity:{{ rackOp }}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>voice table</span>
+          <span style="font-family:var(--font-mono);font-size:10px;font-style:italic;color:var(--text-faint)">{{ vtSub }}</span>
+          <span style="display:{{ vtModDisp }};font-family:var(--font-mono);font-size:9.5px;color:var(--ember-300)">Δ {{ vtModTotal }}</span>
+          <span style="flex:1"></span>
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Switch" label="changed only" checked="{{ vtChangedOnly }}" on-change="{{ onChangedOnly }}" hint-size="140px,24px"></x-import>
+          <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" on-click="{{ onResetVoiceClick }}" hint-size="120px,28px">↺ reset table</x-import>
+        </div>
+        <p style="margin:0 0 12px;font-family:var(--font-mono);font-size:10.5px;line-height:1.6;color:var(--text-faint)">377 parameters. pick a phoneme; diphthong glides follow the tuned vowels; ' ([h]) shapes itself from the next vowel.</p>
+        <div class="vx-vt" style="display:grid;grid-template-columns:274px minmax(0,1fr);gap:14px;align-items:start">
+          <div data-screen-label="phoneme grid" style="border:1px solid var(--border-subtle);border-radius:8px;padding:12px;background-image:var(--bg-grid);background-color:var(--bg-raised)">
+            <sc-for list="{{ vtSections }}" as="sec" hint-placeholder-count="6">
+              <div style="margin-bottom:11px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                  <span class="q-label" style="font-size:9.5px">{{ sec.label }}</span>
+                  <span style="font-family:var(--font-mono);font-size:9.5px;font-style:italic;color:var(--text-faint)">{{ sec.lojban }}</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px">
+                  <sc-for list="{{ sec.cells }}" as="cl" hint-placeholder-count="6">
+                    <button data-key="{{ cl.key }}" onClick="{{ onCell }}" disabled="{{ cl.dis }}" style="position:relative;min-width:34px;height:34px;padding:0 8px;border-radius:6px;border:1px solid {{ cl.bd }};background:{{ cl.bg }};color:{{ cl.fg }};font-family:var(--font-mono);font-size:13px;font-weight:500;cursor:pointer;opacity:{{ cl.op }}" style-hover="background:var(--surface-hover)" style-active="transform:translateY(1px)">{{ cl.disp }}<span style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:99px;background:var(--ember-500);opacity:{{ cl.dotOp }}"></span></button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div data-screen-label="phoneme editor" style="border:1px solid var(--border-subtle);border-radius:8px;padding:12px 14px;background:var(--bg-raised);min-height:300px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-card);font-family:var(--font-mono);font-size:19px;font-weight:600;color:var(--text-strong)">{{ selPhDisp }}</span>
+              <div style="display:flex;flex-direction:column;gap:1px">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-strong)">{{ selPhCls }} <span style="color:var(--quanta-300)">{{ selPhIpa }}</span></span>
+                <span style="display:{{ selPhModDisp }};font-family:var(--font-mono);font-size:9.5px;color:var(--ember-300)">Δ {{ selPhModN }} of its parameters</span>
+              </div>
+              <span style="flex:1"></span>
+              <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="ghost" size="sm" on-click="{{ onResetPhonemeClick }}" hint-size="110px,28px">↺ reset {{ selPhDisp }}</x-import>
+            </div>
+            <p style="display:{{ selPhNoteDisp }};margin:0 0 10px;font-family:var(--font-mono);font-size:10.5px;line-height:1.6;color:var(--amber-500)">∴ {{ selPhNote }}</p>
+
+            <sc-if value="{{ vtSteady }}" hint-placeholder-val="{{ true }}">
+              <div class="vx-matrix" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
+                <sc-for list="{{ vtMatrix }}" as="c" hint-placeholder-count="9">
+                  <div class="vx-srow" style="background:var(--surface-card);border:1px solid {{ c.cellBd }};border-radius:6px;padding:7px 9px 8px;opacity:{{ c.op }}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px">
+                      <span style="font-family:var(--font-mono);font-size:9.5px;letter-spacing:0.06em;color:var(--text-muted)">{{ c.lab }} <span style="color:var(--text-faint)">{{ c.unit }}</span></span>
+                      <input class="vx-val" type="text" inputMode="decimal" value="{{ c.vd }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:50px;background:none;border:1px solid transparent;border-radius:4px;color:{{ c.valC }};font-family:var(--font-mono);font-size:11.5px;text-align:right;padding:1px 3px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+                    </div>
+                    <div class="vx-slider" style="position:relative;height:18px;display:flex;align-items:center">
+                      <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                      <div style="position:absolute;height:3px;border-radius:2px;background:{{ c.fill }};left:{{ c.fillL }}%;width:{{ c.fillW }}%"></div>
+                      <div style="position:absolute;top:4px;width:1px;height:10px;background:var(--fg-ghost);left:{{ c.defPct }}%"></div>
+                      <div class="vx-thumb" style="position:absolute;left:{{ c.pct }}%;width:11px;height:11px;border-radius:3px;background:{{ c.thumbBg }};border:1px solid {{ c.thumbBd }};margin-left:-5px"></div>
+                      <input class="vx-range" type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.v }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" aria-label="{{ c.lab }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vtStop }}" hint-placeholder-val="{{ false }}">
+              <div class="q-label" style="font-size:9.5px;margin:2px 0 6px">closure — silence or voice bar</div>
+              <div class="vx-matrix" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
+                <sc-for list="{{ vtClos }}" as="c" hint-placeholder-count="9">
+                  <div class="vx-srow" style="background:var(--surface-card);border:1px solid {{ c.cellBd }};border-radius:6px;padding:7px 9px 8px;opacity:{{ c.op }}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px">
+                      <span style="font-family:var(--font-mono);font-size:9.5px;letter-spacing:0.06em;color:var(--text-muted)">{{ c.lab }} <span style="color:var(--text-faint)">{{ c.unit }}</span></span>
+                      <input class="vx-val" type="text" inputMode="decimal" value="{{ c.vd }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:50px;background:none;border:1px solid transparent;border-radius:4px;color:{{ c.valC }};font-family:var(--font-mono);font-size:11.5px;text-align:right;padding:1px 3px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+                    </div>
+                    <div class="vx-slider" style="position:relative;height:18px;display:flex;align-items:center">
+                      <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                      <div style="position:absolute;height:3px;border-radius:2px;background:{{ c.fill }};left:{{ c.fillL }}%;width:{{ c.fillW }}%"></div>
+                      <div style="position:absolute;top:4px;width:1px;height:10px;background:var(--fg-ghost);left:{{ c.defPct }}%"></div>
+                      <div class="vx-thumb" style="position:absolute;left:{{ c.pct }}%;width:11px;height:11px;border-radius:3px;background:{{ c.thumbBg }};border:1px solid {{ c.thumbBd }};margin-left:-5px"></div>
+                      <input class="vx-range" type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.v }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" aria-label="{{ c.lab }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="q-label" style="font-size:9.5px;margin:10px 0 6px">release burst</div>
+              <div class="vx-matrix" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
+                <sc-for list="{{ vtBurst }}" as="c" hint-placeholder-count="9">
+                  <div class="vx-srow" style="background:var(--surface-card);border:1px solid {{ c.cellBd }};border-radius:6px;padding:7px 9px 8px;opacity:{{ c.op }}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px">
+                      <span style="font-family:var(--font-mono);font-size:9.5px;letter-spacing:0.06em;color:var(--text-muted)">{{ c.lab }} <span style="color:var(--text-faint)">{{ c.unit }}</span></span>
+                      <input class="vx-val" type="text" inputMode="decimal" value="{{ c.vd }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:50px;background:none;border:1px solid transparent;border-radius:4px;color:{{ c.valC }};font-family:var(--font-mono);font-size:11.5px;text-align:right;padding:1px 3px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+                    </div>
+                    <div class="vx-slider" style="position:relative;height:18px;display:flex;align-items:center">
+                      <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                      <div style="position:absolute;height:3px;border-radius:2px;background:{{ c.fill }};left:{{ c.fillL }}%;width:{{ c.fillW }}%"></div>
+                      <div style="position:absolute;top:4px;width:1px;height:10px;background:var(--fg-ghost);left:{{ c.defPct }}%"></div>
+                      <div class="vx-thumb" style="position:absolute;left:{{ c.pct }}%;width:11px;height:11px;border-radius:3px;background:{{ c.thumbBg }};border:1px solid {{ c.thumbBd }};margin-left:-5px"></div>
+                      <input class="vx-range" type="range" min="{{ c.min }}" max="{{ c.max }}" step="{{ c.step }}" value="{{ c.v }}" data-path="{{ c.path }}" disabled="{{ c.dis }}" aria-label="{{ c.lab }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="q-label" style="font-size:9.5px;margin:10px 0 2px">timing</div>
+            </sc-if>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));column-gap:26px">
+              <sc-for list="{{ vtScalarRows }}" as="r" hint-placeholder-count="3">
+                <div class="vx-srow" style="display:grid;grid-template-columns:120px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:{{ r.pad }};opacity:{{ r.op }}">
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                    <span style="width:5px;height:5px;border-radius:99px;flex:none;background:{{ r.dot }}"></span>
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.label }}</span>
+                    <span style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);flex:none">{{ r.unit }}</span>
+                    <button class="vx-help" data-help="{{ r.helpKey }}" data-title="{{ r.label }}" onClick="{{ onHelp }}" aria-label="help" style="width:15px;height:15px;flex:none;border:1px solid var(--border-subtle);border-radius:99px;background:none;color:var(--text-muted);font-family:var(--font-mono);font-size:9px;cursor:pointer;padding:0;line-height:1">?</button>
+                  </div>
+                  <div class="vx-slider" style="position:relative;height:26px;display:flex;align-items:center">
+                    <div style="position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--surface-inset)"></div>
+                    <div style="position:absolute;height:3px;border-radius:2px;background:{{ r.fill }};left:{{ r.fillL }}%;width:{{ r.fillW }}%"></div>
+                    <div style="position:absolute;top:8px;width:1px;height:10px;background:var(--fg-ghost);left:{{ r.defPct }}%"></div>
+                    <div class="vx-thumb" style="position:absolute;left:{{ r.pct }}%;width:13px;height:13px;border-radius:4px;background:{{ r.thumbBg }};border:1px solid {{ r.thumbBd }};margin-left:-6px;transition:transform 80ms var(--ease-out)"></div>
+                    <input class="vx-range" type="range" min="{{ r.min }}" max="{{ r.max }}" step="{{ r.step }}" value="{{ r.v }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" aria-label="{{ r.label }}" onChange="{{ onSlide }}" onDoubleClick="{{ onRowReset }}" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:ew-resize">
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">
+                    <button data-path="{{ r.path }}" onClick="{{ onRowReset }}" title="reset to engine default" style="display:{{ r.rst }};border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;cursor:pointer;padding:1px 2px" style-hover="color:var(--ember-300)">↺</button>
+                    <span title="range widened by a loaded config" style="display:{{ r.wid }};color:var(--amber-500);font-family:var(--font-mono);font-size:10px">⤢</span>
+                    <input class="vx-val" type="text" inputMode="decimal" value="{{ r.vd }}" data-path="{{ r.path }}" disabled="{{ r.dis }}" onChange="{{ onValDraft }}" onKeyDown="{{ onValKey }}" onBlur="{{ onValBlur }}" aria-label="value" style="width:54px;background:none;border:1px solid transparent;border-radius:4px;color:{{ r.valC }};font-family:var(--font-mono);font-size:12px;text-align:right;padding:2px 4px" style-hover="border-color:var(--border-strong)" style-focus="border-color:var(--ember-500);background:var(--surface-inset);outline:none">
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:14px 4px 0;border-top:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">
+        <span>voksa v0.1.0 · MIT OR Apache-2.0</span>
+        <span>engine: vendored klattsch-core 0.1.1 (MIT, Tony Gies)</span>
+        <a href="{{ repoUrl }}" target="_blank" rel="noopener">github.com/dhilipsiva/voksa</a>
+        <span style="flex:1"></span>
+        <span>eval(config) = voice</span>
+      </footer>
+    </div>
+  </div>
+
+  <div class="vx-dock" style="position:fixed;left:0;right:0;bottom:0;z-index:60;gap:10px;align-items:center;padding:10px 12px;background:color-mix(in oklab, var(--bg-base) 84%, transparent);backdrop-filter:saturate(1.1) blur(14px);border-top:1px solid var(--border-subtle)">
+    <div style="flex:1">
+      <x-import component-from-global-scope="QUINEDesignSystem_b59e1b.Button" variant="primary" size="lg" block="{{ true }}" disabled="{{ speakDis }}" on-click="{{ onSpeakClick }}" hint-size="100%,44px">▶ speak</x-import>
+    </div>
+    <span style="font-family:var(--font-mono);font-size:11px;color:{{ statusC }};max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ status }}</span>
+  </div>
+
+  <sc-if value="{{ helpOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-pop="1" style="position:fixed;left:{{ helpX }}px;top:{{ helpY }}px;width:284px;z-index:90;background:var(--surface-card);border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--shadow-2);padding:12px">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px">
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-strong)">{{ helpTitle }}</span>
+        <span style="flex:1"></span>
+        <button onClick="{{ onHelpClose }}" aria-label="close" style="border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:12px;cursor:pointer;padding:0">✕</button>
+      </div>
+      <div style="font-size:12.5px;line-height:1.55;color:var(--text-body)">{{ helpBody }}</div>
+      <div style="margin-top:7px;font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint)">key: {{ helpKey }} · voksa-help-text.json</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ aboutOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ onAboutClose }}" style="position:fixed;inset:0;z-index:80;background:color-mix(in oklab, var(--void-1000) 72%, transparent);display:flex;align-items:flex-start;justify-content:center;padding:7vh 16px 16px;overflow:auto">
+      <div data-pop="1" onClick="{{ eatClick }}" style="width:620px;max-width:100%;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;box-shadow:var(--shadow-3);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border-subtle);background-image:var(--bg-grid)">
+          <img src="assets/voksa-mark.svg" alt="" style="width:24px;height:24px">
+          <span style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>about voksa</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint)">x1 is the voice of x2</span>
+          <span style="flex:1"></span>
+          <button onClick="{{ onAboutClose }}" aria-label="close" style="border:0;background:none;color:var(--text-faint);font-family:var(--font-mono);font-size:14px;cursor:pointer">✕</button>
+        </div>
+        <div style="padding:16px 18px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ aboutCaps }}" as="cp" hint-placeholder-count="5">
+              <div style="display:flex;gap:10px;align-items:baseline">
+                <span style="font-family:var(--font-mono);color:var(--ember-300);flex:none;width:14px">{{ cp.g }}</span>
+                <span style="font-size:12.5px;line-height:1.55;color:var(--text-body)">{{ cp.t }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div class="q-label" style="font-size:9.5px;margin:16px 0 8px">gated sizes — cargo xtask wasm-size</div>
+          <div style="border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden">
+            <sc-for list="{{ aboutSizes }}" as="sz" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:170px 120px 1fr;gap:10px;padding:7px 12px;border-bottom:1px solid color-mix(in oklab, var(--border-subtle) 55%, transparent);font-family:var(--font-mono);font-size:11.5px">
+                <span style="color:var(--text-muted)">{{ sz.k }}</span>
+                <span style="color:var(--phosphor-300)">{{ sz.v }}</span>
+                <span style="color:var(--text-faint)">{{ sz.n }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div class="q-label" style="font-size:9.5px;margin:16px 0 8px">crates</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <sc-for list="{{ aboutArch }}" as="ar" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:190px 1fr;gap:10px;font-family:var(--font-mono);font-size:11px">
+                <span style="color:var(--text-strong)">{{ ar.crate }}</span>
+                <span style="color:var(--text-muted)">{{ ar.desc }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:16px 0 0;font-family:var(--font-serif);font-style:italic;font-size:14px;color:var(--text-muted)">"One must imagine the synthesizer happy."</p>
+          <div style="display:flex;gap:16px;margin-top:12px;font-family:var(--font-mono);font-size:11.5px">
+            <a href="{{ repoUrl }}" target="_blank" rel="noopener">source →</a>
+            <a href="{{ issuesUrl }}" target="_blank" rel="noopener">issues →</a>
+            <a href="{{ mailUrl }}">dhilipsiva@pm.me</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1440, &quot;height&quot;: 960 },
+  &quot;initialTheme&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;dark&quot;, &quot;light&quot;], &quot;default&quot;: &quot;dark&quot;, &quot;tsType&quot;: &quot;'dark' | 'light'&quot;, &quot;section&quot;: &quot;appearance&quot; },
+  &quot;density&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;cozy&quot;, &quot;compact&quot;], &quot;default&quot;: &quot;cozy&quot;, &quot;tsType&quot;: &quot;'cozy' | 'compact'&quot;, &quot;section&quot;: &quot;layout&quot; },
+  &quot;lojbanSubs&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;labels&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    booted: false, failed: false, failMsg: '', theme: (this.props.initialTheme || 'dark'),
+    text: 'coi munje', flags: { flat: false, xu: false, dotside: false, buffer: false },
+    knobs: {}, atts: {}, voice: {}, ranges: {}, drafts: {},
+    notes: '', preset: 'Default', sentenceSlug: 'greeting',
+    sentenceEn: 'baseline greeting — simple CV/CVC, penultimate stress',
+    autoSpeak: true, speaking: false, status: 'compiling voksa_web_bg.wasm…', statusKind: 'boot',
+    totalMs: 0, canWav: false, loadedName: null,
+    selEmotion: 'ui', selPhoneme: 'a', vtChangedOnly: false, abOff: false,
+    aboutOpen: false, demoOpen: false, legendOpen: false, help: null, dropActive: false,
+  };
+
+  componentDidMount() {
+    this._closer = (e) => {
+      if (!e.target.closest('[data-pop]')) this.setState({ demoOpen: false, help: null, legendOpen: false });
+    };
+    document.addEventListener('pointerdown', this._closer, true);
+    this.boot();
+  }
+  componentWillUnmount() {
+    document.removeEventListener('pointerdown', this._closer, true);
+    clearTimeout(this._deb); clearTimeout(this._spk);
+    if (this._ro) this._ro.disconnect();
+  }
+
+  async boot() {
+    this.setState({ failed: false, status: 'compiling voksa_web_bg.wasm…', statusKind: 'boot' });
+    try {
+      const [d, h] = await Promise.all([
+        fetch('voksa-engine-data.json').then((r) => { if (!r.ok) throw new Error('fetch ' + r.status); return r.json(); }),
+        fetch('voksa-help-text.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+      ]);
+      this.D = d; this.HELP = h || {};
+      const base = this.baseState();
+      this.setState({ booted: true, ...base, status: 'ready — 42 kB · 0 imports', statusKind: 'ok' }, () => this.renderPCM());
+    } catch (e) {
+      this.setState({ failed: true, failMsg: String((e && e.message) || e), status: 'failed to compile voksa_web_bg.wasm', statusKind: 'err' });
+    }
+  }
+  baseState() {
+    const d = this.D;
+    const knobs = {}; d.prosody.concat(d.naturalness).forEach((p) => { knobs[p.key] = p.def; });
+    const atts = {}; d.attitudinals.forEach((a) => { atts[a.key] = a.def.slice(); });
+    const voice = {}; d.voiceSections.forEach((s) => s.items.forEach((it) => { voice[it.key] = it.def.slice(); }));
+    return { knobs, atts, voice, ranges: {}, drafts: {} };
+  }
+
+  // ---- path plumbing: 'k.rate' | 'a.ui.3' | 'v.a.5' ----
+  itemOf(key) { for (const s of this.D.voiceSections) for (const it of s.items) if (it.key === key) return { sec: s, it }; return null; }
+  vtDescAt(it, i) {
+    const D = this.D;
+    if (it.kind === 'dur') return D.vtDur;
+    if (it.kind === 'steady') return i < 11 ? D.vtFields[i] : D.vtDur;
+    if (i < 11) return D.vtFields[i];
+    if (i < 22) return D.vtFields[i - 11];
+    return i === 22 ? D.vtClosureMs : D.vtBurstMs;
+  }
+  descFor(path) {
+    const [t, k, i] = path.split('.');
+    if (t === 'k') return this.D.prosody.concat(this.D.naturalness).find((p) => p.key === k);
+    if (t === 'a') return this.D.attFields[+i];
+    return this.vtDescAt(this.itemOf(k).it, +i);
+  }
+  defFor(path) {
+    const [t, k, i] = path.split('.');
+    if (t === 'k') return this.descFor(path).def;
+    if (t === 'a') return this.D.attitudinals.find((x) => x.key === k).def[+i];
+    return this.itemOf(k).it.def[+i];
+  }
+  valFor(path) {
+    const [t, k, i] = path.split('.');
+    const s = this.state;
+    if (t === 'k') return s.knobs[k];
+    if (t === 'a') return (s.atts[k] || [])[+i];
+    return (s.voice[k] || [])[+i];
+  }
+  setVal(path, v, silent) {
+    const [t, k, i] = path.split('.');
+    this.setState((s) => {
+      if (t === 'k') return { knobs: { ...s.knobs, [k]: v }, preset: silent ? s.preset : 'custom' };
+      if (t === 'a') { const arr = s.atts[k].slice(); arr[+i] = v; return { atts: { ...s.atts, [k]: arr } }; }
+      const arr = s.voice[k].slice(); arr[+i] = v; return { voice: { ...s.voice, [k]: arr } };
+    });
+    if (!silent) this.kick();
+  }
+  applyExact(path, v) {
+    const d = this.descFor(path);
+    this.setState((s) => {
+      const r = { ...s.ranges };
+      const cur = r[path] || { min: d.min, max: d.max, step: d.step };
+      let { min, max, step } = cur;
+      if (v < min) min = v;
+      if (v > max) max = v;
+      const st = typeof step === 'number' ? step : 0;
+      if (st > 0 && Math.abs((v - min) / st - Math.round((v - min) / st)) > 1e-9) step = 'any';
+      if (min !== d.min || max !== d.max || step !== d.step) r[path] = { min, max, step }; else delete r[path];
+      return { ranges: r };
+    });
+    this.setVal(path, v);
+  }
+  resetPath(path) {
+    const def = this.defFor(path);
+    this.setState((s) => { const r = { ...s.ranges }; delete r[path]; return { ranges: r }; });
+    this.setVal(path, def);
+  }
+  clearRanges(prefix) {
+    this.setState((s) => {
+      const r = { ...s.ranges };
+      Object.keys(r).forEach((p) => { if (p.startsWith(prefix)) delete r[p]; });
+      return { ranges: r };
+    });
+  }
+  resetEmotion(key) {
+    const a = this.D.attitudinals.find((x) => x.key === key);
+    this.clearRanges('a.' + key + '.');
+    this.setState((s) => ({ atts: { ...s.atts, [key]: a.def.slice() } }));
+    this.kick();
+  }
+  resetPhoneme(key) {
+    const info = this.itemOf(key);
+    this.clearRanges('v.' + key + '.');
+    this.setState((s) => ({ voice: { ...s.voice, [key]: info.it.def.slice() } }));
+    this.kick();
+  }
+  resetVoiceAll() {
+    const voice = {}; this.D.voiceSections.forEach((s) => s.items.forEach((it) => { voice[it.key] = it.def.slice(); }));
+    this.clearRanges('v.');
+    this.setState({ voice });
+    this.kick();
+  }
+  resetAll() {
+    this.setState({ ...this.baseState(), flags: { flat: false, xu: false, dotside: false, buffer: false }, preset: 'Default', loadedName: null, notes: '', status: 'ready', statusKind: 'ok' });
+    this.kick();
+  }
+  applyPreset(name) {
+    const p = this.D.presets.find((x) => x.name === name); if (!p) return;
+    const base = this.baseState();
+    Object.entries(p.over).forEach(([k, v]) => { base.knobs[k] = v; });
+    this.setState({ ...base, preset: name });
+    this.kick();
+  }
+
+  // ---- config round-trip (mirrors reference index.html exactly) ----
+  buildConfig() {
+    const s = this.state, D = this.D, c = { text: s.text };
+    D.flags.forEach((f) => { c[f.key] = !!s.flags[f.key]; });
+    D.prosody.concat(D.naturalness).forEach((p) => { c[p.key] = s.knobs[p.key]; });
+    const diff = (v, d) => Math.fround(v) !== Math.fround(d);
+    const atts = {};
+    D.attitudinals.forEach((a) => {
+      const o = {};
+      D.attFields.forEach((f, i) => { const v = s.atts[a.key][i]; if (diff(v, a.def[i])) o[f.key] = v; });
+      if (Object.keys(o).length) atts[a.key] = o;
+    });
+    if (Object.keys(atts).length) c.attitudinals = atts;
+    const phon = {};
+    D.voiceSections.forEach((sec) => sec.items.forEach((it) => {
+      let o = null;
+      s.voice[it.key].forEach((v, i) => {
+        if (!diff(v, it.def[i])) return;
+        o = o || {};
+        if (it.kind === 'stop') {
+          if (i < 11) { o.closure = o.closure || {}; o.closure[D.vtFields[i].key] = v; }
+          else if (i < 22) { o.burst = o.burst || {}; o.burst[D.vtFields[i - 11].key] = v; }
+          else if (i === 22) o.closure_ms = v; else o.burst_ms = v;
+        } else if (it.kind === 'dur') o.dur_ms = v;
+        else o[i < 11 ? D.vtFields[i].key : 'dur_ms'] = v;
+      });
+      if (o) phon[it.key] = o;
+    }));
+    if (Object.keys(phon).length) c.phonemes = phon;
+    c.phonetics = this.transcript().text;
+    c.notes = s.notes;
+    c.sampleRate = D.sampleRate;
+    c.voksaVersion = D.version;
+    return c;
+  }
+  applyConfig(c, name) {
+    const D = this.D, base = this.baseState();
+    const ranges = base.ranges;
+    const widen = (path, v, d) => { if (v < d.min || v > d.max) ranges[path] = { min: Math.min(v, d.min), max: Math.max(v, d.max), step: 'any' }; };
+    const flags = {}; D.flags.forEach((f) => { flags[f.key] = typeof c[f.key] === 'boolean' ? c[f.key] : false; });
+    D.prosody.concat(D.naturalness).forEach((p) => {
+      if (typeof c[p.key] === 'number') { base.knobs[p.key] = c[p.key]; widen('k.' + p.key, c[p.key], p); }
+    });
+    if (c.attitudinals && typeof c.attitudinals === 'object') D.attitudinals.forEach((a) => {
+      const o = c.attitudinals[a.key]; if (!o) return;
+      D.attFields.forEach((f, i) => { if (typeof o[f.key] === 'number') { base.atts[a.key][i] = o[f.key]; widen('a.' + a.key + '.' + i, o[f.key], f); } });
+    });
+    if (c.phonemes && typeof c.phonemes === 'object') D.voiceSections.forEach((sec) => sec.items.forEach((it) => {
+      const o = c.phonemes[it.key]; if (!o) return;
+      const setI = (i, v) => { if (typeof v !== 'number') return; base.voice[it.key][i] = v; widen('v.' + it.key + '.' + i, v, this.vtDescAt(it, i)); };
+      if (it.kind === 'stop') {
+        D.vtFields.forEach((f, i) => { setI(i, (o.closure || {})[f.key]); setI(11 + i, (o.burst || {})[f.key]); });
+        setI(22, o.closure_ms); setI(23, o.burst_ms);
+      } else if (it.kind === 'dur') setI(0, o.dur_ms);
+      else { D.vtFields.forEach((f, i) => setI(i, o[f.key])); setI(11, o.dur_ms); }
+    }));
+    this.setState({
+      ...base, ranges, flags,
+      text: typeof c.text === 'string' ? c.text : this.state.text,
+      notes: typeof c.notes === 'string' ? c.notes : '',
+      preset: 'custom', loadedName: name || 'config.json', sentenceSlug: '',
+      status: 'config loaded — ' + (name || 'config.json'), statusKind: 'load',
+    });
+    this.kick();
+  }
+  async loadFile(file) {
+    if (!file) return;
+    try { const c = JSON.parse(await file.text()); this.applyConfig(c, file.name); }
+    catch (err) { this.setState({ status: 'bad config JSON — ' + ((err && err.message) || err), statusKind: 'err' }); }
+  }
+
+  // ---- transcription (approximation of voksa_transcribe; port binds the wasm export) ----
+  transcript() {
+    const s = this.state;
+    const key = s.text + '|' + JSON.stringify(s.flags);
+    if (this._tc && this._tc.key === key) return this._tc.out;
+    const out = this.doTranscribe(s.text, s.flags);
+    this._tc = { key, out };
+    return out;
+  }
+  clsOf(c) {
+    if ('ptkbdg'.includes(c)) return 'stop';
+    if ('fvszcjx'.includes(c)) return 'fric';
+    if ('mn'.includes(c)) return 'nas';
+    if ('lr'.includes(c)) return 'liq';
+    return 'fric';
+  }
+  doTranscribe(text, flags) {
+    const VOW = 'aeiouy', CONS = 'bcdfgjklmnprstvxz';
+    const DIPH = ['ai','ei','oi','au','ia','ie','ii','io','iu','ua','ue','ui','uo','uu','iy','uy'];
+    const V2 = ['pl','pr','bl','br','fl','fr','kl','kr','gl','gr','tr','dr','tc','ts','dj','dz','sp','st','sk','sf','sm','sn','sl','sr','zb','zd','zg','zv','zm','cp','cf','ct','ck','cm','cn','cl','cr','jb','jv','jd','jg','jm'];
+    const V3 = ['str','spr','skr','spl'];
+    const DIG = { 0:'no',1:'pa',2:'re',3:'ci',4:'vo',5:'mu',6:'xa',7:'ze',8:'bi',9:'so' };
+    const toks = [], segs = [];
+    const T = (t, k) => { if (t) toks.push({ t, k }); };
+    const ATT = this.D ? this.D.attitudinals.map((a) => a.key) : [];
+    const INTENS = { nai: 1, sai: 1, cai: 1, "ru'e": 1 };
+    const raw = (text || '').trim().split(/\s+/).filter(Boolean);
+    const words = [];
+    raw.forEach((rw) => {
+      const core = rw.replace(/^\.+/, '').replace(/\.+$/, '');
+      if (/^[0-9][0-9.,]*$/.test(core)) {
+        const parts = []; const bits = core.split('.');
+        (bits[0] || '').split(',').forEach((g, gi, arr) => {
+          for (const d of g) if (DIG[d] != null) parts.push(DIG[d]);
+          if (gi < arr.length - 1) parts.push("ki'o");
+        });
+        if (bits[1] != null) { parts.push('pi'); for (const d of bits[1]) if (DIG[d] != null) parts.push(DIG[d]); }
+        parts.forEach((p) => words.push({ w: p, lead: false, trail: false, caps: false }));
+      } else if (core) {
+        words.push({ w: core, lead: rw.startsWith('.'), trail: /\.$/.test(rw.replace(/^\.+/, '')), caps: /[A-Z]/.test(core) });
+      }
+    });
+    let lastContent = null, lastWasPause = false;
+    words.forEach((W, wi) => {
+      const lower = W.w.toLowerCase();
+      const isAtt = ATT.includes(lower);
+      if (W.lead) { T(' ‖ ', 'p'); segs.push({ cls: 'pause' }); lastWasPause = true; }
+      else if (wi > 0 && !lastWasPause) { T(' ', 'n'); segs.push({ cls: 'gap' }); }
+      lastWasPause = false;
+      if (isAtt && lastContent) for (let i = lastContent.s; i < lastContent.e; i++) segs[i].att = lower;
+      const segStart = segs.length;
+      const isCmevla = W.trail || CONS.includes(lower[lower.length - 1]);
+      const hasCluster = new RegExp('[' + CONS + ']{2}').test(lower.replace(/[',]/g, ''));
+      // syllabify (commas are explicit breaks; approximation)
+      const sylls = [];
+      lower.split(',').forEach((chunk) => {
+        let i = 0, onset = '';
+        const parts = [];
+        while (i < chunk.length) {
+          const ch = chunk[i];
+          if (ch === "'") { onset += "'"; i++; continue; }
+          if (VOW.includes(ch)) {
+            let nuc = ch;
+            if (i + 1 < chunk.length && DIPH.includes(ch + chunk[i + 1])) { nuc += chunk[i + 1]; i++; }
+            i++;
+            let run = ''; let j = i;
+            while (j < chunk.length && CONS.includes(chunk[j])) { run += chunk[j]; j++; }
+            const more = j < chunk.length;
+            let coda = '', next = '';
+            if (!more) coda = run;
+            else if (run.length) {
+              const l3 = run.slice(-3), l2 = run.slice(-2);
+              if (run.length >= 3 && V3.includes(l3)) { coda = run.slice(0, -3); next = l3; }
+              else if (run.length >= 2 && V2.includes(l2)) { coda = run.slice(0, -2); next = l2; }
+              else { coda = run.slice(0, -1); next = run.slice(-1); }
+            }
+            parts.push(onset + nuc + coda);
+            onset = next; i = j;
+          } else { onset += ch; i++; }
+        }
+        if (onset) { if (parts.length) parts[parts.length - 1] += onset; else parts.push(onset); }
+        sylls.push(...parts);
+      });
+      // stress
+      let stressIdx = -1;
+      if (W.caps) {
+        const orig = W.w; let capPos = -1;
+        for (let p = 0; p < orig.length; p++) if (/[A-Z]/.test(orig[p])) { capPos = p; break; }
+        if (capPos >= 0) {
+          const target = orig.slice(0, capPos).replace(/,/g, '').length;
+          let acc = 0;
+          for (let si = 0; si < sylls.length; si++) { if (target < acc + sylls[si].length) { stressIdx = si; break; } acc += sylls[si].length; }
+        }
+      } else if (!isAtt && !INTENS[lower] && (isCmevla || hasCluster)) {
+        const idxs = [];
+        sylls.forEach((sy, ix) => { if (/[aeiou]/.test(sy)) idxs.push(ix); });
+        if (idxs.length >= 2) stressIdx = idxs[idxs.length - 2];
+        else if (idxs.length === 1 && isCmevla) stressIdx = idxs[0];
+      }
+      // emit
+      sylls.forEach((sy, si) => {
+        const st = si === stressIdx;
+        if (si > 0) {
+          T('.', 'd');
+          if (flags.buffer && CONS.includes(sylls[si - 1].slice(-1)) && CONS.includes(sy[0])) { T('(ɪ)', 'b'); segs.push({ cls: 'buf' }); }
+        }
+        let disp = st ? sy.toUpperCase() : sy;
+        if (flags.buffer) {
+          const re = new RegExp('([' + CONS + CONS.toUpperCase() + '])(?=[' + CONS + CONS.toUpperCase() + '])', 'g');
+          disp = disp.replace(re, '$1\u0001');
+        }
+        disp.split('\u0001').forEach((piece, pi) => {
+          if (pi > 0) T('(ɪ)', 'b');
+          T(piece, st ? 's' : 'n');
+        });
+        let ci = 0;
+        while (ci < sy.length) {
+          const c = sy[ci];
+          if (VOW.includes(c)) {
+            if (ci + 1 < sy.length && DIPH.includes(c + sy[ci + 1])) { segs.push({ cls: 'diph', key: c + sy[ci + 1], st }); ci += 2; }
+            else { segs.push({ cls: 'vow', key: c, st }); ci++; }
+          } else if (c === "'") { segs.push({ cls: 'h' }); ci++; }
+          else { segs.push({ cls: this.clsOf(c), key: c, st }); ci++; }
+          if (flags.buffer && ci < sy.length && CONS.includes(sy[ci - 1]) && CONS.includes(sy[ci])) segs.push({ cls: 'buf' });
+        }
+      });
+      if (!isAtt && !INTENS[lower]) lastContent = { s: segStart, e: segs.length };
+      if (isCmevla) { T(' ‖ ', 'p'); segs.push({ cls: 'pause' }); lastWasPause = true; }
+    });
+    return { toks, segs, text: toks.map((t) => t.t).join('') };
+  }
+
+  // ---- mock render: deterministic pseudo-PCM from segs + LIVE parameter state ----
+  hash(str) { let h = 2166136261 >>> 0; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  natVal(key) {
+    const s = this.state;
+    if (!s.abOff) return s.knobs[key];
+    const p = this.D.naturalness.find((x) => x.key === key);
+    return p ? p.off : 0;
+  }
+  renderPCM() {
+    if (!this.state.booted || !this.D) return;
+    const s = this.state, D = this.D;
+    const segs = this.transcript().segs;
+    const SR = 8000, k = s.knobs, flat = s.flags.flat;
+    const rate = flat ? 1 : (k.rate || 1);
+    const V = s.voice;
+    const trip = (arr, o) => ((arr[o + 2] + arr[o + 5] + arr[o + 8]) / 3);
+    let lastV = -1;
+    segs.forEach((sg, i) => { if (sg.cls === 'vow' || sg.cls === 'diph') lastV = i; });
+    const plan = []; let total = 0;
+    segs.forEach((sg, i) => {
+      let ms = 0;
+      if (sg.cls === 'vow') ms = V[sg.key] ? V[sg.key][11] : 150;
+      else if (sg.cls === 'diph') ms = V[sg.key] ? V[sg.key][0] : 200;
+      else if (sg.cls === 'stop') ms = V[sg.key][22] + V[sg.key][23];
+      else if (sg.cls === 'fric') ms = V[sg.key] ? V[sg.key][11] : 120;
+      else if (sg.cls === 'nas' || sg.cls === 'liq') ms = V[sg.key][11];
+      else if (sg.cls === 'h') ms = V["'"][0];
+      else if (sg.cls === 'buf') ms = V.buffer[11];
+      else if (sg.cls === 'pause') ms = 180;
+      else if (sg.cls === 'gap') ms = 40;
+      if (!flat && sg.st && (sg.cls === 'vow' || sg.cls === 'diph')) ms *= k.stress_duration_factor;
+      if (!flat && i === lastV) ms *= this.natVal('final_lengthen');
+      let attShift = 0;
+      if (sg.att && !flat) { const dev = s.atts[sg.att]; if (dev) { attShift = dev[0]; ms *= dev[2]; } }
+      ms /= rate;
+      plan.push({ sg, ms, attShift, at: total });
+      total += ms;
+    });
+    const n = Math.max(1, Math.round(SR * total / 1000));
+    const out = new Float32Array(n);
+    const rng = this.mulberry(this.hash(s.text + '|' + JSON.stringify(s.knobs) + '|' + (s.abOff ? 1 : 0)));
+    const f0s = flat ? 120 : k.declination_start_hz, f0e = flat ? 120 : k.declination_end_hz;
+    const flut = flat ? 0 : this.natVal('flutter');
+    const breath = flat ? 0 : this.natVal('breath_aspiration');
+    plan.forEach((p) => {
+      const sg = p.sg;
+      const start = Math.round(SR * p.at / 1000), len = Math.max(1, Math.round(SR * p.ms / 1000));
+      let amp = 0, voiced = 0, noise = 0, f0add = p.attShift || 0;
+      if (sg.cls === 'vow' || sg.cls === 'diph') { const a = V[sg.cls === 'diph' ? sg.key[0] : sg.key] || V.a; amp = trip(a, 0); voiced = 1; }
+      else if (sg.cls === 'buf') { amp = trip(V.buffer, 0); voiced = 1; }
+      else if (sg.cls === 'nas' || sg.cls === 'liq') { amp = trip(V[sg.key], 0) * 0.9; voiced = 1; }
+      else if (sg.cls === 'fric') { const a = V[sg.key]; amp = Math.max(trip(a, 0), 0.35); voiced = a[9]; noise = a[10]; }
+      else if (sg.cls === 'h') { noise = 0.4; amp = 0.35; }
+      if (!flat && sg.st) { amp *= k.stress_amp_factor; f0add += k.stress_f0_excursion_hz; }
+      for (let x = 0; x < len; x++) {
+        const gi = start + x; if (gi >= n) break;
+        const gt = gi / n;
+        let env = Math.min(1, x / (SR * 0.008), (len - x) / (SR * 0.014)); if (env < 0) env = 0;
+        let v = 0;
+        if (sg.cls === 'stop') {
+          const a = V[sg.key];
+          const closN = len * (a[22] / ((a[22] + a[23]) || 1));
+          if (x < closN) v = a[9] > 0 ? Math.sin(2 * Math.PI * 95 * (gi / SR)) * 0.13 * a[9] : 0;
+          else v = (rng() * 2 - 1) * Math.max(trip(a, 11), 0.4) * Math.pow(1 - (x - closN) / Math.max(1, len - closN), 1.5);
+        } else if (sg.cls === 'pause' || sg.cls === 'gap') { v = 0; }
+        else {
+          let f0 = f0s + (f0e - f0s) * gt + f0add;
+          if (s.flags.xu && !flat && gi > n * 0.82) f0 += k.xu_rise_hz * ((gi - n * 0.82) / (n * 0.18));
+          if (flut > 0) f0 *= 1 + 0.04 * (flut / 100) * Math.sin(2 * Math.PI * 2.6 * (gi / SR));
+          if (voiced > 0) v += Math.sin(2 * Math.PI * f0 * (gi / SR)) * 0.55 * amp * voiced;
+          if (noise > 0) v += (rng() * 2 - 1) * 0.45 * noise * Math.max(amp, 0.5);
+          if (breath > 0 && voiced > 0) v += (rng() * 2 - 1) * breath * 0.8;
+        }
+        out[gi] += v * env;
+      }
+    });
+    this._pcm = out; this._pcmRate = SR;
+    this.setState({ totalMs: Math.round(total), canWav: true });
+    this.drawWave();
+  }
+  drawWave() {
+    const el = this._wave; if (!el) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = el.clientWidth || 600, h = el.clientHeight || 76;
+    el.width = Math.round(w * dpr); el.height = Math.round(h * dpr);
+    const g = el.getContext('2d'); g.scale(dpr, dpr);
+    g.clearRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(94,94,108,0.55)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+    const pcm = this._pcm; if (!pcm || !pcm.length) return;
+    g.strokeStyle = '#38E3A6'; g.lineWidth = 1;
+    g.shadowColor = 'rgba(56,227,166,0.45)'; g.shadowBlur = 4;
+    g.beginPath();
+    const step = Math.max(1, Math.floor(pcm.length / w));
+    for (let x = 0; x < w; x++) {
+      let peak = 0;
+      for (let i = x * step; i < (x + 1) * step && i < pcm.length; i++) { const a = Math.abs(pcm[i]); if (a > peak) peak = a; }
+      const y = Math.min(1, peak) * (h / 2 - 3);
+      g.moveTo(x + 0.5, h / 2 - y); g.lineTo(x + 0.5, h / 2 + y);
+    }
+    g.stroke(); g.shadowBlur = 0;
+  }
+  speak() {
+    const s = this.state;
+    if (!s.booted || s.failed) return;
+    clearTimeout(this._spk);
+    this.setState({ speaking: true, status: 'speaking…', statusKind: 'speak' }, () => {
+      this.renderPCM();
+      const ms = Math.max(350, Math.min(1800, this.state.totalMs || 500));
+      this._spk = setTimeout(() => this.setState({ speaking: false, status: 'ready', statusKind: 'ok' }), ms);
+    });
+  }
+  kick() {
+    const s = this.state;
+    if (!s.autoSpeak || !s.booted || s.failed) return;
+    clearTimeout(this._deb);
+    this._deb = setTimeout(() => this.speak(), 400);
+  }
+  wavBytes(samples, sampleRate) {
+    const dataLen = samples.length * 2;
+    const buf = new ArrayBuffer(44 + dataLen);
+    const v = new DataView(buf);
+    const wstr = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+    wstr(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); wstr(8, 'WAVE');
+    wstr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    wstr(36, 'data'); v.setUint32(40, dataLen, true);
+    for (let i = 0; i < samples.length; i++) { const x = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44 + i * 2, (x * 32767) | 0, true); }
+    return new Uint8Array(buf);
+  }
+  download(name, bytes, mime) {
+    const b = new Blob([bytes], { type: mime });
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a'); a.href = u; a.download = name; a.click();
+    URL.revokeObjectURL(u);
+  }
+  fmt(v) {
+    if (typeof v !== 'number' || !isFinite(v)) return '';
+    for (let p = 1; p <= 7; p++) { const s = Number(v.toPrecision(p)); if (Math.fround(s) === Math.fround(v)) return String(s); }
+    return String(v);
+  }
+  row(path, desc, opts) {
+    opts = opts || {};
+    const s = this.state;
+    const v = this.valFor(path), def = this.defFor(path);
+    const r = s.ranges[path];
+    const min = r ? r.min : desc.min, max = r ? r.max : desc.max, step = r ? r.step : desc.step;
+    const mod = Math.fround(v) !== Math.fround(def);
+    const dis = !!(s.flags.flat) || !!opts.dis;
+    const span = (max - min) || 1;
+    const pct = Math.max(0, Math.min(100, ((v - min) / span) * 100));
+    const dp = Math.max(0, Math.min(100, ((def - min) / span) * 100));
+    const draft = s.drafts[path];
+    return {
+      path, label: opts.label != null ? opts.label : desc.label, unit: desc.unit || '',
+      helpKey: opts.help || '', lab: opts.lab || '',
+      min, max, step, v,
+      vd: draft != null ? draft : this.fmt(v),
+      pct: pct.toFixed(2), defPct: dp.toFixed(2),
+      fillL: Math.min(pct, dp).toFixed(2), fillW: Math.abs(pct - dp).toFixed(2),
+      fill: mod ? 'var(--ember-500)' : 'transparent',
+      thumbBg: mod ? 'var(--ember-500)' : 'var(--text-muted)',
+      thumbBd: mod ? 'var(--ember-300)' : 'var(--border-strong)',
+      valC: mod ? 'var(--ember-300)' : 'var(--text-muted)',
+      dot: mod ? 'var(--ember-500)' : 'transparent',
+      cellBd: mod ? 'color-mix(in oklab, var(--ember-500) 45%, transparent)' : 'var(--border-subtle)',
+      rst: mod && !dis ? 'inline-block' : 'none',
+      wid: r ? 'inline-block' : 'none',
+      dis, op: dis ? 0.45 : 1,
+      pad: this.props.density === 'compact' ? '2px 0' : '4px 0',
+      mod,
+    };
+  }
+
+  // ---- handlers ----
+  onText = (e) => { this.setState({ text: e.target.value, sentenceSlug: '', sentenceEn: '' }); this.kick(); };
+  onFlag = (e) => {
+    const k = e.currentTarget.dataset.flag;
+    this.setState((s) => {
+      const f = { ...s.flags, [k]: !s.flags[k] };
+      if (k === 'flat' && f.flat) f.xu = false;
+      return { flags: f };
+    });
+    this.kick();
+  };
+  onSlide = (e) => { const p = e.currentTarget.dataset.path; const v = parseFloat(e.currentTarget.value); if (isFinite(v)) this.setVal(p, v); };
+  onRowReset = (e) => { const p = e.currentTarget.dataset.path; if (p) this.resetPath(p); };
+  onValDraft = (e) => { const p = e.currentTarget.dataset.path, val = e.currentTarget.value; this.setState((s) => ({ drafts: { ...s.drafts, [p]: val } })); };
+  onValKey = (e) => {
+    const p = e.currentTarget.dataset.path;
+    if (e.key === 'Enter') e.currentTarget.blur();
+    else if (e.key === 'Escape') { this.setState((s) => { const dr = { ...s.drafts }; delete dr[p]; return { drafts: dr }; }); e.currentTarget.blur(); }
+  };
+  onValBlur = (e) => {
+    const p = e.currentTarget.dataset.path;
+    const d = this.state.drafts[p];
+    if (d == null) return;
+    this.setState((s) => { const dr = { ...s.drafts }; delete dr[p]; return { drafts: dr }; });
+    const v = parseFloat(d);
+    if (isFinite(v)) this.applyExact(p, v);
+  };
+  onHelp = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const el = e.currentTarget;
+    const key = el.dataset.help, title = el.dataset.title || key;
+    const r = el.getBoundingClientRect();
+    const x = Math.max(8, Math.min(r.left - 30, window.innerWidth - 300));
+    const y = Math.min(r.bottom + 8, window.innerHeight - 170);
+    this.setState({ help: { key, title, x: Math.round(x), y: Math.round(y) } });
+  };
+  onHelpClose = () => this.setState({ help: null });
+  onLegend = () => this.setState((s) => ({ legendOpen: !s.legendOpen }));
+  onSentence = (e) => {
+    const slug = e.target.value;
+    if (!slug) { this.setState({ sentenceSlug: '', sentenceEn: '' }); return; }
+    const sn = this.D.sentences.find((x) => x.slug === slug);
+    if (sn) this.applySentence(sn);
+  };
+  applySentence(sn) {
+    const f = sn.flags || {};
+    this.setState((s) => ({ text: sn.text, sentenceSlug: sn.slug, sentenceEn: sn.en, flags: { ...s.flags, xu: !!f.xu, dotside: !!f.dotside, buffer: !!f.buffer } }));
+    this.kick();
+  }
+  onSentenceNext = () => {
+    if (!this.D) return;
+    const L = this.D.sentences;
+    const i = L.findIndex((x) => x.slug === this.state.sentenceSlug);
+    this.applySentence(L[(i + 1) % L.length]);
+  };
+  onPreset = (e) => { const n = e.target.value; if (n === 'custom') return; this.applyPreset(n); };
+  onNotes = (e) => this.setState({ notes: e.target.value });
+  onAuto = (e) => this.setState({ autoSpeak: e.target.checked });
+  onSpeakClick = () => this.speak();
+  onDlWav = () => { if (this._pcm) this.download('voksa-mock.wav', this.wavBytes(this._pcm, this._pcmRate), 'audio/wav'); };
+  onExport = () => { if (this.D) this.download('voksa-config.json', new TextEncoder().encode(JSON.stringify(this.buildConfig(), null, 2)), 'application/json'); };
+  onPickFile = () => { if (this._file) this._file.click(); };
+  onFileChange = (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; this.loadFile(f); };
+  onDragOver = (e) => { e.preventDefault(); if (!this.state.dropActive) this.setState({ dropActive: true }); };
+  onDragLeave = () => this.setState({ dropActive: false });
+  onDrop = (e) => {
+    e.preventDefault(); this.setState({ dropActive: false });
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) this.loadFile(f);
+  };
+  onEmotion = (e) => this.setState({ selEmotion: e.currentTarget.dataset.key });
+  onTry = () => {
+    const a = this.D.attitudinals.find((x) => x.key === this.state.selEmotion);
+    this.setState({ text: a.example, sentenceSlug: '', sentenceEn: '' }, () => this.speak());
+  };
+  onResetEmotionClick = () => this.resetEmotion(this.state.selEmotion);
+  onCell = (e) => this.setState({ selPhoneme: e.currentTarget.dataset.key });
+  onChangedOnly = (e) => this.setState({ vtChangedOnly: e.target.checked });
+  onResetPhonemeClick = () => this.resetPhoneme(this.state.selPhoneme);
+  onResetVoiceClick = () => this.resetVoiceAll();
+  onResetAllClick = () => this.resetAll();
+  onAbCur = () => { this.setState({ abOff: false }); this.kick(); };
+  onAbOff = () => { this.setState({ abOff: true }); this.kick(); };
+  onTheme = () => this.setState((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' }));
+  onAboutOpen = () => this.setState({ aboutOpen: true });
+  onAboutClose = () => this.setState({ aboutOpen: false });
+  onDemoToggle = () => this.setState((s) => ({ demoOpen: !s.demoOpen }));
+  onRetry = () => this.boot();
+  eatClick = (e) => e.stopPropagation();
+  onDemoPick = (e) => {
+    const which = e.currentTarget.dataset.demo;
+    this.setState({ demoOpen: false });
+    if (!this.D) return;
+    if (which === 'fresh') {
+      this.resetAll();
+      this.setState({ text: 'coi munje', sentenceSlug: 'greeting', sentenceEn: this.D.sentences[0].en, failed: false });
+    } else if (which === 'dirty') {
+      this.setState({ failed: false });
+      this.applyPreset('Sing-song');
+      setTimeout(() => {
+        this.applyExact('a.ui.0', 22);
+        this.applyExact('v.a.0', 760);
+        this.applyExact('v.s.11', 96);
+        this.setVal('k.flutter', 40);
+      }, 0);
+    } else if (which === 'loaded') {
+      this.setState({ failed: false });
+      const c = this.D.demoConfig;
+      this.applyConfig(c, c._filename || 'kulnu-tuning.json');
+    } else if (which === 'flat') {
+      this.setState((s) => ({ failed: false, flags: { ...s.flags, flat: true, xu: false } }));
+      this.kick();
+    } else if (which === 'fail') {
+      this.setState({ failed: true, speaking: false, failMsg: 'WebAssembly.compileStreaming: expected magic word 00 61 73 6d (served as text/html?)', status: 'failed to compile voksa_web_bg.wasm', statusKind: 'err' });
+    }
+  };
+  waveRef = (el) => {
+    this._wave = el;
+    if (el) {
+      if (!this._ro && window.ResizeObserver) { this._ro = new ResizeObserver(() => this.drawWave()); this._ro.observe(el); }
+      this.drawWave();
+    }
+  };
+  fileRef = (el) => { this._file = el; };
+
+  renderVals() {
+    const s = this.state, D = this.D;
+    const booted = s.booted && !!D;
+    const HELP = this.HELP || {};
+    const lj = this.props.lojbanSubs !== false;
+    const fr = Math.fround;
+
+    // transcript
+    let toks = [], flagsEcho = '';
+    if (booted) {
+      toks = this.transcript().toks.map((t) => ({
+        t: t.t,
+        c: t.k === 's' ? 'var(--text-strong)' : t.k === 'p' ? 'var(--accent)' : t.k === 'b' ? (s.theme === 'light' ? 'var(--phosphor-700)' : 'var(--phosphor-300)') : t.k === 'd' ? 'var(--text-faint)' : 'var(--text-body)',
+        w: t.k === 's' ? '600' : '400',
+      }));
+      const on = D.flags.filter((f) => s.flags[f.key]).map((f) => f.key);
+      flagsEcho = on.length ? 'flags: ' + on.join(' · ') : 'flags: none';
+    }
+
+    const flagChips = booted ? D.flags.map((f) => {
+      const on = s.flags[f.key];
+      const dis = f.key === 'xu' && s.flags.flat;
+      return {
+        key: f.key, label: f.label, sub: f.sub, dis, on,
+        bg: on ? 'var(--accent-soft)' : 'var(--bg-raised)',
+        bd: on ? 'color-mix(in oklab, var(--ember-500) 45%, transparent)' : 'var(--border-subtle)',
+        fg: on ? 'var(--text-strong)' : 'var(--text-body)',
+        dot: on ? 'var(--ember-500)' : 'var(--void-400)',
+        glow: on ? '0 0 6px color-mix(in oklab, var(--ember-500) 60%, transparent)' : 'none',
+        op: dis ? 0.4 : 1,
+      };
+    }) : [];
+
+    const prosodyRows = booted ? D.prosody.map((p) => this.row('k.' + p.key, p, { help: 'prosody.' + p.key })) : [];
+    const natRows = booted ? D.naturalness.map((p) => this.row('k.' + p.key, p, { help: 'naturalness.' + p.key, dis: s.abOff })) : [];
+
+    const emotions = booted ? D.attitudinals.map((a) => {
+      const modN = s.atts[a.key].reduce((m, v, i) => m + (fr(v) !== fr(a.def[i]) ? 1 : 0), 0);
+      const sel = a.key === s.selEmotion;
+      return {
+        key: a.key, label: a.label, sub: a.sub, dotOp: modN ? 1 : 0,
+        bg: sel ? 'var(--accent-soft)' : 'var(--bg-raised)',
+        bd: sel ? 'color-mix(in oklab, var(--ember-500) 45%, transparent)' : 'var(--border-subtle)',
+        bt: sel ? 'var(--ember-500)' : 'transparent',
+      };
+    }) : [];
+    const selA = booted ? D.attitudinals.find((a) => a.key === s.selEmotion) : null;
+    const attRows = selA ? D.attFields.map((f, i) => this.row('a.' + selA.key + '.' + i, f, { help: 'att.fields.' + f.key })) : [];
+    const attModN = selA ? s.atts[selA.key].reduce((m, v, i) => m + (fr(v) !== fr(selA.def[i]) ? 1 : 0), 0) : 0;
+
+    // voice table
+    const phonModCount = (it) => s.voice[it.key].reduce((m, v, i) => m + (fr(v) !== fr(it.def[i]) ? 1 : 0), 0);
+    const vtSections = booted ? D.voiceSections.map((sec) => ({
+      id: sec.id, label: sec.label, lojban: lj ? (sec.lojban || '') : '',
+      cells: sec.items.map((it) => {
+        const modN = phonModCount(it), sel = it.key === s.selPhoneme;
+        return {
+          key: it.key, disp: it.key === 'buffer' ? 'ɪ' : it.key,
+          dotOp: modN ? 1 : 0, dis: s.flags.flat,
+          op: s.vtChangedOnly && !modN && !sel ? 0.25 : (s.flags.flat ? 0.45 : 1),
+          bg: sel ? 'var(--accent-soft)' : 'var(--surface-card)',
+          bd: sel ? 'var(--ember-500)' : modN ? 'color-mix(in oklab, var(--ember-500) 45%, transparent)' : 'var(--border-subtle)',
+          fg: sel ? 'var(--text-strong)' : 'var(--text-body)',
+        };
+      }),
+    })) : [];
+    const selInfo = booted ? this.itemOf(s.selPhoneme) : null;
+    const selIt = selInfo ? selInfo.it : null;
+    const MLAB = ['F1', 'F1 bw', 'F1 amp', 'F2', 'F2 bw', 'F2 amp', 'F3', 'F3 bw', 'F3 amp'];
+    const mkCell = (i, off) => {
+      const f = this.vtDescAt(selIt, i);
+      const r = this.row('v.' + selIt.key + '.' + i, f, { help: 'vt.fields.' + f.key });
+      r.lab = MLAB[i - off]; return r;
+    };
+    let vtMatrix = [], vtClos = [], vtBurst = [], vtScalarRows = [];
+    let vtSteady = false, vtStop = false;
+    if (selIt) {
+      if (selIt.kind === 'steady') {
+        vtSteady = true;
+        for (let i = 0; i < 9; i++) vtMatrix.push(mkCell(i, 0));
+        vtScalarRows = [9, 10].map((i) => this.row('v.' + selIt.key + '.' + i, D.vtFields[i], { help: 'vt.fields.' + D.vtFields[i].key }));
+        vtScalarRows.push(this.row('v.' + selIt.key + '.11', D.vtDur, { help: 'vt.fields.dur_ms' }));
+      } else if (selIt.kind === 'stop') {
+        vtStop = true;
+        for (let i = 0; i < 9; i++) vtClos.push(mkCell(i, 0));
+        for (let i = 11; i < 20; i++) vtBurst.push(mkCell(i, 11));
+        vtScalarRows = [
+          this.row('v.' + selIt.key + '.9', D.vtFields[9], { label: 'closure voicing', help: 'vt.fields.voicing' }),
+          this.row('v.' + selIt.key + '.21', D.vtFields[10], { label: 'burst aspiration', help: 'vt.fields.aspiration' }),
+          this.row('v.' + selIt.key + '.22', D.vtClosureMs, { help: 'vt.fields.closure_ms' }),
+          this.row('v.' + selIt.key + '.23', D.vtBurstMs, { help: 'vt.fields.burst_ms' }),
+        ];
+      } else {
+        vtScalarRows = [this.row('v.' + selIt.key + '.0', D.vtDur, { help: 'vt.fields.dur_ms' })];
+      }
+    }
+    const selPhModN = selIt ? phonModCount(selIt) : 0;
+    const selPhNote = selIt ? (selIt.note || selInfo.sec.note || '') : '';
+
+    // counts
+    const allKnobs = booted ? D.prosody.concat(D.naturalness) : [];
+    const prosodyN = booted ? D.prosody.reduce((m, p) => m + (fr(s.knobs[p.key]) !== fr(p.def) ? 1 : 0), 0) : 0;
+    const knobMods = booted ? allKnobs.reduce((m, p) => m + (fr(s.knobs[p.key]) !== fr(p.def) ? 1 : 0), 0) : 0;
+    const natN = knobMods - prosodyN;
+    const attMods = booted ? D.attitudinals.reduce((m, a) => m + s.atts[a.key].reduce((x, v, i) => x + (fr(v) !== fr(a.def[i]) ? 1 : 0), 0), 0) : 0;
+    const vtModTotal = booted ? D.voiceSections.reduce((m, sec) => m + sec.items.reduce((x, it) => x + phonModCount(it), 0), 0) : 0;
+    const dirtyTotal = knobMods + attMods + vtModTotal;
+
+    const navChips = [
+      { href: '#vx-prosody', label: 'prosody', chip: prosodyN ? 'Δ' + prosodyN : '7', chipC: prosodyN ? 'var(--ember-300)' : 'var(--text-faint)' },
+      { href: '#vx-naturalness', label: 'naturalness', chip: natN ? 'Δ' + natN : '9', chipC: natN ? 'var(--ember-300)' : 'var(--text-faint)' },
+      { href: '#vx-attitudinals', label: 'attitudinals', chip: attMods ? 'Δ' + attMods : '7×8', chipC: attMods ? 'var(--ember-300)' : 'var(--text-faint)' },
+      { href: '#vx-voicetable', label: 'voice table', chip: vtModTotal ? 'Δ' + vtModTotal : '377', chipC: vtModTotal ? 'var(--ember-300)' : 'var(--text-faint)' },
+    ];
+
+    const sentenceOptions = booted
+      ? [{ value: '', label: '— free text —' }].concat(D.sentences.map((x) => ({ value: x.slug, label: x.text })))
+      : [{ value: '', label: '— free text —' }];
+    const si = booted ? D.sentences.findIndex((x) => x.slug === s.sentenceSlug) : -1;
+    const sentenceCounter = booted ? (si >= 0 ? String(si + 1).padStart(2, '0') : '—') + '/' + D.sentences.length : '—/18';
+
+    const presetNames = booted ? D.presets.map((p) => p.name) : ['Default'];
+    const presetOptions = s.preset === 'custom' ? presetNames.concat(['custom']) : presetNames;
+
+    const statusC = { ok: 'var(--text-muted)', speak: 'var(--phosphor-300)', load: 'var(--phosphor-300)', err: 'var(--crimson-500)', boot: 'var(--amber-500)' }[s.statusKind] || 'var(--text-muted)';
+
+    const help = s.help;
+    const helpBody = help ? (HELP[help.key] || ('// help pending — ' + help.key)) : '';
+
+    return {
+      theme: s.theme,
+      // topbar
+      dirtyDisp: dirtyTotal ? 'inline-flex' : 'none', dirtyTotal,
+      demoOpen: s.demoOpen, onDemoToggle: this.onDemoToggle, onDemoPick: this.onDemoPick,
+      onAboutOpen: this.onAboutOpen, onAboutClose: this.onAboutClose, onTheme: this.onTheme, eatClick: this.eatClick,
+      // source
+      text: s.text, onText: this.onText,
+      sentenceOptions, sentenceSlug: s.sentenceSlug, onSentence: this.onSentence, onSentenceNext: this.onSentenceNext,
+      sentenceCounter, sentenceEn: s.sentenceEn || ' ',
+      flagChips, onFlag: this.onFlag,
+      toks, flagsEcho, legendOpen: s.legendOpen, onLegend: this.onLegend,
+      // transport
+      failed: s.failed, failMsg: s.failMsg, onRetry: this.onRetry,
+      speakDis: !booted || s.failed, onSpeakClick: this.onSpeakClick,
+      autoOn: s.autoSpeak, onAuto: this.onAuto,
+      waveRef: this.waveRef, speaking: s.speaking,
+      status: s.status, statusC,
+      waveMeta: booted ? (s.totalMs / 1000).toFixed(2) + ' s · mock preview · 48 kHz target' : '',
+      wavDis: !s.canWav || s.failed, onDlWav: this.onDlWav,
+      // share
+      notes: s.notes, onNotes: this.onNotes,
+      deltaLine: dirtyTotal ? 'Δ ' + dirtyTotal + ' deviations from the pinned defaults — exports are delta-only.' : 'at engine defaults — tweak something, then send it back.',
+      deltaC: dirtyTotal ? 'var(--ember-300)' : 'var(--text-faint)',
+      loadedDisp: s.loadedName ? 'inline-flex' : 'none', loadedName: s.loadedName || '',
+      onExport: this.onExport, onPickFile: this.onPickFile, onFileChange: this.onFileChange, fileRef: this.fileRef,
+      onDragOver: this.onDragOver, onDragLeave: this.onDragLeave, onDrop: this.onDrop,
+      dropDisp: s.dropActive ? 'flex' : 'none',
+      repoUrl: booted ? D.links.repo : '#', issuesUrl: booted ? D.links.issues : '#', mailUrl: booted ? D.links.mail : '#',
+      // racks
+      navChips, presetOptions, preset: s.preset, onPreset: this.onPreset, onResetAllClick: this.onResetAllClick,
+      bootPending: !booted && !s.failed,
+      rackOp: s.flags.flat ? 0.75 : 1,
+      flatChipDisp: s.flags.flat ? 'inline' : 'none',
+      prosodyRows, natRows,
+      abOff: s.abOff, onAbCur: this.onAbCur, onAbOff: this.onAbOff,
+      abABg: s.abOff ? 'transparent' : 'var(--accent-soft)', abAC: s.abOff ? 'var(--text-muted)' : 'var(--ember-300)',
+      abBBg: s.abOff ? 'color-mix(in oklab, var(--phosphor-500) 14%, transparent)' : 'transparent', abBC: s.abOff ? 'var(--phosphor-300)' : 'var(--text-muted)',
+      attSub: lj ? "cnima'o — emotion overlays" : 'emotion overlays',
+      emotions, onEmotion: this.onEmotion,
+      selAttLabel: selA ? selA.label : '', selAttSub: selA ? selA.sub : '',
+      selAttExample: selA ? selA.example : '', onTry: this.onTry,
+      attModDisp: attModN ? 'inline' : 'none', attModN, onResetEmotionClick: this.onResetEmotionClick,
+      attRows,
+      vtSub: lj ? 'lo voksa selci — the per-phoneme acoustic table' : 'the per-phoneme acoustic table',
+      vtModDisp: vtModTotal ? 'inline' : 'none', vtModTotal,
+      vtChangedOnly: s.vtChangedOnly, onChangedOnly: this.onChangedOnly, onResetVoiceClick: this.onResetVoiceClick,
+      vtSections, onCell: this.onCell,
+      selPhDisp: selIt ? (selIt.key === 'buffer' ? 'ɪ' : selIt.key) : '',
+      selPhCls: selInfo ? selInfo.sec.label + (lj && selInfo.sec.lojban ? ' · ' + selInfo.sec.lojban : '') : '',
+      selPhIpa: selIt && selIt.ipa ? '[' + selIt.ipa + ']' : '',
+      selPhModDisp: selPhModN ? 'inline' : 'none', selPhModN,
+      selPhNoteDisp: selPhNote ? 'block' : 'none', selPhNote,
+      onResetPhonemeClick: this.onResetPhonemeClick,
+      vtSteady, vtStop, vtMatrix, vtClos, vtBurst, vtScalarRows,
+      // shared row handlers
+      onSlide: this.onSlide, onRowReset: this.onRowReset,
+      onValDraft: this.onValDraft, onValKey: this.onValKey, onValBlur: this.onValBlur,
+      onHelp: this.onHelp, onHelpClose: this.onHelpClose,
+      helpOpen: !!help, helpTitle: help ? help.title : '', helpKey: help ? help.key : '', helpBody,
+      helpX: help ? help.x : 0, helpY: help ? help.y : 0,
+      aboutOpen: s.aboutOpen,
+      aboutCaps: booted ? D.capabilities : [], aboutSizes: booted ? D.sizes : [], aboutArch: booted ? D.architecture : [],
+    };
+  }
+}
+</script>
+</body>
+</html>

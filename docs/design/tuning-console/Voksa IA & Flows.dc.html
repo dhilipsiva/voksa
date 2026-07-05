@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/base.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/styles.css">
+  <script src="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/_ds_bundle.js"></script>
+  <style>body { margin: 0; background: var(--bg-base); }</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg-base);color:var(--text-body);font-family:var(--font-sans);padding:28px 24px 64px">
+  <div style="max-width:1180px;margin:0 auto">
+
+    <header style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:var(--text-strong)">voksa</span>
+      <span class="q-label">IA map + user flows</span>
+      <span style="flex:1"></span>
+      <a href="Voksa Workbench.dc.html" style="font-family:var(--font-mono);font-size:12px">open the workbench →</a>
+    </header>
+    <p style="margin:0 0 26px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)">deliverable 1 of 4 · design doc for the Dioxus port · voksa v0.1.0 · QUINE design system</p>
+
+    <section data-screen-label="context" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:10px"><span style="color:var(--accent)">// </span>context &amp; assumptions</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:8px 28px;font-size:13px;line-height:1.6">
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">⊢</span><span>The console is a <strong style="color:var(--text-strong)">community tuning instrument</strong>, not a settings form: the synthesizer's 465 parameters are documented conventions, and shared config JSON is the project's bug-report + ground-truth channel.</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">⊢</span><span><strong style="color:var(--text-strong)">Embed contract:</strong> dhilipsiva.dev owns the navbar. The console ships zero site chrome — its top element is a page-title row (display-font <span style="font-family:var(--font-mono)">voksa</span> + label), nothing sticky at top:0, theme inherited from the host (<span style="font-family:var(--font-mono)">initialTheme</span> prop).</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">⊢</span><span>All defaults, descriptors, sentences and ranges come from the repo (<span style="font-family:var(--font-mono)">voksa-engine-data.json</span> here; <span style="font-family:var(--font-mono)">voksa_default_params()</span> at runtime in the port — never hand-copied).</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">⊢</span><span>Prototype boundaries: silent (no AudioWorklet); transcription + waveform are deterministic approximations that read the live parameter state. Help copy is a keyed skeleton (<span style="font-family:var(--font-mono)">voksa-help-text.json</span>) to be filled via Claude Code.</span></div>
+      </div>
+    </section>
+
+    <section data-screen-label="ia map" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:4px"><span style="color:var(--accent)">// </span>information architecture — one screen, two columns, four racks</div>
+      <p style="margin:0 0 14px;font-family:var(--font-mono);font-size:11px;color:var(--text-faint)">everything reachable without navigation: SOURCE (what is spoken) stays pinned left; TUNING (how it sounds) scrolls right, ordered by audience — broadest knobs first, 377-param table last.</p>
+      <div style="border:1px solid var(--border-subtle);border-radius:8px;background-image:var(--bg-grid);background-color:var(--bg-raised);padding:14px">
+        <div style="border:1px dashed var(--border-strong);border-radius:6px;padding:6px 10px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);margin-bottom:8px">host site navbar — not ours</div>
+        <div style="display:flex;gap:8px;align-items:center;font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:6px 10px;margin-bottom:8px">
+          <span style="color:var(--text-strong);font-weight:600">voksa</span><span>tuning console</span><span style="color:var(--text-faint)">v0.1.0 · 42 kB</span><span style="flex:1"></span><span style="color:var(--ember-300)">Δ n</span><span>⎇ demo</span><span>λ about</span><span>◐</span>
+        </div>
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:8px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">1 · utterance</span><br><span style="color:var(--text-faint)">text field · 18-sentence picker + ⟳ · 4 flag chips (flat / xu / dotside / buffer)</span></div>
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">2 · phonetic analysis</span><br><span style="color:var(--text-faint)">live transcript: CAPS stress · ‖ pause · (ɪ) buffer · legend ?</span></div>
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">3 · transport</span><br><span style="color:var(--text-faint)">▶ speak · speak-on-change (400 ms debounce) · waveform · status · ⤓ wav</span></div>
+            <div style="border:1px solid color-mix(in oklab, var(--phosphor-500) 40%, transparent);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--phosphor-300)">4 · share the tuning</span><br><span style="color:var(--text-faint)">Δ summary · notes (travels in JSON) · export / load / drop · send-back CTA</span></div>
+            <div style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);padding:0 2px">sticky column — the listen loop never scrolls away</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:6px 10px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">rack nav (sticky) · prosody / naturalness / attitudinals / voice table · preset ▾ · ↺ reset all</div>
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">A · prosody</span> <span style="color:var(--text-faint)">— 7 sliders · sentence melody</span></div>
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">B · naturalness</span> <span style="color:var(--text-faint)">— 9 sliders · one-line explainer · A/B latch vs phase-10 voice (the #1 listening task)</span></div>
+            <div style="border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--text-strong)">C · attitudinals</span> <span style="color:var(--text-faint)">— ∴ "invented, non-normative" callout · 7 cmavo chips (Δ dots) → editor: 8 sliders + ▶ try + ↺</span></div>
+            <div style="border:1px solid color-mix(in oklab, var(--ember-500) 40%, transparent);border-radius:6px;background:var(--surface-card);padding:8px 10px;font-family:var(--font-mono);font-size:10.5px"><span style="color:var(--ember-300)">D · voice table</span> <span style="color:var(--text-faint)">— phoneme grid navigator (27 cells, 6 classes) → per-phoneme editor · changed-only · ↺ per phoneme + table</span></div>
+          </div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);margin-top:8px">≤1100px: columns stack · ≤720px: fixed bottom dock (▶ speak + status); racks collapse into one column; source stays first</div>
+      </div>
+    </section>
+
+    <section data-screen-label="personas" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:4px"><span style="color:var(--accent)">// </span>three personas, one loop</div>
+      <p style="margin:0 0 14px;font-family:var(--font-mono);font-size:11px;color:var(--text-faint)">every flow ends at zone 4 — the export IS the contribution. numbers reference the IA map above.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+        <div style="border:1px solid var(--border-subtle);border-top:2px solid var(--phosphor-500);border-radius:8px;background:var(--bg-raised);padding:14px">
+          <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong);margin-bottom:2px">the listener</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);margin-bottom:10px">plays test sentences, scores what they hear · phone-friendly · touches zones 1–4 only</div>
+          <div style="font-family:var(--font-mono);font-size:11px;line-height:2;color:var(--text-body)">
+            land → status <span style="color:var(--phosphor-300)">ready</span><br>
+            <span style="color:var(--text-faint)">1</span> ⟳ cycle the 18 coverage sentences<br>
+            <span style="color:var(--text-faint)">3</span> ▶ speak (first play = the required gesture)<br>
+            <span style="color:var(--text-faint)">2</span> read transcript ↔ what they heard<br>
+            <span style="color:var(--text-faint)">B</span> A/B: current ↔ naturalness off<br>
+            <span style="color:var(--text-faint)">4</span> notes: "4/5 — s too long" → export → issue
+          </div>
+        </div>
+        <div style="border:1px solid var(--border-subtle);border-top:2px solid var(--ember-500);border-radius:8px;background:var(--bg-raised);padding:14px">
+          <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong);margin-bottom:2px">the tuner</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);margin-bottom:10px">deep parameter work · desktop · lives in zones A–D with speak-on-change ON</div>
+          <div style="font-family:var(--font-mono);font-size:11px;line-height:2;color:var(--text-body)">
+            <span style="color:var(--text-faint)">1</span> pick a sentence that exercises the target<br>
+            <span style="color:var(--text-faint)">D</span> phoneme grid → editor (formant matrix)<br>
+            drag / type exact value / dblclick-reset<br>
+            each change re-speaks after 400 ms<br>
+            <span style="color:var(--ember-300)">Δ</span> dots + rack counts track the diff<br>
+            <span style="color:var(--text-faint)">4</span> delta-only export → share back
+          </div>
+        </div>
+        <div style="border:1px solid var(--border-subtle);border-top:2px solid var(--quanta-500);border-radius:8px;background:var(--bg-raised);padding:14px">
+          <div style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-strong);margin-bottom:2px">the reporter</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);margin-bottom:10px">audits someone else's tuning · starts from a shared JSON</div>
+          <div style="font-family:var(--font-mono);font-size:11px;line-height:2;color:var(--text-body)">
+            <span style="color:var(--text-faint)">4</span> drop config → <span style="color:var(--phosphor-300)">REPLACES all state</span><br>
+            chip shows filename · out-of-range values<br>
+            widen sliders (<span style="color:var(--amber-500)">⤢</span>) — never clamped<br>
+            <span style="color:var(--text-faint)">3</span> listen · <span style="color:var(--text-faint)">D</span> changed-only shows their edits<br>
+            annotate notes, adjust, re-export —<br>
+            round-trips bit-identically via the CLI
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-screen-label="contracts" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:10px"><span style="color:var(--accent)">// </span>hard behavioral contracts (the design must not fight these)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:6px 28px;font-family:var(--font-mono);font-size:11.5px;line-height:1.75">
+        <div><span style="color:var(--amber-500)">⤢ widen, never clamp</span> — a loaded value outside a slider's range widens min/max and relaxes step to <span style="color:var(--text-faint)">any</span>; the readout always shows the true value.</div>
+        <div><span style="color:var(--phosphor-300)">load = replace</span> — absent keys fall back to engine defaults; loading over a dirty session must equal what <span style="color:var(--text-faint)">voksa --config</span> would play.</div>
+        <div><span style="color:var(--ember-300)">Δ delta-only export</span> — attitudinals/phonemes export only f32-different values (fround compare); hence modified indicators everywhere.</div>
+        <div><span style="color:var(--text-strong)">defaults from the engine</span> — sliders seed from voksa_default_params(); UI equals engine by construction.</div>
+        <div><span style="color:var(--text-strong)">flat disables voice shaping</span> — all 465 controls + the xu flag grey out; text, playback and share stay live.</div>
+        <div><span style="color:var(--text-strong)">gesture-gated audio</span> — first ▶ creates the AudioContext; re-speaks replace the live node, never stack; ~400 ms debounce collapses drags.</div>
+      </div>
+    </section>
+
+    <section data-screen-label="voice table rationale" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:10px;padding:18px 20px;margin-bottom:16px">
+      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong);margin-bottom:10px"><span style="color:var(--accent)">// </span>the voice-table pattern — why grid → editor</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:8px 28px;font-size:13px;line-height:1.6">
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">∴</span><span>377 sliders as collapsible rows (the old page) buries state: you can't see <em>where</em> a tuning deviates. The <strong style="color:var(--text-strong)">phoneme grid is a map</strong> — 27 keycaps grouped by manner class, each carrying an ember Δ dot — so a loaded config is legible at a glance.</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">∴</span><span>One phoneme in focus keeps ≤24 controls on screen. The <strong style="color:var(--text-strong)">3×3 formant matrix</strong> (F1–F3 × freq/bw/amp) mirrors how a Klatt voice is actually thought about; stops get closure + burst matrices + timing; diphthongs/[h] expose only their one free parameter, with a note explaining why.</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">∴</span><span><strong style="color:var(--text-strong)">changed-only</strong> dims untouched cells (never hides — grid stays spatially stable); per-phoneme ↺ and table-level ↺ match the delta-export mental model.</span></div>
+        <div style="display:flex;gap:9px"><span style="font-family:var(--font-mono);color:var(--ember-300);flex:none">∴</span><span>Phone: the same grid wraps above the editor — navigation survives 360 px because cells are 34 px touch targets, not table rows.</span></div>
+      </div>
+    </section>
+
+    <footer style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding-top:14px;border-top:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint)">
+      <span>deliverables:</span>
+      <a href="Voksa Workbench.dc.html">1 · workbench (this doc's subject)</a>
+      <span>2 · IA &amp; flows — this doc</span>
+      <span>3 · phone preview — pending</span>
+      <span>4 · component spec — pending</span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

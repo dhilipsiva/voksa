@@ -1,0 +1,183 @@
+{
+  "_readme": "voksa tuning console — engine descriptor data. Extracted from crates/voksa-web/www/index.html + voksa-core (v0.1.0). In the Dioxus port, DO NOT hand-copy defaults: seed every control from voksa_default_params() at runtime, exactly like the reference page. Order of everything here mirrors the frozen wasm f32 layout (449 floats): prosody 0-6, attitudinals 7-62, voice table 63-439, naturalness 440-448.",
+  "version": "0.1.0",
+  "wasmKb": 42,
+  "gateKb": 43,
+  "sampleRate": 48000,
+  "msrv": "1.85",
+  "flags": [
+    { "key": "flat",    "label": "flat",    "sub": "no prosody",    "bit": 1 },
+    { "key": "xu",      "label": "xu",      "sub": "question rise", "bit": 2 },
+    { "key": "dotside", "label": "dotside", "sub": "name dialect",  "bit": 4 },
+    { "key": "buffer",  "label": "buffer",  "sub": "[ɪ] in clusters", "bit": 8 }
+  ],
+  "prosody": [
+    { "key": "declination_start_hz",   "label": "pitch start",        "unit": "Hz", "min": 60,  "max": 220, "step": 1,    "def": 120 },
+    { "key": "declination_end_hz",     "label": "pitch end",          "unit": "Hz", "min": 50,  "max": 200, "step": 1,    "def": 95 },
+    { "key": "stress_duration_factor", "label": "stress stretch",     "unit": "×",  "min": 1,   "max": 3,   "step": 0.05, "def": 1.5 },
+    { "key": "stress_f0_excursion_hz", "label": "stress pitch boost", "unit": "Hz", "min": 0,   "max": 60,  "step": 1,    "def": 20 },
+    { "key": "stress_amp_factor",      "label": "stress loudness",    "unit": "×",  "min": 1,   "max": 2,   "step": 0.05, "def": 1.2 },
+    { "key": "xu_rise_hz",             "label": "xu rise",            "unit": "Hz", "min": 0,   "max": 80,  "step": 1,    "def": 25 },
+    { "key": "rate",                   "label": "speaking rate",      "unit": "×",  "min": 0.5, "max": 2.5, "step": 0.05, "def": 1 }
+  ],
+  "naturalness": [
+    { "key": "flutter",             "label": "pitch flutter",       "unit": "FL",  "min": 0,    "max": 100, "step": 1,    "def": 25,   "off": 0 },
+    { "key": "breath_aspiration",   "label": "breathiness",         "unit": "+",   "min": 0,    "max": 0.5, "step": 0.01, "def": 0.06, "off": 0 },
+    { "key": "baseline_oq_delta",   "label": "open quotient Δ",     "unit": "soft","min": -0.5, "max": 0.8, "step": 0.01, "def": 0.1,  "off": 0 },
+    { "key": "baseline_tilt_delta", "label": "spectral tilt Δ",     "unit": "dark","min": -0.9, "max": 0.9, "step": 0.01, "def": -0.1, "off": 0 },
+    { "key": "micro_f0_hz",         "label": "vowel-height pitch",  "unit": "Hz",  "min": 0,    "max": 15,  "step": 0.5,  "def": 4,    "off": 0 },
+    { "key": "obstruent_f0_hz",     "label": "consonant pitch kick","unit": "Hz",  "min": 0,    "max": 20,  "step": 0.5,  "def": 6,    "off": 0 },
+    { "key": "final_lengthen",      "label": "final lengthening",   "unit": "×",   "min": 1,    "max": 2,   "step": 0.05, "def": 1.3,  "off": 1 },
+    { "key": "cluster_shorten",     "label": "cluster shortening",  "unit": "r",   "min": 0,    "max": 0.4, "step": 0.01, "def": 0.15, "off": 0 },
+    { "key": "undershoot",          "label": "vowel undershoot",    "unit": "u",   "min": 0,    "max": 1,   "step": 0.05, "def": 0.35, "off": 0 }
+  ],
+  "attFields": [
+    { "key": "f0_mean_hz",    "label": "pitch shift",    "unit": "Hz",       "min": -40,  "max": 40,  "step": 1 },
+    { "key": "f0_range_mult", "label": "pitch range",    "unit": "×",        "min": 0,    "max": 3,   "step": 0.05 },
+    { "key": "rate_mult",     "label": "tempo",          "unit": "× slower", "min": 0.5,  "max": 2,   "step": 0.05 },
+    { "key": "oq",            "label": "open quotient Δ","unit": "breath",   "min": -0.6, "max": 0.8, "step": 0.01 },
+    { "key": "tilt",          "label": "brightness Δ",   "unit": "tilt",     "min": -0.9, "max": 0.9, "step": 0.01 },
+    { "key": "di",            "label": "creak",          "unit": "diplo.",   "min": 0,    "max": 1,   "step": 0.01 },
+    { "key": "vibrato_hz",    "label": "flutter",        "unit": "Hz",       "min": 0,    "max": 15,  "step": 0.5 },
+    { "key": "aspiration",    "label": "breathiness Δ",  "unit": "+",        "min": 0,    "max": 0.6, "step": 0.01 }
+  ],
+  "attitudinals": [
+    { "key": "ui",     "label": ".ui",     "sub": "happiness / joy",  "example": "coi munje .ui",    "def": [14, 1.4, 0.95, 0.05, 0.15, 0, 0, 0] },
+    { "key": "uu",     "label": ".uu",     "sub": "pity / sadness",   "example": "mi klama .uu",     "def": [-12, 0.6, 1.15, 0.2, -0.2, 0, 0, 0.15] },
+    { "key": "oi",     "label": ".oi",     "sub": "complaint / pain", "example": "coi munje .oi",    "def": [-4, 0.9, 1.05, -0.1, -0.05, 0.1, 0, 0] },
+    { "key": "ii",     "label": ".ii",     "sub": "fear",             "example": "coi munje .ii",    "def": [18, 1.2, 0.9, 0.05, 0.05, 0, 6, 0.1] },
+    { "key": "o'o",    "label": ".o'o",    "sub": "patience / calm",  "example": "mi klama .o'o",    "def": [-6, 0.3, 1, 0, -0.05, 0, 0, 0] },
+    { "key": "au",     "label": ".au",     "sub": "desire",           "example": "mi djica .au",     "def": [8, 1.1, 1, 0.1, 0, 0, 0, 0.08] },
+    { "key": "o'onai", "label": ".o'onai", "sub": "anger",            "example": "mi fengu .o'onai", "def": [10, 1.3, 0.9, -0.2, 0.25, 0.15, 0, 0] }
+  ],
+  "vtFields": [
+    { "key": "f1_hz",      "label": "F1",         "unit": "Hz", "min": 100,  "max": 1200, "step": 5 },
+    { "key": "bw1_hz",     "label": "F1 bw",      "unit": "Hz", "min": 20,   "max": 500,  "step": 5 },
+    { "key": "amp1",       "label": "F1 amp",     "unit": "",   "min": 0,    "max": 1.2,  "step": 0.01 },
+    { "key": "f2_hz",      "label": "F2",         "unit": "Hz", "min": 400,  "max": 3000, "step": 10 },
+    { "key": "bw2_hz",     "label": "F2 bw",      "unit": "Hz", "min": 20,   "max": 1000, "step": 5 },
+    { "key": "amp2",       "label": "F2 amp",     "unit": "",   "min": 0,    "max": 1.2,  "step": 0.01 },
+    { "key": "f3_hz",      "label": "F3",         "unit": "Hz", "min": 1000, "max": 8000, "step": 10 },
+    { "key": "bw3_hz",     "label": "F3 bw",      "unit": "Hz", "min": 20,   "max": 4000, "step": 10 },
+    { "key": "amp3",       "label": "F3 amp",     "unit": "",   "min": 0,    "max": 1.2,  "step": 0.01 },
+    { "key": "voicing",    "label": "voicing",    "unit": "",   "min": 0,    "max": 1,    "step": 0.01 },
+    { "key": "aspiration", "label": "aspiration", "unit": "",   "min": 0,    "max": 1,    "step": 0.01 }
+  ],
+  "vtDur":       { "key": "dur_ms",     "label": "duration", "unit": "ms", "min": 0, "max": 400, "step": 5 },
+  "vtClosureMs": { "key": "closure_ms", "label": "closure",  "unit": "ms", "min": 0, "max": 150, "step": 1 },
+  "vtBurstMs":   { "key": "burst_ms",   "label": "burst",    "unit": "ms", "min": 0, "max": 80,  "step": 1 },
+  "voiceSections": [
+    { "id": "vowels", "label": "vowels", "lojban": "karsna", "items": [
+      { "key": "a", "kind": "steady", "ipa": "a", "def": [730, 90, 1, 1090, 110, 0.8, 2440, 150, 0.3, 1, 0, 160] },
+      { "key": "e", "kind": "steady", "ipa": "ɛ", "def": [530, 90, 1, 1840, 110, 0.6, 2480, 150, 0.3, 1, 0, 150] },
+      { "key": "i", "kind": "steady", "ipa": "i", "def": [270, 90, 1, 2290, 110, 0.7, 3010, 150, 0.45, 1, 0, 150] },
+      { "key": "o", "kind": "steady", "ipa": "o", "def": [570, 90, 1, 840, 110, 0.8, 2410, 150, 0.25, 1, 0, 150] },
+      { "key": "u", "kind": "steady", "ipa": "u", "def": [300, 90, 1, 870, 110, 0.75, 2240, 150, 0.25, 1, 0, 150] },
+      { "key": "y", "kind": "steady", "ipa": "ə", "def": [500, 90, 1, 1500, 110, 0.6, 2500, 150, 0.3, 1, 0, 100] }
+    ]},
+    { "id": "diphthongs", "label": "diphthongs", "lojban": "relkarsna", "note": "glide endpoints follow the tuned vowels — duration is the only free parameter", "items": [
+      { "key": "ai", "kind": "dur", "def": [200] }, { "key": "ei", "kind": "dur", "def": [200] },
+      { "key": "oi", "kind": "dur", "def": [200] }, { "key": "au", "kind": "dur", "def": [200] },
+      { "key": "ia", "kind": "dur", "def": [200] }, { "key": "ie", "kind": "dur", "def": [200] },
+      { "key": "ii", "kind": "dur", "def": [200] }, { "key": "io", "kind": "dur", "def": [200] },
+      { "key": "iu", "kind": "dur", "def": [200] }, { "key": "ua", "kind": "dur", "def": [200] },
+      { "key": "ue", "kind": "dur", "def": [200] }, { "key": "ui", "kind": "dur", "def": [200] },
+      { "key": "uo", "kind": "dur", "def": [200] }, { "key": "uu", "kind": "dur", "def": [200] },
+      { "key": "iy", "kind": "dur", "def": [200] }, { "key": "uy", "kind": "dur", "def": [200] }
+    ]},
+    { "id": "stops", "label": "stops", "lojban": "zunsna", "note": "closure (silence or voice bar) then release burst", "items": [
+      { "key": "p", "kind": "stop", "ipa": "p", "def": [500, 90, 0, 1500, 110, 0, 2500, 150, 0, 0, 0, 500, 90, 0, 700, 700, 0.6, 2500, 150, 0, 0, 1, 60, 25] },
+      { "key": "t", "kind": "stop", "ipa": "t", "def": [500, 90, 0, 1500, 110, 0, 2500, 150, 0, 0, 0, 500, 90, 0, 1500, 110, 0, 3500, 1000, 0.85, 0, 1, 60, 25] },
+      { "key": "k", "kind": "stop", "ipa": "k", "def": [500, 90, 0, 1500, 110, 0, 2500, 150, 0, 0, 0, 500, 90, 0, 1500, 110, 0, 2150, 500, 0.85, 0, 1, 60, 25] },
+      { "key": "b", "kind": "stop", "ipa": "b", "def": [200, 100, 0.3, 1500, 110, 0, 2500, 150, 0, 1, 0, 500, 90, 0, 700, 700, 0.6, 2500, 150, 0, 0, 1, 60, 25] },
+      { "key": "d", "kind": "stop", "ipa": "d", "def": [200, 100, 0.3, 1500, 110, 0, 2500, 150, 0, 1, 0, 500, 90, 0, 1500, 110, 0, 3500, 1000, 0.85, 0, 1, 60, 25] },
+      { "key": "g", "kind": "stop", "ipa": "ɡ", "def": [200, 100, 0.3, 1500, 110, 0, 2500, 150, 0, 1, 0, 500, 90, 0, 1500, 110, 0, 2150, 500, 0.85, 0, 1, 60, 25] }
+    ]},
+    { "id": "fricatives", "label": "fricatives", "lojban": "zunsna", "items": [
+      { "key": "f", "kind": "steady", "ipa": "f", "def": [500, 90, 0, 1500, 110, 0, 4500, 3500, 0.3, 0, 0.8, 120] },
+      { "key": "v", "kind": "steady", "ipa": "v", "def": [250, 100, 0.6, 1500, 110, 0, 4500, 3500, 0.3, 0.6, 0.5, 120] },
+      { "key": "s", "kind": "steady", "ipa": "s", "def": [500, 90, 0, 1500, 110, 0, 6000, 1700, 0.9, 0, 1, 120] },
+      { "key": "z", "kind": "steady", "ipa": "z", "def": [250, 100, 0.6, 1500, 110, 0, 6000, 1700, 0.8, 0.6, 0.6, 120] },
+      { "key": "c", "kind": "steady", "ipa": "ʃ", "def": [500, 90, 0, 1500, 110, 0, 3000, 800, 0.9, 0, 1, 120] },
+      { "key": "j", "kind": "steady", "ipa": "ʒ", "def": [250, 100, 0.6, 1500, 110, 0, 2800, 700, 0.8, 0.6, 0.6, 120] },
+      { "key": "x", "kind": "steady", "ipa": "x", "def": [500, 90, 0, 1500, 110, 0, 2000, 600, 0.85, 0, 1, 120] }
+    ]},
+    { "id": "sonorants", "label": "nasals + liquids", "lojban": "zunsna", "items": [
+      { "key": "m", "kind": "steady", "ipa": "m", "def": [300, 100, 1, 1000, 150, 0.1, 2200, 200, 0.05, 1, 0, 80] },
+      { "key": "n", "kind": "steady", "ipa": "n", "def": [310, 100, 1, 1700, 150, 0.1, 2600, 200, 0.05, 1, 0, 80] },
+      { "key": "l", "kind": "steady", "ipa": "l", "def": [360, 90, 1, 1300, 110, 0.5, 2700, 150, 0.2, 1, 0, 80] },
+      { "key": "r", "kind": "steady", "ipa": "r", "def": [490, 90, 1, 1350, 110, 0.4, 1750, 130, 0.45, 1, 0, 80] }
+    ]},
+    { "id": "other", "label": "other", "lojban": "", "items": [
+      { "key": "'",      "kind": "dur",    "ipa": "h", "def": [70],  "note": "aspiration shapes itself from the NEXT vowel's formants — duration is the only free parameter" },
+      { "key": "buffer", "kind": "steady", "ipa": "ɪ", "def": [400, 90, 0.5, 1900, 110, 0.3, 2600, 150, 0.15, 1, 0, 35], "note": "the epenthetic vowel the --buffer flag inserts inside clusters; never written, never stressed" }
+    ]}
+  ],
+  "presets": [
+    { "name": "Default",         "over": {} },
+    { "name": "Sing-song",       "over": { "declination_start_hz": 150, "declination_end_hz": 80, "stress_f0_excursion_hz": 35, "stress_duration_factor": 1.8 } },
+    { "name": "Monotone",        "over": { "declination_start_hz": 110, "declination_end_hz": 110, "stress_f0_excursion_hz": 3, "stress_amp_factor": 1.05, "stress_duration_factor": 1.1 } },
+    { "name": "Fast",            "over": { "rate": 1.7 } },
+    { "name": "Slow & calm",     "over": { "rate": 0.8, "stress_f0_excursion_hz": 12, "declination_start_hz": 110, "declination_end_hz": 90 } },
+    { "name": "Naturalness off", "over": { "flutter": 0, "breath_aspiration": 0, "baseline_oq_delta": 0, "baseline_tilt_delta": 0, "micro_f0_hz": 0, "obstruent_f0_hz": 0, "final_lengthen": 1, "cluster_shorten": 0, "undershoot": 0 } }
+  ],
+  "sentences": [
+    { "slug": "greeting",       "text": "coi munje",                        "en": "baseline greeting — simple CV/CVC, penultimate stress" },
+    { "slug": "declarative",    "text": "mi tavla do bau la lojban.",       "en": "full bridi — pitch declination across the sentence" },
+    { "slug": "clusters",       "text": "le prenu cu klama",                "en": "onset clusters pr / kl — crispness of consonant pairs" },
+    { "slug": "sibilants",      "text": "mi zgana le sance",                "en": "sibilants z / s / c — noise band placement" },
+    { "slug": "cmevla-pause",   "text": "coi la djan. cu klama",            "en": "name (cmevla) — mandatory pauses around djan" },
+    { "slug": "capital-stress", "text": "la DJOsefin. klama",               "en": "capitals mark non-default stress — DJO, not se" },
+    { "slug": "xu-question",    "text": "xu do klama",                      "en": "yes/no question — terminal pitch rise", "flags": { "xu": true } },
+    { "slug": "decimal",        "text": "li 3.14",                          "en": "digits — ci pi pa vo (decimal point = pi)" },
+    { "slug": "thousands",      "text": "li 1,234,567",                     "en": "big number — ki'o thousands groups" },
+    { "slug": "buffer-vowels",  "text": "mi nelci le zdani",                "en": "epenthetic [ɪ] buffer inside clusters", "flags": { "buffer": true } },
+    { "slug": "coda-cluster",   "text": "la armstrong. cu klama",           "en": "borrowed name — coda cluster rm + triple onset str" },
+    { "slug": "syllabic-r",     "text": "la kat,r,in. klama",               "en": "syllabic r as a vowel-less nucleus (kat.r.in)" },
+    { "slug": "triple-onset",   "text": "le spraile cu barda",              "en": "three-consonant onset spr" },
+    { "slug": "vowel-sweep",    "text": "do catlu le dikyjvo",              "en": "all six vowels in one line — a e i o u y" },
+    { "slug": "stops-sweep",    "text": "le patfu cu denpa le bebna gerku", "en": "all six stops — p t k b d g closures + bursts" },
+    { "slug": "aspiration",     "text": "mi djica le da'udja",              "en": "apostrophe [h] — intervocalic aspiration" },
+    { "slug": "diphthongs",     "text": ".ai .ei .ia .ie .io .iu .ua .ue .uo", "en": "diphthong sweep (the ones voksa gives no emotion)" },
+    { "slug": "attitudinal",    "text": "coi munje .ui",                    "en": "attitudinal demo — .ui colors munje with joy" }
+  ],
+  "demoConfig": {
+    "_filename": "kulnu-tuning.json",
+    "text": "coi la djan. cu klama",
+    "xu": false, "dotside": false, "buffer": false, "flat": false,
+    "rate": 1.15,
+    "flutter": 40,
+    "declination_start_hz": 132,
+    "attitudinals": { "ui": { "f0_mean_hz": 31 }, "uu": { "aspiration": 0.28, "rate_mult": 1.3 } },
+    "phonemes": { "a": { "f1_hz": 1400 }, "s": { "dur_ms": 96 }, "k": { "burst": { "amp3": 1.0 }, "closure_ms": 52 } },
+    "notes": "4/5 — la .alis.: stress reads natural; s a touch long; pushed a's F1 past the slider for testing",
+    "sampleRate": 48000,
+    "voksaVersion": "0.1.0"
+  },
+  "links": {
+    "repo": "https://github.com/dhilipsiva/voksa",
+    "issues": "https://github.com/dhilipsiva/voksa/issues/new",
+    "mail": "mailto:dhilipsiva@pm.me"
+  },
+  "capabilities": [
+    { "g": "⊢", "t": "pure Rust, rule-based parallel-formant (Klatt-style) synthesis — no ML, no recorded voices, no eSpeak data" },
+    { "g": "≡", "t": "deterministic: text → parameter schedule → PCM; the same input always renders the identical schedule (snapshot-tested)" },
+    { "g": "∀", "t": "every CLL rule implemented: 17 consonants, 6 vowels, 16 diphthongs, syllabification §3.9, penultimate stress, cmevla/brivla/cmavo classification, mandatory pauses, number normalization §18" },
+    { "g": "λ", "t": "465 runtime parameters: 7 prosody + 9 naturalness knobs, 7×8 attitudinal deviation vectors, the full 377-float per-phoneme voice table" },
+    { "g": "∴", "t": "community-tunable by design: phoneme values are documented conventions, not facts — shared config JSON replays bit-identically via voksa --config" }
+  ],
+  "sizes": [
+    { "k": "voksa_web_bg.wasm", "v": "42 kB gzipped", "n": "gate asserts < 43 kB · zero imports" },
+    { "k": "runtime",           "v": "AudioWorklet",  "n": "no server, no network after load" },
+    { "k": "render",            "v": "< 100 ms",      "n": "whole utterance, typical sentence" },
+    { "k": "MSRV",              "v": "1.85",          "n": "MIT OR Apache-2.0" }
+  ],
+  "architecture": [
+    { "crate": "voksa-core",            "desc": "no_std text front-end + schedule compiler (all CLL rules)" },
+    { "crate": "voksa-engine-klattsch", "desc": "std adapter: schedule IR → klatt parameter events" },
+    { "crate": "klattsch-core-fork",    "desc": "vendored klattsch-core 0.1.1 (MIT, Tony Gies) + OQ/diplophonia/flutter" },
+    { "crate": "voksa-cli",             "desc": "native playback (cpal) + offline WAV + --config replay" },
+    { "crate": "voksa-web",             "desc": "zero-import C-ABI wasm + AudioWorklet + this console" },
+    { "crate": "voksa-component",       "desc": "wasm32-wasip2 WIT component (voksa:synth)" }
+  ]
+}

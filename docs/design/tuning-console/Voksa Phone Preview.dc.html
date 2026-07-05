@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/tokens/base.css">
+  <link rel="stylesheet" href="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/styles.css">
+  <script src="_ds/quine-design-system-b59e1bb0-268a-41cb-aec6-2c083baaa557/_ds_bundle.js"></script>
+  <style>body { margin: 0; background: var(--bg-base); }</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg-base);color:var(--text-body);font-family:var(--font-sans);padding:28px 24px 64px">
+  <div style="max-width:1180px;margin:0 auto">
+    <header style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:var(--text-strong)">voksa</span>
+      <span class="q-label">phone preview — 390 px</span>
+      <span style="flex:1"></span>
+      <a href="Voksa Workbench.dc.html" style="font-family:var(--font-mono);font-size:12px">open the workbench →</a>
+      <a href="Voksa IA & Flows.dc.html" style="font-family:var(--font-mono);font-size:12px">IA &amp; flows →</a>
+    </header>
+    <p style="margin:0 0 24px;font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)">the SAME responsive component, live in a device frame — not a separate mockup. ≤720 px: single column, fixed ▶ speak dock; deep tuning stays reachable by scroll.</p>
+    <div style="display:grid;grid-template-columns:auto minmax(260px,1fr);gap:32px;align-items:start;justify-content:start">
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="430px,880px">
+        <iframe src="Voksa Workbench.dc.html" title="voksa workbench at phone width" style="width:100%;height:730px;border:0;display:block;background:#0B0B10"></iframe>
+      </x-import>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:460px">
+        <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-strong)"><span style="color:var(--accent)">// </span>what changes at phone width</div>
+        <div style="font-family:var(--font-mono);font-size:11.5px;line-height:1.9;color:var(--text-body)">
+          <div><span style="color:var(--ember-300)">⊢</span> source column first — play + listen + share work without opening a rack (the listener persona's whole loop)</div>
+          <div><span style="color:var(--ember-300)">⊢</span> fixed bottom dock: ▶ speak (44 px target) + live status; auto-speak still debounces at 400 ms</div>
+          <div><span style="color:var(--ember-300)">⊢</span> racks stack full-width; rack-nav chips jump; preset menu hidden (kept in share flow), reset-all stays</div>
+          <div><span style="color:var(--ember-300)">⊢</span> phoneme grid wraps ABOVE the editor — 34 px keycaps remain the navigator; formant matrix stays 3-across (minmax 0,1fr)</div>
+          <div><span style="color:var(--ember-300)">⊢</span> sliders keep native drag + keyboard; exact values via the tap-to-type readout (inputMode=decimal)</div>
+          <div><span style="color:var(--ember-300)">⊢</span> interact with the frame — it is the real state model, not a picture</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
