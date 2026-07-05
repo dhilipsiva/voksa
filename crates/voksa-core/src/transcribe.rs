@@ -43,18 +43,17 @@ fn render_word(w: &WordAnalysis, buffer: bool) -> String {
     // Deferred syllable dot: a buffer marker between syllables lands BEFORE
     // the dot ("MUN(ɪ).je"), so the dot flushes with the next phoneme.
     let mut pending_dot = false;
-    let mut emit =
-        |out: &mut String, prev: &mut bool, dot: &mut bool, ch: char, is_consonant: bool| {
-            if buffer && *prev && is_consonant {
-                out.push_str("(ɪ)");
-            }
-            if *dot {
-                out.push('.');
-                *dot = false;
-            }
-            out.push(ch);
-            *prev = is_consonant;
-        };
+    let emit = |out: &mut String, prev: &mut bool, dot: &mut bool, ch: char, is_consonant: bool| {
+        if buffer && *prev && is_consonant {
+            out.push_str("(ɪ)");
+        }
+        if *dot {
+            out.push('.');
+            *dot = false;
+        }
+        out.push(ch);
+        *prev = is_consonant;
+    };
     for (si, syl) in w.syllables.iter().enumerate() {
         if si > 0 {
             pending_dot = true;
